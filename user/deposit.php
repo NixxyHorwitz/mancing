@@ -346,6 +346,21 @@ require dirname(__DIR__) . '/partials/header.php';
 .depo-segment-badge.qris { background: #dcfce7; color: #15803d; }
 .depo-segment-badge.bank { background: #fef3c7; color: #b45309; }
 
+/* QRIS Official Logo Image in Options */
+.depo-seg-qris-img {
+  height: 20px;
+  max-width: 52px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.depo-btn-qris-img {
+  height: 20px;
+  max-width: 52px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  vertical-align: middle;
+}
+
 /* ── 4. QUICK AMOUNT & INPUT COMPACT CARD ── */
 .depo-main-card {
   padding: 12px 14px;
@@ -777,9 +792,8 @@ require dirname(__DIR__) . '/partials/header.php';
   <div class="depo-segment">
     <?php if ($qris_enabled && !empty($qris_raw)): ?>
     <button type="button" class="depo-segment-btn qris active" id="seg-btn-qris" onclick="switchMethod('qris')">
-      <i class="ph-bold ph-qr-code"></i>
-      <span>QRIS Otomatis</span>
-      <span class="depo-segment-badge qris">⚡ Detik</span>
+      <img src="/assets/qris.png?v=3" alt="QRIS" class="depo-seg-qris-img">
+      <span class="depo-segment-badge qris">⚡ Otomatis</span>
     </button>
     <?php endif; ?>
 
@@ -849,7 +863,7 @@ require dirname(__DIR__) . '/partials/header.php';
         <?php endif; ?>
 
         <button type="submit" class="depo-action-btn qris no-dbl-submit" id="btn-submit-qris">
-          <i class="ph-bold ph-qr-code" style="font-size:17px;"></i>
+          <img src="/assets/qris.png?v=3" alt="QRIS" class="depo-btn-qris-img">
           <span>Lanjut Bayar via QRIS</span>
           <i class="ph-bold ph-arrow-right"></i>
         </button>
