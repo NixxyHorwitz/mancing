@@ -649,6 +649,285 @@ require dirname(__DIR__) . '/partials/header.php';
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* ══════════════════════════════════════════════════════════
+   MODAL DIALOGS — MINIMALIST OCEAN AESTHETIC
+   ══════════════════════════════════════════════════════════ */
+.amber-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.amber-modal-backdrop.open {
+  display: flex !important;
+}
+
+.amber-modal-box {
+  background: #ffffff;
+  border: 1.5px solid #e0f2fe;
+  border-radius: 26px;
+  padding: 24px 20px 20px;
+  width: 100%;
+  max-width: 380px;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(2, 132, 199, 0.18), 0 4px 12px rgba(0, 0, 0, 0.04);
+  text-align: center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+
+.amber-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #f1f5f9;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.amber-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.amber-modal-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: #e0f2fe;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 14px;
+  border: 1.5px solid #bae6fd;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12);
+}
+
+.amber-modal-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+}
+
+.amber-modal-body {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+
+.btn-modal-primary {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: #ffffff !important;
+  padding: 12px 18px;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 900;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.28);
+  cursor: pointer;
+  width: 100%;
+  transition: transform 0.12s;
+}
+.btn-modal-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-modal-dismiss {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 8px;
+  width: 100%;
+  text-align: center;
+  transition: color 0.12s;
+}
+.btn-modal-dismiss:hover {
+  color: #64748b;
+}
+
+/* ── TOUR SELECT MODAL ── */
+.tour-select-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1.5px solid #e0f2fe;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.04);
+  transition: transform 0.12s, border-color 0.12s;
+}
+.tour-select-option:active {
+  transform: scale(0.97);
+}
+.tour-select-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+.tour-select-icon--watch {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+}
+.tour-select-title {
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+.tour-select-desc {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+/* ── PROMO HUB MODAL STYLES ── */
+.promo-hub-card-item {
+  background: #ffffff;
+  border: 1.5px solid #e0f2fe;
+  border-radius: 18px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.04);
+}
+.phc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.phc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+.phc-tag--threads {
+  background: #18181b;
+  color: #bae6fd;
+  border: 1px solid #38bdf8;
+}
+.phc-tag--referral {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+.phc-reward {
+  font-size: 10.5px;
+  font-weight: 900;
+  color: #059669;
+}
+.phc-title {
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+.phc-desc {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+.phc-caption-box {
+  background: #f0f9ff;
+  border: 1.2px dashed #7dd3fc;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #0369a1;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.phc-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-phc-action {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid #e0f2fe;
+  cursor: pointer;
+  transition: transform 0.12s;
+  font-family: inherit;
+}
+.btn-phc-action:active {
+  transform: scale(0.96);
+}
+.btn-phc-action--primary {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: #ffffff !important;
+  border: none;
+  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.25);
+}
+.btn-phc-action--share {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff !important;
+  border: none;
+  box-shadow: 0 3px 8px rgba(5, 150, 105, 0.25);
+}
+.btn-phc-action--copy {
+  background: #f0f9ff;
+  color: #0369a1 !important;
+  border-color: #bae6fd;
+}
 </style>
 
 <div class="home-container">

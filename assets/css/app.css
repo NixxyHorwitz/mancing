@@ -799,3 +799,34 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ══════════════════════════════════════════════════════════
+   GLOBAL MODALS & POPUPS BASE STYLES
+   ══════════════════════════════════════════════════════════ */
+.amber-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.amber-modal-backdrop.open {
+  display: flex !important;
+}
+.amber-modal-box {
+  background: #ffffff;
+  border: 1.5px solid #e0f2fe;
+  border-radius: 26px;
+  padding: 24px 20px 20px;
+  width: 100%;
+  max-width: 380px;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(2, 132, 199, 0.18), 0 4px 12px rgba(0, 0, 0, 0.04);
+  text-align: center;
+}
+
