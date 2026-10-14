@@ -31,6 +31,7 @@ define('STAFF_PERMISSIONS', [
     'staff_roles'     => 'Peran & Izin',
     'orderkuota'      => 'OrderKuota API',
     'surveys'         => 'Survei Pengguna',
+    'home_cms'        => 'CMS Beranda & Mancing',
 ]);
 
 // ── Determine who is logged in ─────────────────────────────────────────────

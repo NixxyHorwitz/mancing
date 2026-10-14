@@ -2,510 +2,1059 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/auth/guard.php';
 
-// Auto-create table on live server
-$pdo->exec("CREATE TABLE IF NOT EXISTS minigame_logs (
+$cms_cfg = home_cms_config($pdo);
+$fishing_cfg = $cms_cfg['fishing_engine'] ?? [];
+$is_fishing_enabled = !empty($fishing_cfg['enabled']);
+
+if (!$is_fishing_enabled) {
+    $_SESSION['flash_home_err'] = '⚠️ Fitur Pemancingan Cuan sedang dinonaktifkan sementara oleh Administrator.';
+    redirect('/home');
+}
+
+// Ensure table fishing_logs exists
+$pdo->exec("CREATE TABLE IF NOT EXISTS fishing_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    game_type VARCHAR(50) NOT NULL,
-    score INT NOT NULL,
-    reward DECIMAL(10,2) NOT NULL,
-    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    user_id INT UNSIGNED NOT NULL,
+    fish_name VARCHAR(100) NOT NULL,
+    fish_icon VARCHAR(50) NOT NULL DEFAULT '🐟',
+    rarity VARCHAR(30) NOT NULL DEFAULT 'common',
+    weight_kg DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+    reward DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_user (user_id),
+    KEY idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-// Ensure settings exist for configuration
-$pdo->exec("INSERT IGNORE INTO settings (`key`, `value`) VALUES 
-    ('minigame_reward_per_click', '10'),
-    ('minigame_base_bonus', '50')
-");
+// Refresh fresh user data
+$uStmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+$uStmt->execute([$user['id']]);
+$user = $uStmt->fetch(PDO::FETCH_ASSOC);
 
-// Handle AJAX Claim
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'claim') {
-    header('Content-Type: application/json');
-    $clicks = (int)($_POST['clicks'] ?? 0);
-    
-    // Anti-cheat limit (misal max 150 clicks in 10s)
-    if ($clicks > 150) $clicks = 150;
-    if ($clicks < 0) $clicks = 0;
-    
-    // Check if played today
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM minigame_logs WHERE user_id=? AND DATE(played_at)=CURDATE()");
-    $stmt->execute([$user['id']]);
-    $played_today = (int)$stmt->fetchColumn();
-    
-    if ($played_today > 0) {
-        echo json_encode(['success' => false, 'message' => 'Hari ini sudah main! Besok lagi ya.']);
-        exit;
-    }
-    
-    $reward_per_click = (int)setting($pdo, 'minigame_reward_per_click', '10');
-    $base_bonus = (int)setting($pdo, 'minigame_base_bonus', '50');
-    $reward = $clicks * $reward_per_click;
-    
-    // Base bonus just for playing
-    if ($reward > 0) {
-        $reward += $base_bonus; 
-    }
-    
-    try {
-        $pdo->beginTransaction();
-        
-        // Log game
-        $stmt = $pdo->prepare("INSERT INTO minigame_logs (user_id, game_type, score, reward) VALUES (?, 'tap_tap', ?, ?)");
-        $stmt->execute([$user['id'], $clicks, $reward]);
-        
-        // Update user balance (balance_wd)
-        $stmt = $pdo->prepare("UPDATE users SET balance_wd = balance_wd + ? WHERE id = ?");
-        $stmt->execute([$reward, $user['id']]);
-        
-        $pdo->commit();
-        echo json_encode(['success' => true, 'reward' => $reward]);
-    } catch (\Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
+$daily_free_baits = max(0, (int)($fishing_cfg['daily_free_baits'] ?? 3));
+$reward_min = max(10, (float)($fishing_cfg['reward_min'] ?? 100));
+$reward_max = max(50, (float)($fishing_cfg['reward_max'] ?? 5000));
+
+// Auto refill daily bait if below threshold on new day
+$todayStr = date('Y-m-d');
+$lastPlayedDate = $user['last_plinko_claim'] ?? ''; // or check last checkin
+if ($lastPlayedDate !== $todayStr && (int)($user['fishing_baits'] ?? 0) < $daily_free_baits) {
+    $pdo->prepare("UPDATE users SET fishing_baits = ?, last_plinko_claim = ? WHERE id = ?")
+        ->execute([$daily_free_baits, $todayStr, $user['id']]);
+    $user['fishing_baits'] = $daily_free_baits;
+}
+
+// ─────────────────────────────────────────────────────────────
+// AJAX API HANDLER
+// ─────────────────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json; charset=utf-8');
+    $action = $_POST['action'] ?? '';
+
+    // 1. LEMPAR KAIL (CAST ROD)
+    if ($action === 'cast_rod') {
+        if (!csrf_verify()) {
+            echo json_encode(['ok' => false, 'msg' => 'Sesi keamanan kedaluwarsa. Silakan refresh halaman!']);
+            exit;
         }
-        echo json_encode(['success' => false, 'message' => 'SysErr: ' . $e->getMessage()]);
+
+        try {
+            $pdo->beginTransaction();
+
+            // Lock user row
+            $s = $pdo->prepare("SELECT id, balance_wd, total_earned, fishing_baits FROM users WHERE id = ? FOR UPDATE");
+            $s->execute([$user['id']]);
+            $dbUser = $s->fetch(PDO::FETCH_ASSOC);
+
+            if (!$dbUser) {
+                throw new Exception('Pengguna tidak ditemukan.');
+            }
+
+            $current_baits = (int)($dbUser['fishing_baits'] ?? 0);
+            if ($current_baits < 1) {
+                $pdo->rollBack();
+                echo json_encode([
+                    'ok' => false,
+                    'msg' => 'Umpan pancingmu habis! Tonton video atau beli paket umpan untuk melanjutkan.',
+                    'out_of_baits' => true
+                ]);
+                exit;
+            }
+
+            // Deduct 1 bait
+            $new_baits = $current_baits - 1;
+
+            // Generate Fish Catch via Weighted Probability
+            $roll = mt_rand(1, 100);
+            $fish = null;
+
+            if ($roll <= 45) {
+                // Common: Ikan Mujair Cuan (45%)
+                $weight = round(mt_rand(50, 140) / 100, 2);
+                $reward = round($reward_min + ($weight / 1.4) * ($reward_min * 1.5));
+                $fish = [
+                    'name'   => 'Ikan Mujair Cuan',
+                    'icon'   => '🐟',
+                    'rarity' => 'Common',
+                    'badge'  => 'biasa',
+                    'color'  => '#0284c7',
+                    'weight' => $weight,
+                    'reward' => $reward,
+                ];
+            } elseif ($roll <= 75) {
+                // Uncommon: Ikan Gurame Emas (30%)
+                $weight = round(mt_rand(150, 290) / 100, 2);
+                $reward = round($reward_min * 2.5 + ($weight / 2.9) * ($reward_min * 3));
+                $fish = [
+                    'name'   => 'Ikan Gurame Emas',
+                    'icon'   => '🐠',
+                    'rarity' => 'Uncommon',
+                    'badge'  => 'bagus',
+                    'color'  => '#d97706',
+                    'weight' => $weight,
+                    'reward' => $reward,
+                ];
+            } elseif ($roll <= 90) {
+                // Rare: Ikan Kakap Merah VIP (15%)
+                $weight = round(mt_rand(300, 480) / 100, 2);
+                $reward = round($reward_min * 6.0 + ($weight / 4.8) * ($reward_min * 5));
+                $fish = [
+                    'name'   => 'Ikan Kakap Merah VIP',
+                    'icon'   => '🐡',
+                    'rarity' => 'Rare',
+                    'badge'  => 'langka',
+                    'color'  => '#e11d48',
+                    'weight' => $weight,
+                    'reward' => $reward,
+                ];
+            } elseif ($roll <= 97) {
+                // Epic: Ikan Monster Barramundi (7%)
+                $weight = round(mt_rand(500, 850) / 100, 2);
+                $reward = round($reward_max * 0.75 + ($weight / 8.5) * ($reward_max * 0.5));
+                $fish = [
+                    'name'   => 'Monster Barramundi',
+                    'icon'   => '🦈',
+                    'rarity' => 'Epic',
+                    'badge'  => 'super',
+                    'color'  => '#7c3aed',
+                    'weight' => $weight,
+                    'reward' => $reward,
+                ];
+            } else {
+                // Jackpot: Peti Harta Karun Lautan (3%)
+                $weight = round(mt_rand(1000, 1500) / 100, 2);
+                $reward = round($reward_max * 1.5 + mt_rand(1000, 3000));
+                $fish = [
+                    'name'   => 'Peti Harta Karun Lautan 👑',
+                    'icon'   => '✨',
+                    'rarity' => 'JACKPOT',
+                    'badge'  => 'jackpot',
+                    'color'  => '#10b981',
+                    'weight' => $weight,
+                    'reward' => $reward,
+                ];
+            }
+
+            // Update user balance
+            $upd = $pdo->prepare("UPDATE users SET balance_wd = balance_wd + ?, total_earned = total_earned + ?, fishing_baits = ? WHERE id = ?");
+            $upd->execute([$fish['reward'], $fish['reward'], $new_baits, $user['id']]);
+
+            // Insert into fishing_logs
+            $logIns = $pdo->prepare("
+                INSERT INTO fishing_logs (user_id, fish_name, fish_icon, rarity, weight_kg, reward)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $logIns->execute([
+                $user['id'],
+                $fish['name'],
+                $fish['icon'],
+                $fish['rarity'],
+                $fish['weight'],
+                $fish['reward']
+            ]);
+
+            // Also log into minigame_logs
+            $pdo->prepare("INSERT INTO minigame_logs (user_id, game_type, score, reward) VALUES (?, 'mancing', ?, ?)")
+                ->execute([$user['id'], (int)($fish['weight'] * 10), $fish['reward']]);
+
+            $pdo->commit();
+
+            $new_balance_wd = (float)$dbUser['balance_wd'] + $fish['reward'];
+
+            echo json_encode([
+                'ok'             => true,
+                'fish'           => $fish,
+                'remaining_baits'=> $new_baits,
+                'balance_wd'     => format_rp($new_balance_wd),
+                'reward_rp'      => format_rp($fish['reward']),
+            ]);
+            exit;
+
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            echo json_encode(['ok' => false, 'msg' => 'Gagal memancing: ' . $e->getMessage()]);
+            exit;
+        }
     }
+
+    // 2. BELI PAKET UMPAN PAKAI SALDO BELI (DEPOSIT)
+    if ($action === 'buy_baits') {
+        if (!csrf_verify()) {
+            echo json_encode(['ok' => false, 'msg' => 'Sesi keamanan kedaluwarsa.']);
+            exit;
+        }
+
+        $pack_tier = (int)($_POST['pack_tier'] ?? 1);
+        $packs = [
+            1 => ['qty' => 5,  'price' => 5000,  'label' => 'Paket Cacing Tanah (5 Umpan)'],
+            2 => ['qty' => 15, 'price' => 12000, 'label' => 'Paket Pelet Super (15 Umpan) - Diskon 20%'],
+            3 => ['qty' => 35, 'price' => 25000, 'label' => 'Paket Udang Hidup VIP (35 Umpan) - Diskon 30%'],
+        ];
+
+        if (!isset($packs[$pack_tier])) {
+            echo json_encode(['ok' => false, 'msg' => 'Pilihan paket tidak valid.']);
+            exit;
+        }
+
+        $chosen = $packs[$pack_tier];
+
+        try {
+            $pdo->beginTransaction();
+
+            $s = $pdo->prepare("SELECT id, balance_dep, fishing_baits FROM users WHERE id = ? FOR UPDATE");
+            $s->execute([$user['id']]);
+            $dbUser = $s->fetch(PDO::FETCH_ASSOC);
+
+            if ((float)$dbUser['balance_dep'] < $chosen['price']) {
+                $pdo->rollBack();
+                echo json_encode([
+                    'ok' => false,
+                    'msg' => 'Saldo beli Anda tidak mencukupi (' . format_rp($chosen['price']) . '). Silakan lakukan Top Up terlebih dahulu!',
+                    'need_deposit' => true
+                ]);
+                exit;
+            }
+
+            $new_dep = (float)$dbUser['balance_dep'] - $chosen['price'];
+            $new_baits = (int)($dbUser['fishing_baits'] ?? 0) + $chosen['qty'];
+
+            $pdo->prepare("UPDATE users SET balance_dep = ?, fishing_baits = ? WHERE id = ?")
+                ->execute([$new_dep, $new_baits, $user['id']]);
+
+            $pdo->commit();
+
+            echo json_encode([
+                'ok'          => true,
+                'msg'         => "🎉 Berhasil membeli {$chosen['label']}!",
+                'new_baits'   => $new_baits,
+                'balance_dep' => format_rp($new_dep)
+            ]);
+            exit;
+
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            echo json_encode(['ok' => false, 'msg' => 'Gagal transaksi: ' . $e->getMessage()]);
+            exit;
+        }
+    }
+
+    echo json_encode(['ok' => false, 'msg' => 'Aksi tidak dikenal.']);
     exit;
 }
 
-// Check if played today for UI
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM minigame_logs WHERE user_id=? AND DATE(played_at)=CURDATE()");
-$stmt->execute([$user['id']]);
-$played_today = (int)$stmt->fetchColumn();
+// ─────────────────────────────────────────────────────────────
+// DATA UNTUK TAMPILAN
+// ─────────────────────────────────────────────────────────────
+$todayCatches = [];
+$todayCatchesTotal = 0.0;
+try {
+    $cStmt = $pdo->prepare("
+        SELECT * FROM fishing_logs 
+        WHERE user_id = ? AND DATE(created_at) = CURDATE()
+        ORDER BY id DESC
+        LIMIT 10
+    ");
+    $cStmt->execute([$user['id']]);
+    $todayCatches = $cStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$pageTitle = 'Tap-Tap Game  ';
-$activePage = 'missions'; // Keep missions active in bottom nav
+    $sumStmt = $pdo->prepare("SELECT COALESCE(SUM(reward), 0) FROM fishing_logs WHERE user_id = ? AND DATE(created_at) = CURDATE()");
+    $sumStmt->execute([$user['id']]);
+    $todayCatchesTotal = (float)$sumStmt->fetchColumn();
+} catch (\Throwable) {}
+
+$pageTitle = 'Mancing Cuan Nusantara';
+$activePage = 'missions';
 require dirname(__DIR__) . '/partials/header.php';
 ?>
 
-<div class="section-header" style="margin-bottom:20px; background: #fff; padding: 14px 16px; border: 3px solid #fde047; border-radius: 20px; box-shadow: 0 6px 0 #fde047; display:flex; align-items:center; justify-content:space-between;">
-  <div>
-      <div class="section-title" style="display:flex;align-items:center;gap:8px;font-size:18px; color: #78350f; font-weight: 900;">
-        <div style="background:#fef08a; width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#d97706; font-size:20px;">
-            <i class="ph-fill ph-coin"></i>
-        </div>
-        Tap-Tap Frenzy
-      </div>
-      <p style="font-size:12px;font-weight:700;color:#92400e;margin:6px 0 0">Pukul Karung Duit Secepatnya!</p>
-  </div>
-  <a href="/missions" style="background:#fef08a; padding:8px; border-radius:12px; color:#d97706;"><i class="ph-bold ph-x"></i></a>
-</div>
-
-<div class="game-container">
-    <?php if ($played_today > 0): ?>
-        <div class="played-state">
-            <div class="played-icon">😴</div>
-            <h3 style="font-size:18px;font-weight:900;color:#334155;margin:0 0 8px;">Sudah Main Hari Ini</h3>
-            <p style="font-size:13px;font-weight:700;color:#64748b;margin:0;line-height:1.5;">Otot jarimu butuh istirahat! Balik lagi besok buat nge-tap dan dapetin koin lagi.</p>
-            <a href="/missions" class="btn-back">Kembali ke Misi</a>
-        </div>
-    <?php else: ?>
-        <div id="game-ui">
-            <div id="game-info">
-                <div class="time-box">
-                    <i class="ph-fill ph-timer"></i> <span id="time-left">10.0</span>s
-                </div>
-                <div class="score-box">
-                    <img src="/assets/dollar.png" alt="koin"> <span id="score-count">0</span>
-                </div>
-            </div>
-            
-            <div id="start-overlay">
-                <h2>Siap?</h2>
-                <p>Tap celengan secepat mungkin dalam 10 detik!</p>
-                <button id="start-btn">Mulai Main!</button>
-            </div>
-            
-            <div id="play-area" style="display:none;">
-                <div id="tap-target">
-                    <img src="/assets/moneybag_v2.png" style="width: 140px; height: 140px; object-fit: contain;">
-                </div>
-                <div id="floating-texts"></div>
-            </div>
-            
-            <div id="result-overlay" style="display:none;">
-                <div class="result-box">
-                    <h2 style="color:#d97706; font-size:24px; font-weight:900; margin:0 0 4px;">WAKTU HABIS!</h2>
-                    <p style="font-size:14px; color:#78350f; font-weight:700; margin:0 0 20px;">Kamu berhasil tap <span id="final-taps" style="font-size:18px;font-weight:900;color:#059669;">0</span> kali!</p>
-                    
-                    <div id="reward-loading" style="display:block;">
-                        <i class="ph-bold ph-spinner ph-spin" style="font-size:24px;color:#d97706;"></i>
-                        <p style="font-size:12px; margin-top:8px; font-weight:700;">Menghitung Hadiah...</p>
-                    </div>
-                    
-                    <div id="reward-success" style="display:none;">
-                        <div style="background:#ecfdf5; border:2px dashed #10b981; padding:16px; border-radius:16px; margin-bottom:16px;">
-                            <p style="font-size:12px; color:#047857; font-weight:700; margin:0 0 4px;">Selamat! Saldo Tarik bertambah:</p>
-                            <h1 style="font-size:28px; font-weight:900; color:#059669; margin:0;">+ <span id="reward-amount">Rp 0</span></h1>
-                        </div>
-                        <button onclick="window.location.href='/missions'" class="btn-back" style="width:100%; text-align:center; border:none; cursor:pointer; font-family:inherit;">Mantap!</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
-</div>
-
 <style>
-/* Game Container */
-.game-container {
-    background: #fff;
-    border: 3px solid #cbd5e1;
-    border-radius: 24px;
-    box-shadow: 0 8px 0 #cbd5e1;
-    position: relative;
-    overflow: hidden;
-    min-height: 400px;
-    display: flex;
-    flex-direction: column;
+/* ══════════════════════════════════════════════════════════
+   MANCINGCUAN — INTERACTIVE FISHING CLAYMORPHISM SYSTEM
+   ══════════════════════════════════════════════════════════ */
+:root {
+  --water-deep: #0369a1;
+  --water-light: #38bdf8;
+  --sand-bg: #fef8ee;
+  --wood-border: #78350f;
 }
 
-.played-state {
-    padding: 40px 20px;
-    text-align: center;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-.played-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
-    animation: float 3s ease-in-out infinite;
+.fishing-page-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: 90px;
 }
 
-#game-ui {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    position: relative;
+/* ── Top Dashboard Header ── */
+.fishing-status-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
-#game-info {
-    padding: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px dashed #e2e8f0;
-    z-index: 10;
-}
-.time-box {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 2px solid #ef4444;
-    padding: 8px 16px;
-    border-radius: 16px;
-    font-weight: 900;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 4px 0 #ef4444;
-}
-.score-box {
-    background: #fef08a;
-    color: #d97706;
-    border: 2px solid #f59e0b;
-    padding: 8px 16px;
-    border-radius: 16px;
-    font-weight: 900;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 4px 0 #f59e0b;
-}
-.score-box img { width: 24px; height: 24px; }
-
-#start-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(4px);
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 20px;
-}
-#start-overlay h2 { font-size: 32px; font-weight: 900; color: #0ea5e9; margin: 0 0 8px; }
-#start-overlay p { font-size: 14px; font-weight: 700; color: #64748b; margin: 0 0 24px; }
-#start-btn {
-    background: linear-gradient(135deg, #fde047, #f59e0b);
-    border: 3px solid #fff;
-    color: #78350f;
-    font-size: 18px;
-    font-weight: 900;
-    padding: 12px 32px;
-    border-radius: 100px;
-    box-shadow: 0 6px 0 #d97706;
-    cursor: pointer;
-    transition: transform 0.1s;
-}
-#start-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #d97706; }
-
-#play-area {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    background: radial-gradient(circle, #f8fafc 0%, #e2e8f0 100%);
-    overflow: hidden;
-    user-select: none;
-    -webkit-user-select: none;
-}
-#tap-target {
-    cursor: pointer;
-    transition: transform 0.05s ease-out;
-    filter: drop-shadow(0 10px 10px rgba(0,0,0,0.2));
-    position: relative;
-    z-index: 5;
-    -webkit-tap-highlight-color: transparent;
-}
-.tapped { transform: scale(0.85) rotate(-5deg); filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4)) !important; }
-
-.floating-text {
-    position: absolute;
-    color: #10b981;
-    font-weight: 900;
-    font-size: 24px;
-    pointer-events: none;
-    animation: floatUp 0.8s ease-out forwards;
-    text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
-    z-index: 4;
+.f-stat-card {
+  background: #ffffff;
+  border: 2px solid rgba(255,255,255,0.95);
+  border-radius: 20px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 24px rgba(120,53,15,0.08), inset 2px 2px 5px #ffffff, inset -2px -2px 5px rgba(180,83,9,0.06);
 }
 
-#result-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(8px);
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-.result-box {
-    background: #fff;
-    width: 100%;
-    max-width: 300px;
-    border-radius: 24px;
-    padding: 24px;
-    text-align: center;
-    border: 4px solid #fde047;
-    box-shadow: 0 8px 0 #f59e0b;
-    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+.f-stat-card__lbl {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 2px;
 }
 
-.btn-back {
-    display: inline-block;
-    background: #0ea5e9;
-    color: #fff;
-    font-weight: 800;
-    font-size: 14px;
-    padding: 12px 24px;
-    border-radius: 100px;
-    text-decoration: none;
-    border: 2px solid #fff;
-    box-shadow: 0 4px 0 #0284c7;
-    margin-top: 16px;
-    transition: transform 0.1s;
+.f-stat-card__val {
+  font-size: 16px;
+  font-weight: 900;
+  color: #1e293b;
 }
-.btn-back:active { transform: translateY(4px); box-shadow: 0 0 0 #0284c7; }
 
-@keyframes floatUp {
-    0% { transform: translateY(0) scale(1); opacity: 1; }
-    100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+/* ── Fishing Lake Scene (Volumetric Clay Canvas) ── */
+.fishing-lake-card {
+  position: relative;
+  height: 290px;
+  background: linear-gradient(180deg, #67e8f9 0%, #0284c7 40%, #0369a1 100%);
+  border-radius: 28px;
+  border: 3.5px solid #ffffff;
+  box-shadow: 0 16px 36px rgba(2,132,199,0.25), inset 0 4px 10px rgba(255,255,255,0.6), inset 0 -8px 16px rgba(3,105,161,0.5);
+  overflow: hidden;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
 }
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+
+/* Sun & Clouds */
+.lake-sky {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
 }
-@keyframes popIn {
-    0% { transform: scale(0); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+
+.lake-sun {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fde047 30%, #f59e0b 100%);
+  box-shadow: 0 0 20px rgba(253,224,71,0.8);
+}
+
+.lake-cloud {
+  background: rgba(255,255,255,0.85);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #0369a1;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+/* Animated Water Waves */
+.lake-waves {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.lake-wave {
+  position: absolute;
+  bottom: 0;
+  left: -20%;
+  width: 140%;
+  height: 100%;
+  opacity: 0.35;
+  background-repeat: repeat-x;
+  background-position: 0 bottom;
+  transform-origin: center bottom;
+}
+
+.lake-wave--1 {
+  background: radial-gradient(ellipse at 50% 100%, #38bdf8 0%, transparent 70%);
+  animation: waveMove 4s ease-in-out infinite alternate;
+}
+
+.lake-wave--2 {
+  background: radial-gradient(ellipse at 50% 100%, #0284c7 0%, transparent 60%);
+  animation: waveMove 3s ease-in-out infinite alternate-reverse;
+  opacity: 0.5;
+}
+
+@keyframes waveMove {
+  0%   { transform: translateY(0) scaleY(1); }
+  100% { transform: translateY(-8px) scaleY(1.05); }
+}
+
+/* Animated Bobber (Pelampung Pancing) */
+.lake-bobber {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 42px;
+  z-index: 3;
+  transition: all 0.3s ease;
+}
+
+.bobber-body {
+  width: 22px;
+  height: 32px;
+  margin: 0 auto;
+  border-radius: 50% 50% 40% 40%;
+  background: linear-gradient(180deg, #ef4444 0%, #ef4444 50%, #ffffff 50%, #ffffff 100%);
+  border: 2px solid rgba(0,0,0,0.25);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+  animation: bobberIdle 2.5s ease-in-out infinite;
+}
+
+.bobber-antenna {
+  width: 3px;
+  height: 10px;
+  background: #1e293b;
+  margin: 0 auto;
+  border-radius: 2px;
+}
+
+.lake-bobber.is-waiting .bobber-body {
+  animation: bobberWaiting 0.8s ease-in-out infinite alternate;
+}
+
+.lake-bobber.is-strike .bobber-body {
+  animation: bobberStrike 0.15s ease-in-out infinite;
+  transform: scale(1.15);
+}
+
+@keyframes bobberIdle {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-6px) rotate(3deg); }
+}
+
+@keyframes bobberWaiting {
+  0%   { transform: translateY(-3px) rotate(-6deg); }
+  100% { transform: translateY(5px) rotate(6deg); }
+}
+
+@keyframes bobberStrike {
+  0%   { transform: translateY(8px) rotate(-8deg); }
+  50%  { transform: translateY(-4px) rotate(8deg); }
+  100% { transform: translateY(12px) rotate(0deg); }
+}
+
+/* Water Ripple Effect */
+.water-ripple {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 50%;
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.lake-bobber.is-strike + .water-ripple {
+  animation: ripplePop 0.8s ease-out infinite;
+}
+
+@keyframes ripplePop {
+  0%   { width: 30px; height: 10px; opacity: 0.9; }
+  100% { width: 120px; height: 40px; opacity: 0; }
+}
+
+/* Fishing Controls */
+.fishing-action-bar {
+  margin-top: -6px;
+  position: relative;
+  z-index: 10;
+}
+
+.btn-fish-cast {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border: 3px solid #ffffff;
+  border-radius: 22px;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(2,132,199,0.35), inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 4px rgba(3,105,161,0.5);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-shadow: 0 1px 2px rgba(3,105,161,0.6);
+}
+
+.btn-fish-cast:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(2,132,199,0.45);
+}
+
+.btn-fish-cast:active {
+  transform: translateY(2px);
+}
+
+.btn-fish-cast.is-strike {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+  box-shadow: 0 12px 28px rgba(225,29,72,0.45), inset 2px 2px 4px rgba(255,255,255,0.6) !important;
+  animation: strikePulse 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes strikePulse {
+  0%   { transform: scale(0.98); }
+  100% { transform: scale(1.02); }
+}
+
+/* Fish Catch Modal */
+.fish-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.75);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.fish-modal-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fish-modal-card {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border-radius: 28px;
+  border: 3.5px solid #ffffff;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.3), inset 2px 2px 6px #ffffff;
+  padding: 26px 22px;
+  text-align: center;
+  position: relative;
+  transform: scale(0.9);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.fish-modal-backdrop.is-open .fish-modal-card {
+  transform: scale(1);
+}
+
+.fish-splash-icon {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 14px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border: 3px solid #38bdf8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 46px;
+  box-shadow: 0 10px 24px rgba(56,189,248,0.3);
+  animation: fishBounce 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes fishBounce {
+  0%   { transform: translateY(0) scale(0.95); }
+  100% { transform: translateY(-8px) scale(1.05); }
+}
+
+.fish-name-txt {
+  font-size: 20px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.fish-reward-tag {
+  display: inline-block;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 6px 16px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 14px rgba(16,185,129,0.35);
+}
+
+/* Catches History Table */
+.catches-history-card {
+  background: #ffffff;
+  border: 2px solid rgba(255,255,255,0.95);
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(120,53,15,0.06);
+  margin-top: 16px;
+}
+
+.catch-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.catch-item-row:last-child {
+  border-bottom: none;
 }
 </style>
 
+<div class="fishing-page-wrap">
+
+  <!-- Top Title Bar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div>
+      <div style="font-size:18px;font-weight:900;color:#78350f;display:flex;align-items:center;gap:6px;">
+        <i class="ph-fill ph-fish" style="color:#0284c7;font-size:24px;"></i>
+        <span>Pemancingan Cuan Nusantara</span>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:#92400e;">Lempar kail, strike ikan cuan, dan tarik rupiah instan!</div>
+    </div>
+    <a href="/home" style="width:34px;height:34px;border-radius:12px;background:#fff;border:2px solid #fed7aa;display:flex;align-items:center;justify-content:center;color:#b45309;text-decoration:none;font-weight:800;">
+      <i class="ph-bold ph-x"></i>
+    </a>
+  </div>
+
+  <!-- Status Bar (Sisa Umpan & Saldo WD) -->
+  <div class="fishing-status-bar">
+    <div class="f-stat-card">
+      <div class="f-stat-card__lbl">
+        <i class="ph-fill ph-sparkle" style="color:#f59e0b;"></i> Sisa Umpan Kamu
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="f-stat-card__val" id="disp-baits-count">
+          🪱 <?= (int)($user['fishing_baits'] ?? 0) ?> Umpan
+        </span>
+        <button type="button" onclick="openBaitShopModal()" style="background:#fef3c7;border:1.5px solid #f59e0b;color:#b45309;font-size:10px;font-weight:900;padding:3px 8px;border-radius:8px;cursor:pointer;">
+          + Beli
+        </button>
+      </div>
+    </div>
+
+    <div class="f-stat-card">
+      <div class="f-stat-card__lbl">
+        <i class="ph-fill ph-trophy" style="color:#10b981;"></i> Cuan Mancing Hari Ini
+      </div>
+      <div class="f-stat-card__val" style="color:#059669;" id="disp-today-cuan">
+        <?= format_rp($todayCatchesTotal) ?>
+      </div>
+    </div>
+  </div>
+
+  <!-- The Fishing Lake Canvas -->
+  <div class="fishing-lake-card" id="lake-scene">
+    <div class="lake-sky">
+      <div class="lake-sun"></div>
+      <div class="lake-cloud">
+        <i class="ph-fill ph-waves"></i> Danau MancingCuan
+      </div>
+    </div>
+
+    <!-- Bobber Pelampung -->
+    <div class="lake-bobber" id="bobber-el">
+      <div class="bobber-antenna"></div>
+      <div class="bobber-body"></div>
+    </div>
+    <div class="water-ripple"></div>
+
+    <div class="lake-waves">
+      <div class="lake-wave lake-wave--1"></div>
+      <div class="lake-wave lake-wave--2"></div>
+    </div>
+
+    <!-- Status Teks Game -->
+    <div style="text-align:center;z-index:4;">
+      <span id="lake-status-msg" style="background:rgba(0,0,0,0.45);color:#fff;font-size:11px;font-weight:800;padding:4px 14px;border-radius:999px;backdrop-filter:blur(4px);">
+        Siap lempar kail! Tekan tombol di bawah untuk mulai.
+      </span>
+    </div>
+  </div>
+
+  <!-- Fishing Action Button -->
+  <div class="fishing-action-bar">
+    <button type="button" class="btn-fish-cast" id="btn-cast-action" onclick="handleCastClick()">
+      <i class="ph-fill ph-fish" id="btn-cast-ico" style="font-size:22px;"></i>
+      <span id="btn-cast-lbl">Lempar Kail (Pakai 1 Umpan)</span>
+    </button>
+  </div>
+
+  <!-- How to Get Baits Banner -->
+  <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:18px;padding:12px 14px;margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+    <div style="font-size:11px;font-weight:700;color:#166534;line-height:1.4;">
+      💡 <strong>Mau Umpan Gratis?</strong> Tonton video sampai selesai (+1 Umpan/video) atau login tiap hari!
+    </div>
+    <a href="/videos" style="background:#16a34a;color:#fff;font-size:10.5px;font-weight:900;padding:6px 12px;border-radius:10px;text-decoration:none;white-space:nowrap;flex-shrink:0;">
+      Nonton Video &rarr;
+    </a>
+  </div>
+
+  <!-- Today Catches History -->
+  <div class="catches-history-card">
+    <div style="font-size:13px;font-weight:900;color:#1e293b;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span>Riwayat Tangkapan Hari Ini</span>
+      <span style="font-size:11px;color:#64748b;"><?= count($todayCatches) ?> Ikan Terkumpul</span>
+    </div>
+
+    <div id="catches-list-wrap">
+      <?php if (empty($todayCatches)): ?>
+        <div style="text-align:center;padding:18px 0;color:#94a3b8;font-size:12px;font-weight:700;" id="empty-catches-notice">
+          Belum ada tangkapan hari ini. Yuk lempar kailmu sekarang!
+        </div>
+      <?php else: ?>
+        <?php foreach ($todayCatches as $tc): ?>
+          <div class="catch-item-row">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:20px;"><?= htmlspecialchars($tc['fish_icon']) ?></span>
+              <div>
+                <div style="font-size:12px;font-weight:800;color:#1e293b;"><?= htmlspecialchars($tc['fish_name']) ?></div>
+                <div style="font-size:10px;color:#64748b;"><?= $tc['weight_kg'] ?> Kg · <?= date('H:i', strtotime($tc['created_at'])) ?></div>
+              </div>
+            </div>
+            <div style="font-size:12px;font-weight:900;color:#10b981;">
+              +<?= format_rp((float)$tc['reward']) ?>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL POPUP 1: IKAN TERTANGKAP (CELEBRATION)
+     ══════════════════════════════════════════════ -->
+<div class="fish-modal-backdrop" id="modal-catch-el">
+  <div class="fish-modal-card">
+    <div class="fish-splash-icon" id="mc-icon">🐟</div>
+    <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#0284c7;margin-bottom:2px;" id="mc-rarity">
+      STRIKE BERHASIL!
+    </div>
+    <div class="fish-name-txt" id="mc-name">Ikan Gurame Emas</div>
+    <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px;" id="mc-weight">
+      Bobot: 2.45 Kg
+    </div>
+    <div class="fish-reward-tag" id="mc-reward">+Rp 1.500 Saldo Tarik</div>
+    <p style="font-size:11.5px;font-weight:700;color:#475569;margin-bottom:18px;">
+      Hadiah sudah otomatis ditambahkan ke <strong>Saldo Tarik (WD)</strong> akunmu!
+    </p>
+    <button type="button" class="btn-fish-cast" onclick="closeCatchModal()" style="padding:12px 20px;font-size:14px;">
+      <i class="ph-bold ph-check"></i> Ambil Hadiah &amp; Lanjut Mancing
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL POPUP 2: TOKO PAKET UMPAN
+     ══════════════════════════════════════════════ -->
+<div class="fish-modal-backdrop" id="modal-shop-el">
+  <div class="fish-modal-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:16px;font-weight:900;color:#0f172a;display:flex;align-items:center;gap:6px;">
+        <span>🪱 Toko Umpan Cuan</span>
+      </div>
+      <button type="button" onclick="closeBaitShopModal()" style="border:none;background:transparent;font-size:20px;cursor:pointer;color:#64748b;">×</button>
+    </div>
+
+    <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;padding:10px;margin-bottom:14px;font-size:11.5px;color:#475569;text-align:left;">
+      Saldo Beli Kamu: <strong style="color:#0284c7;" id="disp-shop-dep"><?= format_rp((float)($user['balance_dep'] ?? 0)) ?></strong>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Beli umpan menggunakan Saldo Beli (Deposit).</div>
+    </div>
+
+    <!-- Tier 1 -->
+    <div style="background:#fff;border:2px solid #e2e8f0;border-radius:16px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;text-align:left;">
+      <div>
+        <div style="font-size:12.5px;font-weight:800;color:#1e293b;">Paket Cacing Tanah</div>
+        <div style="font-size:10.5px;color:#64748b;">5 Umpan · Rp 5.000</div>
+      </div>
+      <button type="button" onclick="buyBaitPack(1)" style="background:#0284c7;color:#fff;border:none;font-size:11px;font-weight:800;padding:6px 12px;border-radius:10px;cursor:pointer;">
+        Beli
+      </button>
+    </div>
+
+    <!-- Tier 2 -->
+    <div style="background:#fff;border:2px solid #f59e0b;border-radius:16px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;text-align:left;">
+      <div>
+        <div style="font-size:12.5px;font-weight:800;color:#1e293b;">
+          Paket Pelet Super <span style="font-size:9px;background:#fef3c7;color:#b45309;padding:1px 6px;border-radius:6px;">HEMAT 20%</span>
+        </div>
+        <div style="font-size:10.5px;color:#64748b;">15 Umpan · Rp 12.000</div>
+      </div>
+      <button type="button" onclick="buyBaitPack(2)" style="background:#f59e0b;color:#fff;border:none;font-size:11px;font-weight:800;padding:6px 12px;border-radius:10px;cursor:pointer;">
+        Beli
+      </button>
+    </div>
+
+    <!-- Tier 3 -->
+    <div style="background:#fff;border:2px solid #10b981;border-radius:16px;padding:10px 12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;text-align:left;">
+      <div>
+        <div style="font-size:12.5px;font-weight:800;color:#1e293b;">
+          Paket Udang Hidup VIP <span style="font-size:9px;background:#d1fae5;color:#047857;padding:1px 6px;border-radius:6px;">HEMAT 30%</span>
+        </div>
+        <div style="font-size:10.5px;color:#64748b;">35 Umpan · Rp 25.000</div>
+      </div>
+      <button type="button" onclick="buyBaitPack(3)" style="background:#10b981;color:#fff;border:none;font-size:11px;font-weight:800;padding:6px 12px;border-radius:10px;cursor:pointer;">
+        Beli
+      </button>
+    </div>
+
+    <a href="/deposit" style="font-size:11px;font-weight:800;color:#0284c7;text-decoration:none;">
+      Top Up Saldo Beli via QRIS / Bank &rarr;
+    </a>
+  </div>
+</div>
+
 <script>
-const _csrf = '<?= csrf_token() ?>';
+let gameState = 'idle'; // 'idle', 'waiting', 'strike', 'reeling'
+let currentStrikeFish = null;
+let csrfToken = '<?= csrf_token() ?>';
 
-document.addEventListener('DOMContentLoaded', () => {
-    const startBtn = document.getElementById('start-btn');
-    if(!startBtn) return; // If already played
-    
-    const tapTarget = document.getElementById('tap-target');
-    const timeLeftEl = document.getElementById('time-left');
-    const scoreCountEl = document.getElementById('score-count');
-    const playArea = document.getElementById('play-area');
-    
-    let score = 0;
-    let timeLeft = 10.0;
-    let isPlaying = false;
-    let timerInterval;
-    let audioCtx;
+function handleCastClick() {
+  if (gameState === 'waiting') return;
 
-    function initAudio() {
-        if (!audioCtx) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) audioCtx = new AudioContext();
+  if (gameState === 'strike') {
+    // User strikes/reels in!
+    claimCatch();
+    return;
+  }
+
+  // State is idle -> start casting
+  castRod();
+}
+
+function castRod() {
+  const btn = document.getElementById('btn-cast-action');
+  const btnLbl = document.getElementById('btn-cast-lbl');
+  const bobber = document.getElementById('bobber-el');
+  const statusMsg = document.getElementById('lake-status-msg');
+
+  gameState = 'waiting';
+  btn.disabled = true;
+  btn.style.opacity = '0.7';
+  btnLbl.textContent = 'Kail di air... Menunggu ikan menyambar 🐟';
+  bobber.className = 'lake-bobber is-waiting';
+  statusMsg.textContent = 'Perhatikan pelampung... bersiap untuk menarik saat STRIKE!';
+
+  // Delay random 1.8s - 3.2s for bite
+  const waitMs = Math.floor(Math.random() * 1400) + 1800;
+  setTimeout(() => {
+    triggerStrike();
+  }, waitMs);
+}
+
+function triggerStrike() {
+  const btn = document.getElementById('btn-cast-action');
+  const btnLbl = document.getElementById('btn-cast-lbl');
+  const bobber = document.getElementById('bobber-el');
+  const statusMsg = document.getElementById('lake-status-msg');
+
+  gameState = 'strike';
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  btn.className = 'btn-fish-cast is-strike';
+  btnLbl.textContent = '🔥 STRIKE! TARIK KAIL SEKARANG!';
+  bobber.className = 'lake-bobber is-strike';
+  statusMsg.textContent = '⚡ IKAN MENYAMBAR! KLIK TOMBOL SEBELUM LEPAS!';
+
+  // Vibrate phone if supported
+  if (navigator.vibrate) {
+    navigator.vibrate([100, 50, 100]);
+  }
+}
+
+function claimCatch() {
+  const btn = document.getElementById('btn-cast-action');
+  const btnLbl = document.getElementById('btn-cast-lbl');
+  const bobber = document.getElementById('bobber-el');
+  const statusMsg = document.getElementById('lake-status-msg');
+
+  gameState = 'reeling';
+  btn.disabled = true;
+  btnLbl.textContent = 'Sedang mengangkat ikan ke permukaan...';
+  statusMsg.textContent = 'Tarik pelan-pelan...';
+
+  const fd = new FormData();
+  fd.append('action', 'cast_rod');
+  fd.append('csrf_token', csrfToken);
+
+  fetch('/minigame', {
+    method: 'POST',
+    body: fd
+  })
+  .then(r => r.json())
+  .then(res => {
+    resetLakeState();
+
+    if (!res.ok) {
+      if (res.out_of_baits) {
+        openBaitShopModal();
+      }
+      if (typeof nToast === 'function') nToast(res.msg, 'error');
+      else alert(res.msg);
+      return;
+    }
+
+    // Success! Show Catch Modal
+    currentStrikeFish = res.fish;
+    showCatchModal(res.fish, res.reward_rp);
+
+    // Update UI counters
+    document.getElementById('disp-baits-count').textContent = '🪱 ' + res.remaining_baits + ' Umpan';
+    
+    // Add row to history
+    prependCatchRow(res.fish);
+
+    if (typeof nToast === 'function') {
+      nToast('🎉 Menangkap ' + res.fish.name + ' (+Rp ' + res.reward_rp + ')!', 'success');
+    }
+  })
+  .catch(err => {
+    resetLakeState();
+    console.error(err);
+    alert('Terjadi kendala jaringan saat mengangkat kail.');
+  });
+}
+
+function resetLakeState() {
+  gameState = 'idle';
+  const btn = document.getElementById('btn-cast-action');
+  const btnLbl = document.getElementById('btn-cast-lbl');
+  const bobber = document.getElementById('bobber-el');
+  const statusMsg = document.getElementById('lake-status-msg');
+
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  btn.className = 'btn-fish-cast';
+  btnLbl.textContent = 'Lempar Kail (Pakai 1 Umpan)';
+  bobber.className = 'lake-bobber';
+  statusMsg.textContent = 'Siap lempar kail! Tekan tombol untuk mulai.';
+}
+
+function showCatchModal(fish, rewardRp) {
+  document.getElementById('mc-icon').textContent = fish.icon;
+  document.getElementById('mc-rarity').textContent = fish.rarity + ' CATCH!';
+  document.getElementById('mc-name').textContent = fish.name;
+  document.getElementById('mc-weight').textContent = 'Bobot: ' + fish.weight + ' Kg';
+  document.getElementById('mc-reward').textContent = '+' + rewardRp + ' Saldo Tarik';
+  
+  document.getElementById('modal-catch-el').classList.add('is-open');
+}
+
+function closeCatchModal() {
+  document.getElementById('modal-catch-el').classList.remove('is-open');
+}
+
+function openBaitShopModal() {
+  document.getElementById('modal-shop-el').classList.add('is-open');
+}
+
+function closeBaitShopModal() {
+  document.getElementById('modal-shop-el').classList.remove('is-open');
+}
+
+function buyBaitPack(tier) {
+  const fd = new FormData();
+  fd.append('action', 'buy_baits');
+  fd.append('pack_tier', tier);
+  fd.append('csrf_token', csrfToken);
+
+  fetch('/minigame', {
+    method: 'POST',
+    body: fd
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (!res.ok) {
+      if (res.need_deposit) {
+        if (confirm(res.msg + '\n\nBuka halaman Deposit sekarang?')) {
+          window.location.href = '/deposit';
         }
+      } else {
+        alert(res.msg);
+      }
+      return;
     }
 
-    function playCoinSound() {
-        if (!audioCtx) return;
-        try {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.frequency.value = 1200 + Math.random() * 400; // Random high pitch
-            osc.type = 'sine';
-            gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
-        } catch(e) {}
-    }
+    // Success
+    document.getElementById('disp-baits-count').textContent = '🪱 ' + res.new_baits + ' Umpan';
+    document.getElementById('disp-shop-dep').textContent = res.balance_dep;
+    closeBaitShopModal();
+    if (typeof nToast === 'function') nToast(res.msg, 'success');
+    else alert(res.msg);
+  })
+  .catch(err => {
+    console.error(err);
+    alert('Gagal memproses pembelian umpan.');
+  });
+}
 
-    startBtn.addEventListener('click', () => {
-        initAudio(); // Must be initialized inside user interaction
-        document.getElementById('start-overlay').style.display = 'none';
-        playArea.style.display = 'flex';
-        startGame();
-    });
+function prependCatchRow(fish) {
+  const list = document.getElementById('catches-list-wrap');
+  const emptyNotice = document.getElementById('empty-catches-notice');
+  if (emptyNotice) emptyNotice.remove();
 
-    // Handle both click and touch for faster tapping without double firing
-    const handleTap = (e) => {
-        if (!isPlaying) return;
-        e.preventDefault(); // prevent zoom / scroll
-        
-        score++;
-        scoreCountEl.innerText = score;
-        
-        // Squish effect
-        tapTarget.classList.remove('tapped');
-        void tapTarget.offsetWidth; // trigger reflow
-        tapTarget.classList.add('tapped');
-        
-        // Vibrate
-        if (navigator.vibrate) navigator.vibrate(20);
-        
-        // SFX
-        playCoinSound();
-        
-        // Spawn floating text
-        spawnFloatingText(e);
-    };
-
-    tapTarget.addEventListener('touchstart', handleTap, {passive: false});
-    tapTarget.addEventListener('mousedown', (e) => {
-        if(e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return; // avoid double fire
-        handleTap(e);
-    });
-    
-    tapTarget.addEventListener('touchend', () => tapTarget.classList.remove('tapped'));
-    tapTarget.addEventListener('mouseup', () => tapTarget.classList.remove('tapped'));
-
-    function startGame() {
-        isPlaying = true;
-        score = 0;
-        timeLeft = 10.0;
-        
-        timerInterval = setInterval(() => {
-            timeLeft -= 0.1;
-            if (timeLeft <= 0) {
-                timeLeft = 0;
-                endGame();
-            }
-            timeLeftEl.innerText = timeLeft.toFixed(1);
-        }, 100);
-    }
-    
-    function endGame() {
-        isPlaying = false;
-        clearInterval(timerInterval);
-        
-        // Show result overlay
-        document.getElementById('result-overlay').style.display = 'flex';
-        document.getElementById('final-taps').innerText = score;
-        
-        // Submit score via AJAX
-        submitScore(score);
-    }
-    
-    function spawnFloatingText(e) {
-        const text = document.createElement('img');
-        text.className = 'floating-text';
-        // Randomize dollar.png and dlr.png
-        text.src = Math.random() > 0.5 ? '/assets/dollar.png' : '/assets/dlr.png';
-        text.style.width = '40px';
-        text.style.height = '40px';
-        text.style.objectFit = 'contain';
-        
-        // Random slight rotation
-        const rot = Math.floor(Math.random() * 60) - 30;
-        text.style.transform = `rotate(${rot}deg)`;
-        
-        // Position
-        let x, y;
-        const rect = playArea.getBoundingClientRect();
-        if (e.touches && e.touches.length > 0) {
-            x = e.touches[0].clientX - rect.left;
-            y = e.touches[0].clientY - rect.top;
-        } else {
-            x = e.clientX - rect.left;
-            y = e.clientY - rect.top;
-        }
-        
-        text.style.left = (x - 10) + 'px';
-        text.style.top = (y - 20) + 'px';
-        
-        document.getElementById('floating-texts').appendChild(text);
-        
-        setTimeout(() => text.remove(), 800);
-    }
-    
-    async function submitScore(finalScore) {
-        try {
-            const formData = new FormData();
-            formData.append('action', 'claim');
-            formData.append('clicks', finalScore);
-            formData.append('_csrf', _csrf);
-            
-            const res = await fetch('', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-            
-            document.getElementById('reward-loading').style.display = 'none';
-            document.getElementById('reward-success').style.display = 'block';
-            
-            if(data.success) {
-                // format rp
-                document.getElementById('reward-amount').innerText = 
-                    'Rp ' + parseInt(data.reward).toLocaleString('id-ID');
-            } else {
-                document.getElementById('reward-amount').innerText = 'Gagal';
-                if (typeof nToast === 'function') nToast(data.message || 'Terjadi kesalahan.', 'error');
-            }
-        } catch (err) {
-            document.getElementById('reward-loading').style.display = 'none';
-            document.getElementById('reward-success').style.display = 'block';
-            document.getElementById('reward-amount').innerText = 'Error';
-            
-            // Debug the raw text in case of fatal HTML error
-            if (typeof nToast === 'function') nToast('Terjadi kesalahan koneksi.', 'error');
-        }
-    }
-});
+  const row = document.createElement('div');
+  row.className = 'catch-item-row';
+  row.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:20px;">${fish.icon}</span>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#1e293b;">${fish.name}</div>
+        <div style="font-size:10px;color:#64748b;">${fish.weight} Kg · Baru saja</div>
+      </div>
+    </div>
+    <div style="font-size:12px;font-weight:900;color:#10b981;">
+      +Rp ${Number(fish.reward).toLocaleString('id-ID')}
+    </div>
+  `;
+  list.insertBefore(row, list.firstChild);
+}
 </script>
 
 <?php require dirname(__DIR__) . '/partials/footer.php'; ?>

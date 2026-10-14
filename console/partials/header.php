@@ -504,9 +504,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 
     <!-- 3. KONTEN & VIDEO (COLLAPSIBLE) -->
     <?php
-    $farmPages = ['videos', 'memberships'];
+    $farmPages = ['videos', 'memberships', 'home_cms'];
     $isFarmActive = in_array($activePage ?? '', $farmPages, true);
-    $canFarm = staff_can('videos') || staff_can('memberships');
+    $canFarm = staff_can('videos') || staff_can('memberships') || staff_can('home_cms') || staff_can('settings');
     ?>
     <?php if ($canFarm): ?>
     <div class="c-sidebar__label" style="margin-top:6px">Video &amp; Konten 🎬</div>
@@ -534,6 +534,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
           <a href="/console/memberships.php" class="c-nav-sublink <?= $activePage==='memberships'?'active':'' ?>">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
             <span>Paket Membership</span>
+          </a>
+          <?php endif; ?>
+
+          <?php if (staff_can('home_cms') || staff_can('settings')): ?>
+          <a href="/console/home_cms.php" class="c-nav-sublink <?= $activePage==='home_cms'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            <span>CMS Beranda &amp; Mancing</span>
           </a>
           <?php endif; ?>
         </div>

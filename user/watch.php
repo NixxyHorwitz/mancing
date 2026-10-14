@@ -305,8 +305,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'claim
 
         $pdo->prepare("INSERT INTO watch_history (user_id,video_id,reward_given) VALUES (?,?,?)")
             ->execute([$user['id'], $vid_id, $reward]);
-        $pdo->prepare("UPDATE users SET balance_wd=balance_wd+?,total_earned=total_earned+? WHERE id=?")
-            ->execute([$reward, $reward, $user['id']]);
+        $cms_cfg = home_cms_config($pdo);
+        $bait_bonus = !empty($cms_cfg['fishing_engine']['enabled']) ? max(0, (int)($cms_cfg['fishing_engine']['bait_per_video'] ?? 1)) : 0;
+
+        $pdo->prepare("UPDATE users SET balance_wd=balance_wd+?,total_earned=total_earned+?,fishing_baits=fishing_baits+? WHERE id=?")
+            ->execute([$reward, $reward, $bait_bonus, $user['id']]);
 
         // Sinkronkan total_watches = fake_watches + real_watches (watch_history)
         try {
@@ -326,9 +329,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'claim
         $pdo->commit();
 
         $debug_notice = $is_debug_user ? ' [Mode Debug Tester]' : '';
-        $_SESSION['flash_videos_msg'] = 'Reward ' . format_rp($reward) . ' berhasil diklaim!' . $debug_notice;
+        $bait_msg = $bait_bonus > 0 ? " + 🎣 {$bait_bonus} Umpan Mancing" : "";
+        $_SESSION['flash_videos_msg'] = 'Reward ' . format_rp($reward) . $bait_msg . ' berhasil diklaim!' . $debug_notice;
         $_SESSION['flash_videos_type'] = 'success';
-        echo json_encode(['ok'=>true,'reward'=>format_rp($reward),'msg'=>'+' . format_rp($reward) . ' berhasil ditambahkan!' . $debug_notice]);
+        echo json_encode(['ok'=>true,'reward'=>format_rp($reward),'msg'=>'+' . format_rp($reward) . $bait_msg . ' berhasil ditambahkan!' . $debug_notice]);
     } catch (\Throwable) {
         $pdo->rollBack();
         echo json_encode(['ok'=>false,'msg'=>'Terjadi kendala pada server. Silakan coba lagi.']);

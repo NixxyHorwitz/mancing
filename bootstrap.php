@@ -211,6 +211,206 @@ function site_logo(PDO $pdo): string {
     return $logo;
 }
 
+/**
+ * Get Home CMS configuration with robust defaults
+ */
+function home_cms_config(PDO $pdo): array {
+    $raw = setting($pdo, 'home_cms_config', '');
+    $saved = $raw ? json_decode($raw, true) : null;
+    if (!is_array($saved)) {
+        $saved = [];
+    }
+
+    $defaults = [
+        // 1. HERO USER & SALDO
+        'hero' => [
+            'show_user_bar'      => true,
+            'show_mascot'        => true,
+            'mascot_text'        => 'Halo {username}! Nonton video hari ini & kumpulkan saldo Rupiah. Pancing ikan cuan & bagikan bukti hasilmu!',
+            'show_balance_card'  => true,
+            'show_today_stats'   => true,
+            'show_ref_strip'     => true,
+            'show_watch_mission' => true,
+            'show_upgrade_btn'   => true,
+            'show_watch_cta'     => true,
+            'watch_cta_text'     => 'Mulai Tonton Video Sekarang',
+            'show_quick_actions' => true,
+        ],
+        // 2. TOUR PANDUAN PENGGUNA BARU
+        'tour' => [
+            'show_banner' => true,
+            'title'       => 'Baru di MancingCuan? Yuk Ikuti Panduan Singkat! 🎣',
+            'desc'        => 'Pelajari langkah mudah menghasilkan saldo rupiah dari nonton video dan mancing cuan:',
+        ],
+        // 3. BENTO QUICK TILES
+        'bento' => [
+            'show_section' => true,
+            'title'        => 'Menu Cepat & Fitur Cuan',
+            'tiles'        => [
+                [
+                    'id'      => 'watch',
+                    'enabled' => true,
+                    'label'   => 'Tonton',
+                    'url'     => '/videos',
+                    'icon'    => 'ph-film-strip',
+                    'bg'      => 'linear-gradient(135deg,#f97316,#ea580c)',
+                ],
+                [
+                    'id'      => 'fishing',
+                    'enabled' => true,
+                    'label'   => 'Mancing',
+                    'url'     => '/minigame',
+                    'icon'    => 'ph-fish',
+                    'bg'      => 'linear-gradient(135deg,#0284c7,#0369a1)',
+                ],
+                [
+                    'id'      => 'threads',
+                    'enabled' => true,
+                    'label'   => 'Threads',
+                    'url'     => '/threads',
+                    'icon'    => 'ph-threads-logo',
+                    'bg'      => 'linear-gradient(135deg,#18181b,#27272a)',
+                ],
+                [
+                    'id'      => 'survey',
+                    'enabled' => true,
+                    'label'   => 'Survei',
+                    'url'     => '/survey',
+                    'icon'    => 'ph-clipboard-text',
+                    'bg'      => 'linear-gradient(135deg,#059669,#047857)',
+                ],
+                [
+                    'id'      => 'checkin',
+                    'enabled' => true,
+                    'label'   => 'Check-in',
+                    'url'     => '/checkin',
+                    'icon'    => 'ph-calendar-check',
+                    'bg'      => 'linear-gradient(135deg,#f59e0b,#d97706)',
+                ],
+                [
+                    'id'      => 'missions',
+                    'enabled' => true,
+                    'label'   => 'Misi',
+                    'url'     => '/missions',
+                    'icon'    => 'ph-target',
+                    'bg'      => 'linear-gradient(135deg,#8b5cf6,#6d28d9)',
+                ],
+                [
+                    'id'      => 'referral',
+                    'enabled' => true,
+                    'label'   => 'Undang',
+                    'url'     => '/referral',
+                    'icon'    => 'ph-users-three',
+                    'bg'      => 'linear-gradient(135deg,#10b981,#047857)',
+                ],
+                [
+                    'id'      => 'upgrade',
+                    'enabled' => true,
+                    'label'   => 'VIP Upgrade',
+                    'url'     => '/upgrade',
+                    'icon'    => 'ph-crown',
+                    'bg'      => 'linear-gradient(135deg,#fbbf24,#d97706)',
+                ],
+            ],
+        ],
+        // 4. BANNER SURVEI PENGGUNA
+        'survey_banner' => [
+            'enabled' => true,
+            'title'   => 'Survei Pengguna Berhadiah',
+            'badge'   => '+Rp 15.000 WD',
+            'desc'    => 'Bantu kami berkembang 2 menit & dapatkan Rp 15.000 saldo tarik langsung!',
+            'cta'     => 'Isi Survei',
+        ],
+        // 5. BANNER AJAKAN PROMOSI / PROMO HUB
+        'promo_banner' => [
+            'enabled' => true,
+            'title'   => 'Ajak Teman & Promosi Cuan',
+            'badge'   => '+Rp 75.000',
+            'desc'    => 'Viral di Threads & bagikan link untuk panen komisi saldo tunai!',
+            'cta'     => 'Mulai',
+        ],
+        // 6. RIWAYAT LANJUTKAN MENONTON
+        'continue_watching' => [
+            'enabled' => true,
+            'title'   => 'Lanjutkan Menonton',
+            'limit'   => 3,
+        ],
+        // 7. CARD PROMOSI THREADS
+        'threads_card' => [
+            'enabled'     => true,
+            'badge_event' => 'EVENT PROMOSI THREADS',
+            'badge_cuan'  => '+Rp 75.000 & Gaji Pasti',
+            'title'       => 'Viral di Threads & Jadi Promotor Khusus! 👑',
+            'desc'        => 'Posting ceritamu, raih reward di Langkah 1 & bonus gaji pasti jika tembus 5K views!',
+        ],
+        // 8. TUGAS VIDEO PILIHAN
+        'featured_videos' => [
+            'enabled' => true,
+            'title'   => 'Video Pilihan Berhadiah',
+            'desc'    => 'Tonton video pilihan berdurasi singkat dan saldo cuan langsung bertambah otomatis!',
+            'limit'   => 4,
+        ],
+        // 9. SPOTLIGHT GAME MANCING CUAN
+        'fishing_spotlight' => [
+            'enabled' => true,
+            'badge'   => '🎣 GAME SPOTLIGHT',
+            'title'   => 'Kolam Pemancingan Cuan 🐟',
+            'desc'    => 'Lempar kailmu, strike ikan berkantong uang tunai, dan kumpulkan saldo tarik rupiah!',
+            'cta'     => 'Mulai Mancing Sekarang',
+            'url'     => '/minigame',
+        ],
+        // 10. TIPS CUAN
+        'tips' => [
+            'enabled' => true,
+            'title'   => 'Tips Cuan Harian',
+            'text'    => 'Tonton video sampai kuota harianmu penuh, pancing ikan cuan, dan undang teman untuk komisi pasif tanpa batas!',
+        ],
+        // 11. INBOX NOTIFIKASI
+        'notif_inbox' => [
+            'enabled' => true,
+        ],
+        // 12. FLOATING PROMO BUTTON
+        'floating_promo' => [
+            'enabled' => true,
+            'title'   => 'Bonus Promosi',
+            'sub'     => 'Raih Rp 75K',
+            'badge'   => 'Hot',
+        ],
+        // 13. SISTEM ENGINE MANCING
+        'fishing_engine' => [
+            'enabled'          => true,
+            'daily_free_baits' => 3,
+            'bait_per_video'   => 1,
+            'reward_min'       => 100,
+            'reward_max'       => 5000,
+            'bait_pack_price'  => 5000,
+            'bait_pack_qty'    => 5,
+        ],
+    ];
+
+    // Deep merge saved into defaults
+    foreach ($defaults as $sec => $val) {
+        if (!isset($saved[$sec])) {
+            $saved[$sec] = $val;
+        } elseif (is_array($val) && $sec !== 'bento') {
+            $saved[$sec] = array_merge($val, (array)$saved[$sec]);
+        }
+    }
+
+    if (!isset($saved['bento']['tiles']) || !is_array($saved['bento']['tiles'])) {
+        $saved['bento']['tiles'] = $defaults['bento']['tiles'];
+    }
+
+    return $saved;
+}
+
+/**
+ * Save Home CMS configuration
+ */
+function home_cms_config_set(PDO $pdo, array $config): void {
+    setting_set($pdo, 'home_cms_config', json_encode($config, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+}
+
 // ============================================================
 // MAINTENANCE MODE ENFORCEMENT
 // ============================================================

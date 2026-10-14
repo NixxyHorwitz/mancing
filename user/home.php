@@ -28,6 +28,9 @@ if (!$is_guest) {
     $user = $uStmt->fetch(PDO::FETCH_ASSOC);
 }
 
+// ── KONFIGURASI HOME CMS ──
+$cms = home_cms_config($pdo);
+
 // ── TUGAS UTAMA: DATA NONTON VIDEO ──
 $watch_limit = user_watch_limit($pdo, $user);
 $watch_today = user_watch_today($pdo, $user);
@@ -50,22 +53,26 @@ $ref_url = function_exists('base_url') ? base_url('register/' . ($ref_code !== '
 
 // Video Populer & Cuan Hari Ini
 $featured_videos = [];
-try {
-    $vStmt = $pdo->prepare("
-        SELECT v.*,
-               (SELECT COUNT(*) FROM watch_history wh WHERE wh.user_id = ? AND wh.video_id = v.id AND DATE(wh.watched_at) = CURDATE()) AS watched_today
-        FROM videos v
-        WHERE v.is_active = 1
-        ORDER BY v.sort_order ASC, v.id DESC
-        LIMIT 4
-    ");
-    $vStmt->execute([$user['id']]);
-    $featured_videos = $vStmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (\Throwable) {}
+$feat_limit = max(1, min(20, (int)($cms['featured_videos']['limit'] ?? 4)));
+if (!empty($cms['featured_videos']['enabled'])) {
+    try {
+        $vStmt = $pdo->prepare("
+            SELECT v.*,
+                   (SELECT COUNT(*) FROM watch_history wh WHERE wh.user_id = ? AND wh.video_id = v.id AND DATE(wh.watched_at) = CURDATE()) AS watched_today
+            FROM videos v
+            WHERE v.is_active = 1
+            ORDER BY v.sort_order ASC, v.id DESC
+            LIMIT {$feat_limit}
+        ");
+        $vStmt->execute([$user['id']]);
+        $featured_videos = $vStmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (\Throwable) {}
+}
 
-// Riwayat Tontonan Belum Selesai (Maksimal 3 per user)
+// Riwayat Tontonan Belum Selesai
 $continue_watching_home = [];
-if (!$is_guest) {
+$cw_limit = max(1, min(10, (int)($cms['continue_watching']['limit'] ?? 3)));
+if (!$is_guest && !empty($cms['continue_watching']['enabled'])) {
     try {
         $pdo->prepare(
             "DELETE uwp FROM user_watch_progress uwp
@@ -80,7 +87,7 @@ if (!$is_guest) {
             JOIN videos v ON v.id = uwp.video_id
             WHERE uwp.user_id = ? AND v.is_active = 1
             ORDER BY uwp.updated_at DESC
-            LIMIT 3
+            LIMIT {$cw_limit}
         ");
         $cwHStmt->execute([$user['id']]);
         $continue_watching_home = $cwHStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1373,6 +1380,7 @@ body {
      ══════════════════════════════════════════════════════════ -->
 <div class="amber-hero-wrap">
   <!-- User Profile Row -->
+  <?php if (!empty($cms['hero']['show_user_bar'])): ?>
   <div class="hero-user-bar">
     <div class="hero-user-left">
       <div class="hero-avatar-box">
@@ -1400,18 +1408,25 @@ body {
       </a>
     <?php endif; ?>
   </div>
+  <?php endif; ?>
 
   <!-- Mascot Speech Bubble -->
+  <?php if (!empty($cms['hero']['show_mascot'])): 
+    $mascotRaw = $cms['hero']['mascot_text'] ?? 'Halo {username}! Nonton video hari ini & kumpulkan saldo Rupiah.';
+    $mascotFormatted = str_replace('{username}', '<strong>' . htmlspecialchars($user['username']) . '</strong>', htmlspecialchars($mascotRaw));
+  ?>
   <div class="mascot-dialogue">
     <div class="mascot-dialogue__icon">
       <i class="ph-fill ph-sparkle" style="font-size:18px;color:#d97706;"></i>
     </div>
     <div class="mascot-dialogue__text">
-      Halo <strong><?= htmlspecialchars($user['username']) ?></strong>! Nonton video hari ini & kumpulkan saldo Rupiah. Bagikan screenshot bukti cuanmu ke teman untuk raih komisi!
+      <?= $mascotFormatted ?>
     </div>
   </div>
+  <?php endif; ?>
 
   <!-- ── THE VIP FLEX CARD (SCREENSHOT TARGET) ── -->
+  <?php if (!empty($cms['hero']['show_balance_card'])): ?>
   <div class="cuan-flex-card" id="cuan-ss-target">
     <!-- Header Card -->
     <div class="cuan-card-header">
@@ -1444,6 +1459,7 @@ body {
     </div>
 
     <!-- Dual Stat Pills: Cuan Hari Ini & Total Dihasilkan -->
+    <?php if (!empty($cms['hero']['show_today_stats'])): ?>
     <div class="cuan-stats-pills">
       <div class="cuan-pill">
         <div class="cuan-pill-lbl">
@@ -1462,8 +1478,10 @@ body {
         </div>
       </div>
     </div>
+    <?php endif; ?>
 
     <!-- Referral Code Strip on Card (High Visibility for Screenshots!) -->
+    <?php if (!empty($cms['hero']['show_ref_strip'])): ?>
     <div class="cuan-ref-banner" onclick="copyRefCode('<?= htmlspecialchars($ref_code) ?>')" title="Klik untuk menyalin kode referral">
       <div class="cuan-ref-left">
         <span class="cuan-ref-tag"><i class="ph-bold ph-ticket"></i> KODE REFF</span>
@@ -1474,8 +1492,10 @@ body {
         <span>Salin</span>
       </button>
     </div>
+    <?php endif; ?>
 
     <!-- Integrated Video Task Mission Bar -->
+    <?php if (!empty($cms['hero']['show_watch_mission'])): ?>
     <div class="cuan-video-mission" id="tour-video-mission">
       <div class="cvm-head">
         <span class="cvm-badge"><i class="ph-fill ph-film-strip"></i> Misi Video Hari Ini</span>
@@ -1491,9 +1511,10 @@ body {
         <span><?= $watch_remaining > 0 ? "Sisa {$watch_remaining} video lagi" : "✓ Kuota Penuh!" ?></span>
       </div>
     </div>
+    <?php endif; ?>
 
     <!-- Highlight Tombol Upgrade jika User Sudah Berpenghasilan Lumayan -->
-    <?php if ($user_has_good_income): ?>
+    <?php if ($user_has_good_income && !empty($cms['hero']['show_upgrade_btn'])): ?>
       <a href="/upgrade" class="btn-upgrade-highlight" title="Upgrade VIP untuk lipatgandakan kuota dan cuan">
         <div class="buh-content">
           <div class="buh-badge">
@@ -1513,13 +1534,16 @@ body {
     <?php endif; ?>
 
     <!-- Primary CTA: Mulai Nonton Video Sekarang -->
+    <?php if (!empty($cms['hero']['show_watch_cta'])): ?>
     <a href="/videos" class="btn-cuan-watch-now" id="tour-btn-watch">
       <i class="ph-fill ph-play-circle" style="font-size:20px;"></i>
-      <span><?= $watch_remaining > 0 ? 'Mulai Tonton Video Sekarang' : 'Buka Galeri Video & Cuan' ?></span>
+      <span><?= htmlspecialchars($cms['hero']['watch_cta_text'] ?? ($watch_remaining > 0 ? 'Mulai Tonton Video Sekarang' : 'Buka Galeri Video & Cuan')) ?></span>
       <i class="ph-bold ph-arrow-right"></i>
     </a>
+    <?php endif; ?>
 
     <!-- Quick Action Buttons -->
+    <?php if (!empty($cms['hero']['show_quick_actions'])): ?>
     <div class="cuan-card-actions">
       <a href="/withdraw" class="cuan-btn-action cuan-btn-action--wd" id="tour-btn-withdraw">
         <i class="ph-bold ph-arrow-up-right"></i> Tarik Saldo
@@ -1531,12 +1555,15 @@ body {
         <i class="ph-bold ph-clock-counter-clockwise"></i> Riwayat
       </a>
     </div>
+    <?php endif; ?>
   </div>
+  <?php endif; ?>
 </div>
 
 <div class="home-feed">
 
   <!-- BANNER AJAKAN TOUR INTERAKTIF UNTUK PENGGUNA BARU -->
+  <?php if (!empty($cms['tour']['show_banner'])): ?>
   <div id="tour-invite-card" class="tour-invite-card">
     <div class="tour-invite-header">
       <div class="tour-invite-badge">
@@ -1547,8 +1574,8 @@ body {
         <i class="ph-bold ph-x"></i>
       </button>
     </div>
-    <div class="tour-invite-title">Baru di MancingCuan? Yuk Ikuti Panduan Singkat! 🎣</div>
-    <div class="tour-invite-desc">Pelajari langkah mudah menghasilkan saldo rupiah dari nonton video dan selesaikan misi:</div>
+    <div class="tour-invite-title"><?= htmlspecialchars($cms['tour']['title'] ?? 'Baru di MancingCuan? Yuk Ikuti Panduan Singkat! 🎣') ?></div>
+    <div class="tour-invite-desc"><?= htmlspecialchars($cms['tour']['desc'] ?? 'Pelajari langkah mudah menghasilkan saldo rupiah dari nonton video dan selesaikan misi:') ?></div>
     <div class="tour-invite-buttons">
       <button type="button" class="btn-tour-choice btn-tour-choice--watch" onclick="startInteractiveTour('watch')" style="width:100%;">
         <div class="btn-tour-choice-icon"><i class="ph-fill ph-film-strip"></i></div>
@@ -1560,14 +1587,16 @@ body {
       </button>
     </div>
   </div>
+  <?php endif; ?>
 
   <!-- ══════════════════════════════════════════════════════════
-       1. MENU CEPAT & AKSES UTAMA (QUICK ACCESS)
+       1. MENU CEPAT & AKSES UTAMA (BENTO QUICK ACCESS)
        ══════════════════════════════════════════════════════════ -->
+  <?php if (!empty($cms['bento']['show_section'])): ?>
   <div style="font-size:13px;font-weight:900;color:#78350f;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
     <div style="display:flex;align-items:center;gap:6px;">
       <i class="ph-fill ph-squares-four" style="color:#d97706;font-size:18px;"></i>
-      <span>Menu Cepat & Fitur Cuan</span>
+      <span><?= htmlspecialchars($cms['bento']['title'] ?? 'Menu Cepat & Fitur Cuan') ?></span>
     </div>
     <button type="button" onclick="openTourSelectModal()" class="btn-tour-pill">
       <i class="ph-bold ph-compass"></i> Panduan Tour
@@ -1575,113 +1604,60 @@ body {
   </div>
 
   <div class="bento-menu-grid">
-    <!-- Tile 1: Nonton Video -->
-    <a href="/videos" class="b-tile" id="tour-tile-video">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#f97316,#ea580c);">
-        <i class="ph-fill ph-film-strip"></i>
-      </div>
-      <span class="b-tile__lbl">Tonton</span>
-    </a>
-
-    <!-- Tile 2: Minigame Putar Roda -->
-    <a href="/minigame" class="b-tile" id="tour-tile-minigame">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);border-color:#3730a3;">
-        <i class="ph-fill ph-game-controller"></i>
-      </div>
-      <span class="b-tile__lbl">Minigame</span>
-    </a>
-
-    <!-- Tile 3: Bonus Promo Threads -->
-    <a href="/threads" class="b-tile" id="tour-tile-threads">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#18181b,#27272a);border-color:#52525b;">
-        <i class="ph-bold ph-threads-logo"></i>
-      </div>
-      <span class="b-tile__lbl">Threads</span>
-    </a>
-
-    <!-- Tile 4: Survei Berbayar -->
-    <a href="/survey" class="b-tile" id="tour-tile-survey">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#059669,#047857);border-color:#064e3b;">
-        <i class="ph-fill ph-clipboard-text"></i>
-      </div>
-      <span class="b-tile__lbl">Survei</span>
-    </a>
-
-    <!-- Tile 5: Absen Hadiah Harian (Checkin) -->
-    <a href="/checkin" class="b-tile" id="tour-tile-checkin">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);border-color:#78350f;">
-        <i class="ph-fill ph-calendar-check"></i>
-        <?php if (!$has_checked_in_today): ?>
-          <span class="b-tile-badge-dot"></span>
-        <?php endif; ?>
-      </div>
-      <span class="b-tile__lbl">Check-in</span>
-    </a>
-
-    <!-- Tile 6: Misi Harian -->
-    <a href="/missions" class="b-tile" id="tour-tile-missions">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-color:#4c1d95;">
-        <i class="ph-fill ph-target"></i>
-      </div>
-      <span class="b-tile__lbl">Misi</span>
-    </a>
-
-    <!-- Tile 7: Undang Teman -->
-    <a href="/referral" class="b-tile" id="tour-tile-referral">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#10b981,#047857);border-color:#064e3b;">
-        <i class="ph-fill ph-users-three"></i>
-      </div>
-      <span class="b-tile__lbl">Undang</span>
-    </a>
-
-    <!-- Tile 8: Upgrade VIP (Hanya muncul jika sudah menghasilkan cuan lumayan) / Panduan Cuan jika masih baru -->
-    <?php if ($show_upgrade_feature): ?>
-      <a href="/upgrade" class="b-tile <?= $user_has_good_income ? 'b-tile--highlighted' : 'b-tile--vip-glow' ?>" id="tour-tile-upgrade" style="position:relative;">
-        <?php if ($user_has_good_income): ?>
+    <?php foreach (($cms['bento']['tiles'] ?? []) as $tile): 
+      if (empty($tile['enabled'])) continue;
+      $tUrl = $tile['url'] ?? '#';
+      $tLabel = $tile['label'] ?? '';
+      $tIcon = $tile['icon'] ?? 'ph-circle';
+      $tBg = $tile['bg'] ?? 'linear-gradient(135deg,#f59e0b,#d97706)';
+      $tId = $tile['id'] ?? '';
+    ?>
+      <a href="<?= htmlspecialchars($tUrl) ?>" class="b-tile <?= $tId==='upgrade' && $user_has_good_income ? 'b-tile--highlighted' : '' ?>" id="tour-tile-<?= htmlspecialchars($tId) ?>">
+        <?php if ($tId === 'upgrade' && $user_has_good_income): ?>
           <span class="b-tile-badge-cuan"><i class="ph-fill ph-sparkle"></i> REKOMENDASI</span>
         <?php endif; ?>
-        <div class="b-tile__icon" style="background:linear-gradient(135deg,#fbbf24,#d97706);border-color:#78350f;">
-          <i class="ph-fill ph-crown" style="color:#78350f;"></i>
+        <div class="b-tile__icon" style="background:<?= htmlspecialchars($tBg) ?>;">
+          <i class="ph-fill <?= htmlspecialchars($tIcon) ?>"></i>
+          <?php if ($tId === 'checkin' && !$has_checked_in_today): ?>
+            <span class="b-tile-badge-dot"></span>
+          <?php endif; ?>
         </div>
-        <span class="b-tile__lbl" style="color:#b45309;font-weight:900;">VIP Upgrade</span>
+        <span class="b-tile__lbl"><?= htmlspecialchars($tLabel) ?></span>
       </a>
-    <?php else: ?>
-      <a href="/panduan" class="b-tile">
-        <div class="b-tile__icon" style="background:linear-gradient(135deg,#64748b,#475569);border-color:#334155;">
-          <i class="ph-fill ph-book-open"></i>
-        </div>
-        <span class="b-tile__lbl">Panduan</span>
-      </a>
-    <?php endif; ?>
+    <?php endforeach; ?>
   </div>
+  <?php endif; ?>
 
   <!-- ══════════════════════════════════════════════════════════
        SURVEI PENGGUNA BERHADIAH RP 15.000 SALDO TARIK
        ══════════════════════════════════════════════════════════ -->
-  <a href="/survey" class="survey-invite-banner" title="Isi Survei Singkat & Dapatkan Rp 15.000 Saldo Tarik">
+  <?php if (!empty($cms['survey_banner']['enabled'])): ?>
+  <a href="/survey" class="survey-invite-banner" title="Isi Survei Singkat & Dapatkan Saldo Tarik">
     <div class="sib-left">
       <div class="sib-icon-box <?= $user_has_surveyed ? 'sib-icon-box--done' : '' ?>">
         <i class="ph-bold <?= $user_has_surveyed ? 'ph-check-circle' : 'ph-clipboard-text' ?>"></i>
       </div>
       <div class="sib-text">
         <div class="sib-title">
-          <span><?= $user_has_surveyed ? 'Survei Selesai (Klaim Berhasil)' : 'Survei Pengguna Berhadiah' ?></span>
-          <span class="sib-badge <?= $user_has_surveyed ? 'sib-badge--done' : '' ?>"><?= $user_has_surveyed ? 'Klaim Berhasil' : '+Rp 15.000 WD' ?></span>
+          <span><?= $user_has_surveyed ? 'Survei Selesai (Klaim Berhasil)' : htmlspecialchars($cms['survey_banner']['title'] ?? 'Survei Pengguna Berhadiah') ?></span>
+          <span class="sib-badge <?= $user_has_surveyed ? 'sib-badge--done' : '' ?>"><?= $user_has_surveyed ? 'Klaim Berhasil' : htmlspecialchars($cms['survey_banner']['badge'] ?? '+Rp 15.000 WD') ?></span>
         </div>
         <div class="sib-desc">
-          <?= $user_has_surveyed ? 'Terima kasih telah berpartisipasi! Saldo tarik Rp 15.000 sudah masuk.' : 'Bantu kami berkembang 2 menit & dapatkan Rp 15.000 saldo tarik langsung!' ?>
+          <?= $user_has_surveyed ? 'Terima kasih telah berpartisipasi! Saldo tarik sudah masuk.' : htmlspecialchars($cms['survey_banner']['desc'] ?? 'Bantu kami berkembang 2 menit & dapatkan Rp 15.000 saldo tarik langsung!') ?>
         </div>
       </div>
     </div>
     <div class="sib-cta <?= $user_has_surveyed ? 'sib-cta--done' : '' ?>">
-      <span><?= $user_has_surveyed ? 'Lihat' : 'Isi Survei' ?></span>
+      <span><?= $user_has_surveyed ? 'Lihat' : htmlspecialchars($cms['survey_banner']['cta'] ?? 'Isi Survei') ?></span>
       <i class="ph-bold ph-arrow-right"></i>
     </div>
   </a>
+  <?php endif; ?>
 
   <!-- ══════════════════════════════════════════════════════════
        AJAKAN PROMOSI BANNER (PROMO HUB TRIGGER)
        ══════════════════════════════════════════════════════════ -->
+  <?php if (!empty($cms['promo_banner']['enabled'])): ?>
   <div class="promo-invite-banner" onclick="openPromoHubModal()" title="Klik untuk Buka Event Promosi & Raih Saldo">
     <div class="pib-left">
       <div class="pib-icon-box">
@@ -1689,30 +1665,31 @@ body {
       </div>
       <div class="pib-text">
         <div class="pib-title">
-          <span>Ajak Teman &amp; Promosi Cuan</span>
-          <span class="pib-badge">+Rp 75.000</span>
+          <span><?= htmlspecialchars($cms['promo_banner']['title'] ?? 'Ajak Teman & Promosi Cuan') ?></span>
+          <span class="pib-badge"><?= htmlspecialchars($cms['promo_banner']['badge'] ?? '+Rp 75.000') ?></span>
         </div>
-        <div class="pib-desc">Viral di Threads &amp; bagikan link untuk panen komisi saldo tunai!</div>
+        <div class="pib-desc"><?= htmlspecialchars($cms['promo_banner']['desc'] ?? 'Viral di Threads & bagikan link untuk panen komisi saldo tunai!') ?></div>
       </div>
     </div>
     <div class="pib-cta">
-      <span>Mulai</span>
+      <span><?= htmlspecialchars($cms['promo_banner']['cta'] ?? 'Mulai') ?></span>
       <i class="ph-bold ph-arrow-right"></i>
     </div>
   </div>
+  <?php endif; ?>
 
   <!-- ══════════════════════════════════════════════════════════
        1.5 LANJUTKAN MENONTON (MAKSIMAL 3 RIWAYAT)
        ══════════════════════════════════════════════════════════ -->
-  <?php if (!empty($continue_watching_home)): ?>
+  <?php if (!empty($cms['continue_watching']['enabled']) && !empty($continue_watching_home)): ?>
     <div class="amber-section-card" style="padding:14px;margin-bottom:16px;border-color:#d97706;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="font-size:13.5px;font-weight:900;color:#78350f;display:flex;align-items:center;gap:6px;">
           <i class="ph-fill ph-clock-counter-clockwise" style="color:#d97706;font-size:18px;"></i>
-          <span>Lanjutkan Menonton</span>
+          <span><?= htmlspecialchars($cms['continue_watching']['title'] ?? 'Lanjutkan Menonton') ?></span>
         </div>
         <span style="font-size:10.5px;font-weight:900;background:#fef3c7;color:#92400e;border:1.5px solid #f59e0b;padding:2px 8px;border-radius:10px;">
-          <?= count($continue_watching_home) ?> / 3 Video
+          <?= count($continue_watching_home) ?> Video
         </span>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;">
@@ -1748,20 +1725,20 @@ body {
   <!-- ══════════════════════════════════════════════════════════
        1.7 CARD PROMOSI THREADS (EVENT CUAN & PROMOTOR KHUSUS)
        ══════════════════════════════════════════════════════════ -->
-  <?php if ($threads_campaign_enabled): ?>
+  <?php if ($threads_campaign_enabled && !empty($cms['threads_card']['enabled'])): ?>
     <div class="threads-promo-home-card" id="tour-threads-promo-card">
       <div class="tph-badge-strip">
-        <span class="tph-badge-event"><i class="ph-bold ph-threads-logo"></i> EVENT PROMOSI THREADS</span>
-        <span class="tph-badge-cuan">+Rp 75.000 &amp; Gaji Pasti</span>
+        <span class="tph-badge-event"><i class="ph-bold ph-threads-logo"></i> <?= htmlspecialchars($cms['threads_card']['badge_event'] ?? 'EVENT PROMOSI THREADS') ?></span>
+        <span class="tph-badge-cuan"><?= htmlspecialchars($cms['threads_card']['badge_cuan'] ?? '+Rp 75.000 & Gaji Pasti') ?></span>
       </div>
       <div class="tph-content">
         <div class="tph-icon-box" style="display:flex;align-items:center;justify-content:center;background:#fffbeb;border:2px solid #f59e0b;border-radius:14px;width:48px;height:48px;flex-shrink:0;">
           <i class="ph-bold ph-threads-logo" style="font-size:26px;color:#d97706;"></i>
         </div>
         <div class="tph-text-col">
-          <div class="tph-title">Viral di Threads &amp; Jadi Promotor Khusus! 👑</div>
+          <div class="tph-title"><?= htmlspecialchars($cms['threads_card']['title'] ?? 'Viral di Threads & Jadi Promotor Khusus! 👑') ?></div>
           <div class="tph-desc">
-            Posting ceritamu, raih <strong><?= format_rp($threads_step1_reward) ?></strong> di Langkah 1 &amp; raih <strong><?= format_rp($threads_step2_reward) ?> + Gaji Pasti &amp; Chat Admin WA</strong> jika postinganmu tembus 5K views!
+            <?= htmlspecialchars($cms['threads_card']['desc'] ?? 'Posting ceritamu, raih reward di Langkah 1 & bonus gaji pasti jika tembus 5K views!') ?>
           </div>
         </div>
       </div>
@@ -1781,19 +1758,19 @@ body {
   <!-- ══════════════════════════════════════════════════════════
        2. TUGAS VIDEO PILIHAN HARI INI (FEATURED VIDEOS)
        ══════════════════════════════════════════════════════════ -->
-  <?php if (!empty($featured_videos)): ?>
+  <?php if (!empty($cms['featured_videos']['enabled']) && !empty($featured_videos)): ?>
     <div class="amber-section-card" style="padding:14px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
         <div style="font-size:14px;font-weight:900;color:#78350f;display:flex;align-items:center;gap:6px;">
           <i class="ph-fill ph-sparkle" style="color:#f59e0b;font-size:18px;"></i>
-          <span>Video Pilihan Berhadiah</span>
+          <span><?= htmlspecialchars($cms['featured_videos']['title'] ?? 'Video Pilihan Berhadiah') ?></span>
         </div>
         <a href="/videos" style="font-size:11px;font-weight:900;color:#d97706;text-decoration:none;display:flex;align-items:center;gap:2px;">
           Lihat Semua &rarr;
         </a>
       </div>
       <div style="font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:12px;">
-        Tonton video pilihan berdurasi singkat dan saldo cuan langsung bertambah otomatis!
+        <?= htmlspecialchars($cms['featured_videos']['desc'] ?? 'Tonton video pilihan berdurasi singkat dan saldo cuan langsung bertambah otomatis!') ?>
       </div>
 
       <div class="v-grid-mini">
@@ -1826,51 +1803,64 @@ body {
     </div>
   <?php endif; ?>
 
-
   <!-- ══════════════════════════════════════════════════════════
-       3. FITUR SERU: MINIGAME PUTAR RODA & MISI CUAN
+       3. SPOTLIGHT GAME: KOLAM PEMANCINGAN CUAN 🎣
        ══════════════════════════════════════════════════════════ -->
-  <div class="sidejob-3d-card" id="tour-sidejob-card" style="background:linear-gradient(145deg, #b45309 0%, #d97706 60%, #f59e0b 100%) !important;border:2px solid #fcd34d !important;">
-    <div class="sidejob-badge-tag"><i class="ph-fill ph-game-controller"></i> Game Berhadiah</div>
+  <?php if (!empty($cms['fishing_spotlight']['enabled'])): ?>
+  <div class="fishing-spotlight-card" id="tour-sidejob-card" style="position:relative;background:linear-gradient(135deg, #0284c7 0%, #0369a1 60%, #075985 100%);border:2.5px solid #38bdf8;border-radius:26px;padding:18px;margin-bottom:18px;box-shadow:0 16px 32px rgba(2,132,199,0.3), inset 2px 2px 5px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(3,105,161,0.5);overflow:hidden;color:#ffffff;">
+    <div style="position:absolute;top:-20px;right:-15px;width:110px;height:110px;background:radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);border-radius:50%;pointer-events:none;"></div>
     
-    <div class="sidejob-title-row">
-      <div class="sidejob-title">Putar Roda & Minigame <i class="ph-fill ph-sparkle" style="color:#fef08a;font-size:16px;"></i></div>
-      <div style="width:38px;height:38px;border-radius:12px;background:#ffffff;display:flex;align-items:center;justify-content:center;color:#b45309;font-size:22px;box-shadow:0 4px 10px rgba(0,0,0,0.15);border:1.5px solid #fed7aa;">
-        <i class="ph-fill ph-spinner"></i>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);backdrop-filter:blur(4px);border:1.5px solid rgba(255,255,255,0.4);border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:900;letter-spacing:0.3px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+      <?= htmlspecialchars($cms['fishing_spotlight']['badge'] ?? '🎣 GAME SPOTLIGHT') ?>
+    </div>
+    
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:17px;font-weight:900;letter-spacing:-0.3px;text-shadow:0 2px 4px rgba(0,0,0,0.2);">
+        <?= htmlspecialchars($cms['fishing_spotlight']['title'] ?? 'Kolam Pemancingan Cuan 🐟') ?>
+      </div>
+      <div style="width:42px;height:42px;border-radius:14px;background:#ffffff;display:flex;align-items:center;justify-content:center;color:#0284c7;font-size:24px;box-shadow:0 6px 14px rgba(0,0,0,0.2);border:2px solid #bae6fd;flex-shrink:0;">
+        <i class="ph-fill ph-fish"></i>
       </div>
     </div>
 
-    <div class="sidejob-desc">
-      Raih kejutan bonus saldo tunai setiap hari! Mainkan minigame putar roda keberuntungan dan kumpulkan hadiah uang tunai langsung ke saldo akunmu.
+    <div style="font-size:11.5px;font-weight:700;line-height:1.45;color:#e0f2fe;margin-bottom:14px;text-shadow:0 1px 2px rgba(0,0,0,0.15);">
+      <?= htmlspecialchars($cms['fishing_spotlight']['desc'] ?? 'Lempar kailmu, strike ikan berkantong uang tunai, dan kumpulkan saldo tarik rupiah!') ?>
     </div>
 
-    <!-- CTA Button directly to Minigame -->
-    <a href="/minigame" class="btn-open-3d-farm">
-      <i class="ph-fill ph-game-controller" style="font-size:18px;"></i>
-      <span>Mainkan Minigame Sekarang</span>
+    <!-- CTA Button to Minigame -->
+    <a href="<?= htmlspecialchars($cms['fishing_spotlight']['url'] ?? '/minigame') ?>" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#ffffff;font-size:13px;font-weight:900;padding:12px 18px;border-radius:18px;text-decoration:none;border:2px solid rgba(255,255,255,0.85);box-shadow:0 8px 18px rgba(217,119,6,0.4), inset 2px 2px 4px rgba(255,255,255,0.6);margin-bottom:12px;transition:transform 0.15s ease;">
+      <i class="ph-fill ph-fish" style="font-size:18px;"></i>
+      <span><?= htmlspecialchars($cms['fishing_spotlight']['cta'] ?? 'Mulai Mancing Sekarang') ?></span>
       <i class="ph-bold ph-arrow-right"></i>
     </a>
 
     <!-- Sub links for Missions & Threads -->
-    <div class="sidejob-sub-links">
-      <a href="/missions" class="sidejob-sub-link"><i class="ph-bold ph-target"></i> Misi Tantangan</a>
-      <a href="/threads" class="sidejob-sub-link"><i class="ph-bold ph-threads-logo"></i> Event Promo Rp 75K</a>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <a href="/missions" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.35);padding:7px 10px;border-radius:12px;color:#fff;font-size:10.5px;font-weight:800;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+        <i class="ph-bold ph-target"></i> Misi Cuan
+      </a>
+      <a href="/threads" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.35);padding:7px 10px;border-radius:12px;color:#fff;font-size:10.5px;font-weight:800;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+        <i class="ph-bold ph-threads-logo"></i> Event Rp 75K
+      </a>
     </div>
   </div>
+  <?php endif; ?>
 
   <!-- ── TIPS CUAN PLATFORM ── -->
+  <?php if (!empty($cms['tips']['enabled'])): ?>
   <div class="amber-tips-box">
     <div class="amber-tips-icon"><i class="ph-fill ph-lightbulb" style="color:#d97706;font-size:22px;"></i></div>
     <div>
-      <div style="font-size:12px;font-weight:900;color:#78350f;margin-bottom:2px;">Tips Cuan Harian</div>
+      <div style="font-size:12px;font-weight:900;color:#78350f;margin-bottom:2px;"><?= htmlspecialchars($cms['tips']['title'] ?? 'Tips Cuan Harian') ?></div>
       <div style="font-size:10.5px;font-weight:700;color:#78350f;line-height:1.35;">
-        Tonton video sampai kuota harianmu penuh, selesaikan misi berhadiah, dan undang teman untuk meraih komisi pasif tanpa batas!
+        <?= htmlspecialchars($cms['tips']['text'] ?? 'Tonton video sampai kuota harianmu penuh, pancing ikan cuan, dan undang teman untuk komisi pasif tanpa batas!') ?>
       </div>
     </div>
   </div>
+  <?php endif; ?>
 
   <!-- ── NOTIFIKASI INBOX ── -->
-  <?php if (!empty($notif_preview)): ?>
+  <?php if (!empty($cms['notif_inbox']['enabled']) && !empty($notif_preview)): ?>
     <div style="background:#ffffff;border:2.5px solid rgba(255,255,255,0.95);border-radius:24px;padding:14px 16px;box-shadow:0 14px 28px rgba(120,53,15,0.08), inset 2px 2px 5px #ffffff, inset -3px -3px 6px rgba(120,53,15,0.05);margin-bottom:16px;">
       <div style="font-size:12px;font-weight:900;color:#78350f;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
         <i class="ph-fill ph-bell-ringing" style="color:#e11d48;"></i> Informasi & Pengumuman
@@ -1885,17 +1875,19 @@ body {
   <?php endif; ?>
 
   <!-- ── FLOATING BUTTON: AJAKAN PROMOSI ── -->
+  <?php if (!empty($cms['floating_promo']['enabled'])): ?>
   <div class="floating-promo-btn" id="btn-floating-promo" onclick="openPromoHubModal()" title="Klik untuk Buka Event Promosi Cuan">
     <div class="fpb-icon-wrap">
       <i class="ph-bold ph-megaphone"></i>
     </div>
     <div class="fpb-text-wrap">
-      <span class="fpb-title">Bonus Promosi</span>
+      <span class="fpb-title"><?= htmlspecialchars($cms['floating_promo']['title'] ?? 'Bonus Promosi') ?></span>
       <span class="fpb-sub">
-        Raih Rp 75K <span class="fpb-badge">Hot</span>
+        <?= htmlspecialchars($cms['floating_promo']['sub'] ?? 'Raih Rp 75K') ?> <span class="fpb-badge"><?= htmlspecialchars($cms['floating_promo']['badge'] ?? 'Hot') ?></span>
       </span>
     </div>
   </div>
+  <?php endif; ?>
 
 </div>
 
