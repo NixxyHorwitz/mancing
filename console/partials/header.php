@@ -548,6 +548,60 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
     </div>
     <?php endif; ?>
 
+    <!-- 3b. FISH SYSTEM (COLLAPSIBLE) -->
+    <?php $isFishActive = strpos($activePage ?? '', 'fishing_') === 0; ?>
+    <?php if (staff_can('fishing')): ?>
+    <div class="c-sidebar__label" style="margin-top:6px">Fish System 🎣</div>
+    <div class="c-nav-collapse-group <?= $isFishActive ? 'open' : '' ?>" id="nav-col-fish">
+      <button type="button" class="c-nav-collapse-btn <?= $isFishActive ? 'is-active' : '' ?>" onclick="toggleSidebarCollapse('nav-col-fish')" aria-expanded="<?= $isFishActive ? 'true' : 'false' ?>">
+        <div class="c-nav-collapse-btn__left">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c3-5 9-7 14-4l4-3v14l-4-3c-5 3-11 1-14-4z"/><circle cx="14" cy="11" r="1"/></svg>
+          <span>Pemancingan</span>
+        </div>
+        <div class="c-nav-collapse-btn__right">
+          <svg class="c-nav-collapse-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </button>
+
+      <div class="c-nav-collapse-body">
+        <div class="c-nav-collapse-inner">
+          <a href="/console/fishing_dashboard.php" class="c-nav-sublink <?= $activePage==='fishing_dashboard'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+            <span>Dashboard</span>
+          </a>
+          <a href="/console/fishing_catches.php" class="c-nav-sublink <?= $activePage==='fishing_catches'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c3-5 9-7 14-4l4-3v14l-4-3c-5 3-11 1-14-4z"/><circle cx="14" cy="11" r="1"/></svg>
+            <span>Log Tangkapan</span>
+          </a>
+          <a href="/console/fishing_sales.php" class="c-nav-sublink <?= $activePage==='fishing_sales'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2"/></svg>
+            <span>Penjualan Ikan</span>
+          </a>
+          <a href="/console/fishing_baits.php" class="c-nav-sublink <?= $activePage==='fishing_baits'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 016 0"/></svg>
+            <span>Umpan & Pembelian</span>
+          </a>
+          <a href="/console/fishing_rods.php" class="c-nav-sublink <?= $activePage==='fishing_rods'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20L18 6"/><path d="M18 6l2-2M18 6v6a3 3 0 01-3 3"/></svg>
+            <span>Skin Joran</span>
+          </a>
+          <a href="/console/fishing_market.php" class="c-nav-sublink <?= $activePage==='fishing_market'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 006 0zM19 7l-3 7a3 3 0 006 0z"/></svg>
+            <span>Harga Pasar</span>
+          </a>
+          <a href="/console/fishing_players.php" class="c-nav-sublink <?= $activePage==='fishing_players'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0114 0"/><path d="M16 4.5a3.5 3.5 0 010 7M22 20a7 7 0 00-4-6.3"/></svg>
+            <span>Pemain</span>
+          </a>
+          <a href="/console/fishing_settings.php" class="c-nav-sublink <?= $activePage==='fishing_settings'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-2.9-1.2l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00-1.2-2.9H3a2 2 0 110-4h.1a1.7 1.7 0 001.2-2.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 002.9-1.2V3a2 2 0 114 0v.1a1.7 1.7 0 002.9 1.2l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 001.2 2.9H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+            <span>Pengaturan & Audit</span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- 4. KEUANGAN & TRANSAKSI (COLLAPSIBLE) -->
     <?php
     $finPages = ['deposits', 'withdrawals', 'wd_settings', 'upgrades', 'orders'];

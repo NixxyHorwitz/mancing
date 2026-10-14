@@ -1486,8 +1486,7 @@ const MancingAPI = {
     return fetch(CFG.endpoint, { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-CSRF-Token': CFG.csrf } })
       .then((r) => r.json());
   },
-  castRod() { return this.post('cast_rod'); },
-  buyBaits(tier) { return this.post('buy_baits', { pack_tier: tier }); }
+  castRod() { return this.post('cast_rod'); }
 };
 window.MancingAPI = MancingAPI;
 window.MancingHooks = Object.assign({ onCast: null, onStrike: null, onLanded: null, onSaved: null }, window.MancingHooks || {});

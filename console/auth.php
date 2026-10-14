@@ -32,6 +32,7 @@ define('STAFF_PERMISSIONS', [
     'orderkuota'      => 'OrderKuota API',
     'surveys'         => 'Survei Pengguna',
     'home_cms'        => 'CMS Beranda & Mancing',
+    'fishing'         => 'Fish System',
 ]);
 
 // ── Determine who is logged in ─────────────────────────────────────────────
@@ -124,6 +125,7 @@ function staff_home_url(): string {
         'vouchers'        => '/console/vouchers.php',
         'investments'     => '/console/investments.php',
         'orderkuota'      => '/console/orderkuota.php',
+        'fishing'         => '/console/fishing_dashboard.php',
     ];
 
     $perms = $_SESSION['staff_permissions'] ?? [];

@@ -47,6 +47,32 @@ function fs_find_user_id(PDO $pdo, string $q): ?int {
     return $id ? (int)$id : -1;
 }
 
+/** Ekspresi SQL: kolom rarity (Common/Uncommon/...) → badge (biasa/bagus/...) */
+const FS_BADGE_SQL = "CASE UPPER(rarity) WHEN 'UNCOMMON' THEN 'bagus' WHEN 'RARE' THEN 'langka' WHEN 'EPIC' THEN 'super' WHEN 'JACKPOT' THEN 'jackpot' ELSE 'biasa' END";
+/** Badge → nilai rarity yang disimpan di fishing_logs */
+const FS_BADGE_RARITY = ['biasa' => 'Common', 'bagus' => 'Uncommon', 'langka' => 'Rare', 'super' => 'Epic', 'jackpot' => 'JACKPOT'];
+
+function fs_head(string $title, string $sub = ''): void {
+    echo '<div class="mb-3"><h4 class="mb-1 text-white" style="font-weight:800">🎣 ' . htmlspecialchars($title) . '</h4>'
+       . ($sub !== '' ? '<div class="fs-muted">' . htmlspecialchars($sub) . '</div>' : '') . '</div>';
+}
+
+function fs_stat(string $label, string $value, string $icon, string $color, string $sub = ''): void { ?>
+  <div class="c-stat h-100" style="border-top:3px solid <?= $color ?>">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div class="c-stat__lbl"><?= htmlspecialchars($label) ?></div>
+      <div class="c-stat__icon" style="background:<?= $color ?>22;color:<?= $color ?>;font-size:18px"><i class="ph-bold <?= $icon ?>"></i></div>
+    </div>
+    <div class="c-stat__val fs-num" style="color:<?= $color ?>"><?= $value ?></div>
+    <?php if ($sub !== ''): ?><div class="fs-muted mt-1"><?= $sub ?></div><?php endif; ?>
+  </div>
+<?php }
+
+function fs_user_link(int $id, ?string $username): string {
+    return '<a href="/console/fishing_players.php?u=' . $id . '" style="color:#e2e8f0;font-weight:700;text-decoration:none">'
+         . htmlspecialchars($username ?? ('#' . $id)) . '</a> <span class="fs-muted">#' . $id . '</span>';
+}
+
 function fs_styles(): void { ?>
 <style>
 .fs-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
