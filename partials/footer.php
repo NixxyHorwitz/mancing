@@ -11,16 +11,20 @@
     transform: translateX(-50%) !important;
     width: calc(100% - 20px) !important;
     max-width: 420px !important;
-    background: rgba(255, 255, 255, 0.94) !important;
+    background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 100%) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
-    border: 1.5px solid #e0f2fe !important;
+    border: 2px solid #bae6fd !important;
     border-radius: 22px !important;
-    box-shadow: 0 10px 24px rgba(2, 132, 199, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02) !important;
+    box-shadow: 
+      0 12px 28px rgba(2, 132, 199, 0.14),
+      0 2px 6px rgba(0, 0, 0, 0.02),
+      inset 2px 2px 4px #ffffff,
+      inset -2px -2px 4px rgba(2, 132, 199, 0.06) !important;
     display: grid !important;
     grid-template-columns: 1fr 1fr 1.2fr 1fr 1fr !important;
     align-items: center !important;
-    height: 52px !important;
+    height: 54px !important;
     padding: 0 6px !important;
     z-index: 9999 !important;
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;

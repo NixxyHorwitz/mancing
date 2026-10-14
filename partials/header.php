@@ -152,27 +152,35 @@ i[class^="ph-"] {
   gap: 8px;
   height: 44px;
   padding: 0 12px 0 8px;
-  background: rgba(255, 255, 255, 0.94);
+  background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1.5px solid #e0f2fe;
-  border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  border: 2px solid #bae6fd;
+  border-radius: 18px;
+  box-shadow: 
+    0 8px 20px rgba(2, 132, 199, 0.12),
+    inset 1.5px 1.5px 3px #ffffff,
+    inset -1.5px -1.5px 3px rgba(2, 132, 199, 0.06);
   text-decoration: none;
-  transition: transform 0.15s, border-color 0.15s;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .island-brand-pill:active {
-  transform: scale(0.97);
+  transform: translateY(1.5px) scale(0.97);
 }
 .brand-fin-icon {
   width: 28px; height: 28px;
-  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-  border: 1px solid #7dd3fc;
+  background: linear-gradient(135deg, #38bdf8, #0284c7);
+  border: 1.5px solid #ffffff;
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  color: #0284c7;
+  color: #ffffff;
   font-size: 15px;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15);
+  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.25), inset 1px 1px 2px rgba(255,255,255,0.7);
+  animation: finSway 3s ease-in-out infinite;
+}
+@keyframes finSway {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(6deg) scale(1.04); }
 }
 .brand-text {
   font-size: 14px;
@@ -198,12 +206,15 @@ i[class^="ph-"] {
   gap: 8px;
   height: 44px;
   padding: 0 8px 0 10px;
-  background: rgba(255, 255, 255, 0.94);
+  background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1.5px solid #e0f2fe;
-  border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  border: 2px solid #bae6fd;
+  border-radius: 18px;
+  box-shadow: 
+    0 8px 20px rgba(2, 132, 199, 0.12),
+    inset 1.5px 1.5px 3px #ffffff,
+    inset -1.5px -1.5px 3px rgba(2, 132, 199, 0.06);
 }
 .cluster-balance-btn {
   display: flex;
