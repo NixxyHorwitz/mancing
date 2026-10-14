@@ -508,7 +508,7 @@ $_fsvg = [
   </div>
 </div>
 
-<script src="/assets/js/toast.js"></script>
+<script src="/assets/js/toast.js?v=<?= @filemtime(dirname(__DIR__) . '/assets/js/toast.js') ?>"></script>
 <?php
 $show_wd_notif = true;
 if (function_exists('is_wd_locked') && isset($pdo)) {

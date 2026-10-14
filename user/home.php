@@ -1264,7 +1264,7 @@ require dirname(__DIR__) . '/partials/header.php';
       </div>
       <div>
         <div class="portal-bait-line">
-          <i class="ph-fill ph-hook"></i> <?= (int)($user['fishing_baits'] ?? 0) ?> Umpan Tersedia
+          <i class="ph-fill ph-bug"></i> <?= (int)($user['fishing_baits'] ?? 0) ?> Umpan Tersedia
         </div>
         <div class="portal-cta-badge">
           <span>Lempar Kail</span>

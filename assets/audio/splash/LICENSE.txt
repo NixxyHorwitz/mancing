@@ -1,0 +1,7 @@
+Splash sounds: BigSoundBank (https://bigsoundbank.com)
+License: CC0 (public domain) — free and royalty-free.
+  small-1.ogg = Splash, Small #1 (s1529)
+  small-3.ogg = Splash, small #3 (s1531)
+  small-6.ogg = Splash, small #6 (s1534)
+  big-1.ogg   = Splash, Big #1 (s1519)
+  big-3.ogg   = Splash, Big #3 (s1521)
