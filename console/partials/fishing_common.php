@@ -8,6 +8,7 @@ fishing_ensure_schema($pdo);
 
 const FS_PAGES = [
     'fishing_dashboard' => ['Dashboard',        'ph-chart-line-up'],
+    'fishing_species'   => ['Harga Ikan',       'ph-tag'],
     'fishing_catches'   => ['Log Tangkapan',    'ph-fish-simple'],
     'fishing_sales'     => ['Penjualan',        'ph-hand-coins'],
     'fishing_baits'     => ['Umpan',            'ph-bug'],
@@ -49,8 +50,6 @@ function fs_find_user_id(PDO $pdo, string $q): ?int {
 
 /** Ekspresi SQL: kolom rarity (Common/Uncommon/...) → badge (biasa/bagus/...) */
 const FS_BADGE_SQL = "CASE UPPER(rarity) WHEN 'UNCOMMON' THEN 'bagus' WHEN 'RARE' THEN 'langka' WHEN 'EPIC' THEN 'super' WHEN 'JACKPOT' THEN 'jackpot' ELSE 'biasa' END";
-/** Badge → nilai rarity yang disimpan di fishing_logs */
-const FS_BADGE_RARITY = ['biasa' => 'Common', 'bagus' => 'Uncommon', 'langka' => 'Rare', 'super' => 'Epic', 'jackpot' => 'JACKPOT'];
 
 function fs_head(string $title, string $sub = ''): void {
     echo '<div class="mb-3"><h4 class="mb-1 text-white" style="font-weight:800">🎣 ' . htmlspecialchars($title) . '</h4>'

@@ -34,7 +34,7 @@ $where  = ['l.created_at >= ?', 'l.created_at < ?'];
 $params = [$from . ' 00:00:00', date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00'];
 $uid = fs_find_user_id($pdo, $fu);
 if ($uid !== null) { $where[] = 'l.user_id = ?'; $params[] = $uid; }
-if (isset(FS_BADGE_RARITY[$fb])) { $where[] = 'UPPER(l.rarity) = ?'; $params[] = strtoupper(FS_BADGE_RARITY[$fb]); }
+if (isset(FISHING_RARITY[$fb])) { $where[] = 'UPPER(l.rarity) = ?'; $params[] = strtoupper(FISHING_RARITY[$fb]); }
 if ($fs === 'unsold') $where[] = 'l.sold_at IS NULL';
 if ($fs === 'sold')   $where[] = 'l.sold_at IS NOT NULL';
 $w = implode(' AND ', $where);

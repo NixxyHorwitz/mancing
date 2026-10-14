@@ -66,7 +66,7 @@ function fs_market_form(string $date, string $label, array $m, array $ref): void
         <?= csrf_field() ?><input type="hidden" name="action" value="set"><input type="hidden" name="date" value="<?= $date ?>">
         <?php foreach (FISHING_BADGES as $b): $pct = round($m[$b]['mult'] * 100, 1); $prev = $ref[$b]['mult'] * 100; ?>
         <div class="d-flex align-items-center gap-2 mb-2">
-          <div style="width:150px"><?= fs_badge($b) ?> <span class="fs-muted"><?= FISHING_SPECIES[$b] ?></span></div>
+          <div style="width:72px;flex:0 0 auto" title="<?= FISHING_SPECIES[$b] ?>"><?= fs_badge($b) ?></div>
           <input type="range" min="50" max="200" step="0.5" value="<?= $pct ?>" class="form-range flex-grow-1" oninput="this.nextElementSibling.value=this.value">
           <input type="number" min="50" max="200" step="0.1" name="pct[<?= $b ?>]" value="<?= $pct ?>" class="c-form-control fs-num" style="width:84px" oninput="this.previousElementSibling.value=this.value">
           <span class="fs-muted" style="width:20px">%</span>

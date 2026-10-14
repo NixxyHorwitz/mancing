@@ -132,3 +132,17 @@ SELECT * FROM (
   UNION ALL SELECT 'Udang Hidup VIP', 35, 25000, 'HEMAT 30%', 'Umpan favorit predator laut', '#fb923c', 3
 ) AS seed
 WHERE NOT EXISTS (SELECT 1 FROM `fishing_bait_packs`);
+
+-- Katalog jenis ikan: peluang, rentang berat & harga dasar (dikelola di Console › Fish System › Harga Ikan).
+-- Baris awal diisi otomatis oleh lib/fishing.php dari pengaturan reward_min/reward_max lama.
+CREATE TABLE IF NOT EXISTS `fishing_species` (
+  `badge` VARCHAR(20) NOT NULL,
+  `name` VARCHAR(80) NOT NULL,
+  `chance` DECIMAL(6,2) NOT NULL DEFAULT 0,
+  `weight_min` DECIMAL(6,2) NOT NULL DEFAULT 0.50,
+  `weight_max` DECIMAL(6,2) NOT NULL DEFAULT 1.00,
+  `price_min` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `price_max` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`badge`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

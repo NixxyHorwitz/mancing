@@ -14,11 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'enabled'          => isset($_POST['enabled']),
         'daily_free_baits' => max(0, min(100, (int)($_POST['daily_free_baits'] ?? 3))),
         'bait_per_video'   => max(0, min(10, (int)($_POST['bait_per_video'] ?? 1))),
-        'reward_min'       => max(10, (float)($_POST['reward_min'] ?? 100)),
-        'reward_max'       => max(50, (float)($_POST['reward_max'] ?? 5000)),
     ];
-    if ($new['reward_max'] < $new['reward_min']) { $flash = 'Hadiah maksimum harus ≥ hadiah minimum.'; $flashType = 'error'; }
-    else {
+    {
         $cfg['fishing_engine'] = array_merge($old, $new);
         home_cms_config_set($pdo, $cfg);
         $diff = [];
@@ -29,18 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $fe = home_cms_config($pdo)['fishing_engine'] ?? [];
-$min = max(10, (float)($fe['reward_min'] ?? 100));
-$max = max(50, (float)($fe['reward_max'] ?? 5000));
-// Perkiraan rentang nilai dasar per jenis (rumus sama dengan user/minigame.php)
-$ranges = [
-    'biasa'   => [45, $min + (0.5 / 1.4) * $min * 1.5, $min + $min * 1.5],
-    'bagus'   => [30, $min * 2.5 + (1.5 / 2.9) * $min * 3, $min * 2.5 + $min * 3],
-    'langka'  => [15, $min * 6 + (3.0 / 4.8) * $min * 5, $min * 6 + $min * 5],
-    'super'   => [7,  $max * 0.75 + (5.0 / 8.5) * $max * 0.5, $max * 0.75 + $max * 0.5],
-    'jackpot' => [3,  $max * 1.5 + 1000, $max * 1.5 + 3000],
-];
-$ev = 0;
-foreach ($ranges as [$p, $lo, $hi]) $ev += $p / 100 * ($lo + $hi) / 2;
+$species = fishing_species($pdo);
+$chanceTotal = max(0.0001, array_sum(array_map(fn($x) => (float)$x['chance'], $species)));
 
 // Audit log
 $fa = trim((string)($_GET['action'] ?? ''));
@@ -73,26 +60,23 @@ fs_styles();
         <div class="col-6"><label class="c-label">Umpan gratis harian</label><input type="number" min="0" max="100" class="c-form-control" name="daily_free_baits" value="<?= (int)($fe['daily_free_baits'] ?? 3) ?>">
           <div class="fs-muted mt-1">Diisi ulang sekali sehari bila umpan pemain di bawah angka ini.</div></div>
         <div class="col-6"><label class="c-label">Umpan per video ditonton</label><input type="number" min="0" max="10" class="c-form-control" name="bait_per_video" value="<?= (int)($fe['bait_per_video'] ?? 1) ?>"></div>
-        <div class="col-6"><label class="c-label">Hadiah dasar minimum (Rp)</label><input type="number" min="10" class="c-form-control" name="reward_min" value="<?= (float)$min ?>"></div>
-        <div class="col-6"><label class="c-label">Hadiah dasar maksimum (Rp)</label><input type="number" min="50" class="c-form-control" name="reward_max" value="<?= (float)$max ?>"></div>
         <div class="col-12"><button class="btn btn-primary w-100">Simpan Pengaturan</button></div>
-        <div class="col-12 fs-muted">Harga paket umpan diatur di tab <a href="/console/fishing_baits.php" style="color:#67e8f9">Umpan</a>; pengali harga jual di tab <a href="/console/fishing_market.php" style="color:#67e8f9">Harga Pasar</a>.</div>
+        <div class="col-12 fs-muted">Harga dasar ikan diatur di tab <a href="/console/fishing_species.php" style="color:#67e8f9">Harga Ikan</a>, paket umpan di tab <a href="/console/fishing_baits.php" style="color:#67e8f9">Umpan</a>, pengali harga jual di tab <a href="/console/fishing_market.php" style="color:#67e8f9">Harga Pasar</a>.</div>
       </form>
     </div></div>
   </div>
   <div class="col-lg-7">
-    <div class="c-card h-100"><div class="c-card-header"><b>Peluang & Rentang Nilai Dasar</b> <span class="fs-muted ms-2">berdasarkan pengaturan saat ini, sebelum pengali pasar</span></div>
+    <div class="c-card h-100"><div class="c-card-header d-flex justify-content-between"><b>Peluang & Harga Dasar</b><a href="/console/fishing_species.php" class="fs-muted" style="text-decoration:none">Ubah di Harga Ikan →</a></div>
       <div class="c-card-body p-0"><table class="c-table no-dt w-100">
-        <thead><tr><th>Jenis</th><th>Peluang</th><th>Nilai Dasar</th></tr></thead>
+        <thead><tr><th>Ikan</th><th>Peluang</th><th>Berat</th><th>Harga Dasar</th></tr></thead>
         <tbody>
-        <?php foreach ($ranges as $b => [$p, $lo, $hi]): ?>
-          <tr><td><?= fs_badge($b) ?> <?= FISHING_SPECIES[$b] ?></td><td class="fs-num"><?= $p ?>%</td><td class="fs-num"><?= format_rp(round($lo)) ?> – <?= format_rp(round($hi)) ?></td></tr>
+        <?php foreach ($species as $b => $x): ?>
+          <tr><td><?= fs_badge($b) ?> <?= htmlspecialchars($x['name']) ?></td><td class="fs-num"><?= number_format((float)$x['chance'] / $chanceTotal * 100, 1) ?>%</td>
+            <td class="fs-num"><?= (float)$x['weight_min'] ?>–<?= (float)$x['weight_max'] ?> kg</td><td class="fs-num"><?= format_rp((float)$x['price_min']) ?> – <?= format_rp((float)$x['price_max']) ?></td></tr>
         <?php endforeach; ?>
-          <tr style="font-weight:800"><td>Rata-rata per lemparan</td><td></td><td class="fs-num" style="color:#fbbf24">± <?= format_rp(round($ev)) ?></td></tr>
         </tbody>
-      </table>
-      <div class="px-3 py-2 fs-muted">Bandingkan dengan harga per umpan di Toko Umpan untuk menjaga ekonomi tetap seimbang.</div>
-    </div></div>
+      </table></div>
+    </div>
   </div>
 </div>
 

@@ -34,7 +34,7 @@ function fishing_ensure_schema(PDO $pdo): void {
     $done = true;
 
     $sqlFile = dirname(__DIR__) . '/database_migrations/create_fishing_system.sql';
-    $tables = ['fishing_logs', 'fishing_sales', 'fishing_bait_packs', 'fishing_bait_purchases', 'fishing_rod_skins', 'fishing_market_prices', 'fishing_prefs', 'fishing_admin_logs'];
+    $tables = ['fishing_logs', 'fishing_sales', 'fishing_bait_packs', 'fishing_bait_purchases', 'fishing_rod_skins', 'fishing_market_prices', 'fishing_prefs', 'fishing_admin_logs', 'fishing_species'];
     $in = implode(',', array_fill(0, count($tables), '?'));
     $s = $pdo->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ($in)");
     $s->execute($tables);
@@ -45,6 +45,8 @@ function fishing_ensure_schema(PDO $pdo): void {
             if ($q !== '') { try { $pdo->exec($q); } catch (\Throwable) {} }
         }
     }
+
+    fishing_species_seed($pdo);
 
     // Migrasi kolom pada tabel lama
     if (!fishing_column_exists($pdo, 'fishing_logs', 'sold_at')) {
@@ -63,6 +65,67 @@ function fishing_ensure_schema(PDO $pdo): void {
     foreach ($adds as [$t, $c, $sql]) {
         if (!fishing_column_exists($pdo, $t, $c)) { try { $pdo->exec($sql); } catch (\Throwable) {} }
     }
+}
+
+/* ───────────────────────── JENIS IKAN & HARGA DASAR ───────────────────────── */
+
+const FISHING_RARITY = ['biasa' => 'Common', 'bagus' => 'Uncommon', 'langka' => 'Rare', 'super' => 'Epic', 'jackpot' => 'JACKPOT'];
+const FISHING_ICON   = ['biasa' => '🐟', 'bagus' => '🐠', 'langka' => '🐡', 'super' => '🦈', 'jackpot' => '✨'];
+const FISHING_COLOR  = ['biasa' => '#0284c7', 'bagus' => '#d97706', 'langka' => '#e11d48', 'super' => '#7c3aed', 'jackpot' => '#10b981'];
+
+/** Isi katalog awal sekali saja, meniru rumus lama (reward_min/reward_max) agar ekonomi tidak berubah diam-diam. */
+function fishing_species_seed(PDO $pdo): void {
+    try {
+        if ((int)$pdo->query("SELECT COUNT(*) FROM fishing_species")->fetchColumn() > 0) return;
+        $pdo->exec("CREATE TABLE IF NOT EXISTS fishing_species (badge VARCHAR(20) NOT NULL PRIMARY KEY, name VARCHAR(80) NOT NULL,
+            chance DECIMAL(6,2) NOT NULL DEFAULT 0, weight_min DECIMAL(6,2) NOT NULL DEFAULT 0.50, weight_max DECIMAL(6,2) NOT NULL DEFAULT 1.00,
+            price_min DECIMAL(12,2) NOT NULL DEFAULT 0, price_max DECIMAL(12,2) NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (\Throwable) { return; }
+    $fe = function_exists('home_cms_config') ? (home_cms_config($pdo)['fishing_engine'] ?? []) : [];
+    $mn = max(10, (float)($fe['reward_min'] ?? 100));
+    $mx = max(50, (float)($fe['reward_max'] ?? 5000));
+    $rows = [
+        ['biasa',   'Ikan Mujair Cuan',           45, 0.50, 1.40, $mn + (0.5 / 1.4) * $mn * 1.5,      $mn * 2.5],
+        ['bagus',   'Ikan Gurame Emas',           30, 1.50, 2.90, $mn * 2.5 + (1.5 / 2.9) * $mn * 3, $mn * 5.5],
+        ['langka',  'Ikan Kakap Merah VIP',       15, 3.00, 4.80, $mn * 6 + (3 / 4.8) * $mn * 5,      $mn * 11],
+        ['super',   'Monster Barramundi',          7, 5.00, 8.50, $mx * 0.75 + (5 / 8.5) * $mx * 0.5, $mx * 1.25],
+        ['jackpot', 'Peti Harta Karun Lautan 👑',  3, 10.0, 15.0, $mx * 1.5 + 1000,                   $mx * 1.5 + 3000],
+    ];
+    $ins = $pdo->prepare("INSERT IGNORE INTO fishing_species (badge, name, chance, weight_min, weight_max, price_min, price_max) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    foreach ($rows as $r) { $r[5] = round($r[5]); $r[6] = round($r[6]); $ins->execute($r); }
+}
+
+/** Katalog jenis ikan, urut biasa → jackpot. */
+function fishing_species(PDO $pdo): array {
+    $out = [];
+    foreach ($pdo->query("SELECT * FROM fishing_species")->fetchAll(PDO::FETCH_ASSOC) as $r) $out[$r['badge']] = $r;
+    $sorted = [];
+    foreach (FISHING_BADGES as $b) if (isset($out[$b])) $sorted[$b] = $out[$b];
+    return $sorted;
+}
+
+/** Harga dasar naik linear dengan berat: ikan terberat = price_max. */
+function fishing_species_price(array $sp, float $weight): float {
+    $wMin = (float)$sp['weight_min']; $wMax = (float)$sp['weight_max'];
+    $t = $wMax > $wMin ? max(0.0, min(1.0, ($weight - $wMin) / ($wMax - $wMin))) : 1.0;
+    return round((float)$sp['price_min'] + $t * ((float)$sp['price_max'] - (float)$sp['price_min']));
+}
+
+/** Undi hasil tangkapan sesuai peluang & rentang di tabel fishing_species. */
+function fishing_roll_catch(PDO $pdo): array {
+    $species = array_filter(fishing_species($pdo), fn($s) => (float)$s['chance'] > 0);
+    if (!$species) throw new RuntimeException('Katalog ikan kosong.');
+    $total = array_sum(array_map(fn($s) => (float)$s['chance'], $species));
+    $roll = mt_rand(1, 1000000) / 1000000 * $total;
+    $pick = array_key_last($species);
+    foreach ($species as $b => $s) { $roll -= (float)$s['chance']; if ($roll <= 0) { $pick = $b; break; } }
+    $sp = $species[$pick];
+    $weight = round(mt_rand((int)round((float)$sp['weight_min'] * 100), (int)round((float)$sp['weight_max'] * 100)) / 100, 2);
+    return [
+        'name' => $sp['name'], 'icon' => FISHING_ICON[$pick], 'rarity' => FISHING_RARITY[$pick], 'badge' => $pick,
+        'color' => FISHING_COLOR[$pick], 'weight' => $weight, 'reward' => fishing_species_price($sp, $weight),
+    ];
 }
 
 /** Rarity di database (Common, Uncommon, ...) → badge (biasa, bagus, ...) */

@@ -119,10 +119,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $curConfig['fishing_engine']['enabled']          = isset($_POST['fishing_engine_enabled']);
         $curConfig['fishing_engine']['daily_free_baits'] = max(0, (int)($_POST['fishing_daily_free_baits'] ?? 3));
         $curConfig['fishing_engine']['bait_per_video']   = max(0, (int)($_POST['fishing_bait_per_video'] ?? 1));
-        $curConfig['fishing_engine']['reward_min']       = max(10, (float)($_POST['fishing_reward_min'] ?? 100));
-        $curConfig['fishing_engine']['reward_max']       = max(50, (float)($_POST['fishing_reward_max'] ?? 5000));
-        $curConfig['fishing_engine']['bait_pack_price']  = max(500, (float)($_POST['fishing_bait_pack_price'] ?? 5000));
-        $curConfig['fishing_engine']['bait_pack_qty']    = max(1, (int)($_POST['fishing_bait_pack_qty'] ?? 5));
 
         home_cms_config_set($pdo, $curConfig);
 
@@ -690,6 +686,9 @@ require __DIR__ . '/partials/header.php';
             ⚙️ Sistem Engine Game Mancing Cuan
           </div>
           <div class="cms-card-sub mb-0">Pengaturan logika mesin game memancing: kuota umpan, drop rate ikan, nominal reward saldo, dan penjualan paket umpan.</div>
+          <?php if (staff_can('fishing')): ?>
+          <a href="/console/fishing_dashboard.php" class="small fw-bold text-info">🎣 Kelola lengkap (paket umpan, joran, harga pasar, log) di menu Fish System →</a>
+          <?php endif; ?>
         </div>
         <div class="d-flex align-items-center gap-2">
           <label class="small text-light fw-bold">Status Fitur Game:</label>
@@ -758,39 +757,10 @@ require __DIR__ . '/partials/header.php';
               </div>
             </div>
 
-            <div class="row g-2 mb-3">
-              <div class="col-6">
-                <label class="small text-muted">Reward Ikan Terendah:</label>
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text bg-secondary text-light">Rp</span>
-                  <input type="number" name="fishing_reward_min" min="10" max="50000" class="form-control bg-dark text-light border-secondary" value="<?= (float)($cms['fishing_engine']['reward_min'] ?? 100) ?>">
-                </div>
-              </div>
-              <div class="col-6">
-                <label class="small text-muted">Reward Ikan Tertinggi:</label>
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text bg-secondary text-light">Rp</span>
-                  <input type="number" name="fishing_reward_max" min="50" max="500000" class="form-control bg-dark text-light border-secondary" value="<?= (float)($cms['fishing_engine']['reward_max'] ?? 5000) ?>">
-                </div>
-              </div>
-            </div>
-
-            <div class="row g-2">
-              <div class="col-6">
-                <label class="small text-muted">Harga Paket Umpan (Depo):</label>
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text bg-secondary text-light">Rp</span>
-                  <input type="number" name="fishing_bait_pack_price" min="500" max="500000" class="form-control bg-dark text-light border-secondary" value="<?= (float)($cms['fishing_engine']['bait_pack_price'] ?? 5000) ?>">
-                </div>
-                <div class="form-text text-muted" style="font-size:10px;">Dibeli user pakai Saldo Beli (Deposit).</div>
-              </div>
-              <div class="col-6">
-                <label class="small text-muted">Isi Umpan per Paket:</label>
-                <div class="input-group input-group-sm">
-                  <input type="number" name="fishing_bait_pack_qty" min="1" max="100" class="form-control bg-dark text-light border-secondary" value="<?= (int)($cms['fishing_engine']['bait_pack_qty'] ?? 5) ?>">
-                  <span class="input-group-text bg-secondary text-light">Umpan</span>
-                </div>
-              </div>
+            <div class="small p-2 rounded" style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);color:#a5f3fc">
+              Harga dasar ikan & peluangnya kini diatur per jenis ikan di
+              <a href="/console/fishing_species.php" class="text-info fw-bold">Fish System › Harga Ikan</a>,
+              paket umpan di <a href="/console/fishing_baits.php" class="text-info fw-bold">Fish System › Umpan</a>.
             </div>
 
           </div>

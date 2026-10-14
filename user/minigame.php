@@ -21,8 +21,6 @@ $uStmt->execute([$user['id']]);
 $user = $uStmt->fetch(PDO::FETCH_ASSOC);
 
 $daily_free_baits = max(0, (int)($fishing_cfg['daily_free_baits'] ?? 3));
-$reward_min = max(10, (float)($fishing_cfg['reward_min'] ?? 100));
-$reward_max = max(50, (float)($fishing_cfg['reward_max'] ?? 5000));
 
 // Auto refill daily bait if below threshold on new day
 $todayStr = date('Y-m-d');
@@ -81,76 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Deduct 1 bait
             $new_baits = $current_baits - 1;
 
-            // Generate Fish Catch via Weighted Probability
-            $roll = mt_rand(1, 100);
-            $fish = null;
-
-            if ($roll <= 45) {
-                // Common: Ikan Mujair Cuan (45%)
-                $weight = round(mt_rand(50, 140) / 100, 2);
-                $reward = round($reward_min + ($weight / 1.4) * ($reward_min * 1.5));
-                $fish = [
-                    'name'   => 'Ikan Mujair Cuan',
-                    'icon'   => '🐟',
-                    'rarity' => 'Common',
-                    'badge'  => 'biasa',
-                    'color'  => '#0284c7',
-                    'weight' => $weight,
-                    'reward' => $reward,
-                ];
-            } elseif ($roll <= 75) {
-                // Uncommon: Ikan Gurame Emas (30%)
-                $weight = round(mt_rand(150, 290) / 100, 2);
-                $reward = round($reward_min * 2.5 + ($weight / 2.9) * ($reward_min * 3));
-                $fish = [
-                    'name'   => 'Ikan Gurame Emas',
-                    'icon'   => '🐠',
-                    'rarity' => 'Uncommon',
-                    'badge'  => 'bagus',
-                    'color'  => '#d97706',
-                    'weight' => $weight,
-                    'reward' => $reward,
-                ];
-            } elseif ($roll <= 90) {
-                // Rare: Ikan Kakap Merah VIP (15%)
-                $weight = round(mt_rand(300, 480) / 100, 2);
-                $reward = round($reward_min * 6.0 + ($weight / 4.8) * ($reward_min * 5));
-                $fish = [
-                    'name'   => 'Ikan Kakap Merah VIP',
-                    'icon'   => '🐡',
-                    'rarity' => 'Rare',
-                    'badge'  => 'langka',
-                    'color'  => '#e11d48',
-                    'weight' => $weight,
-                    'reward' => $reward,
-                ];
-            } elseif ($roll <= 97) {
-                // Epic: Ikan Monster Barramundi (7%)
-                $weight = round(mt_rand(500, 850) / 100, 2);
-                $reward = round($reward_max * 0.75 + ($weight / 8.5) * ($reward_max * 0.5));
-                $fish = [
-                    'name'   => 'Monster Barramundi',
-                    'icon'   => '🦈',
-                    'rarity' => 'Epic',
-                    'badge'  => 'super',
-                    'color'  => '#7c3aed',
-                    'weight' => $weight,
-                    'reward' => $reward,
-                ];
-            } else {
-                // Jackpot: Peti Harta Karun Lautan (3%)
-                $weight = round(mt_rand(1000, 1500) / 100, 2);
-                $reward = round($reward_max * 1.5 + mt_rand(1000, 3000));
-                $fish = [
-                    'name'   => 'Peti Harta Karun Lautan 👑',
-                    'icon'   => '✨',
-                    'rarity' => 'JACKPOT',
-                    'badge'  => 'jackpot',
-                    'color'  => '#10b981',
-                    'weight' => $weight,
-                    'reward' => $reward,
-                ];
-            }
+            // Undi tangkapan: peluang, berat & harga dasar dari tabel fishing_species (Console › Fish System › Harga Ikan)
+            $fish = fishing_roll_catch($pdo);
 
             // Ikan masuk Ember (belum menjadi saldo). Saldo Tarik bertambah saat dijual di Pasar Ikan (Ember).
             $pdo->prepare("UPDATE users SET fishing_baits = ? WHERE id = ?")->execute([$new_baits, $user['id']]);
@@ -3509,11 +3439,11 @@ function saveCatch() {
   if (btn.disabled) return;
   if (!G.res) { $('mc-show').classList.remove('open'); resetToIdle(); return; }
   btn.disabled = true;
-  const f = G.res.fish;
+  const res = G.res, f = res.fish, badge = BADGES[G.rarityIdx];
   flyCoins(btn, $('hud-inv'), 10, () => {
-    G.todayTotal += Number(G.res.price || f.reward) || 0;
+    G.todayTotal += Number(res.price || f.reward) || 0;
     $('hud-cuan-val').textContent = fmtRp(G.todayTotal);
-    prependCatchRow(f, BADGES[G.rarityIdx]);
+    prependCatchRow(f, badge);
     emit('onSaved', { fish: f, todayTotal: G.todayTotal });
   });
   after(0.75, () => {
