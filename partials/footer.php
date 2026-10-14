@@ -2,33 +2,33 @@
 
   <style>
   /* ══════════════════════════════════════════════════════
-     CLAYMORPHISM FLOATING HONEY DOCK WITH VOLUMETRIC PLAY GEM
+     CLAYMORPHISM FLOATING OCEAN DOCK WITH AQUATIC 3D GEM
      ══════════════════════════════════════════════════════ */
   .bottom-nav {
     position: fixed !important;
-    bottom: 8px !important;
+    bottom: 10px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: calc(100% - 20px) !important;
     max-width: 430px !important;
     background: #ffffff !important;
-    border: 1.5px solid #fed7aa !important;
+    border: 2px solid #bae6fd !important;
     border-radius: 28px !important;
     box-shadow: 
-      0 12px 28px rgba(120, 53, 15, 0.15),
+      0 14px 32px rgba(2, 132, 199, 0.22),
       0 3px 8px rgba(0, 0, 0, 0.04),
-      inset 2px 2px 4px #ffffff,
-      inset -2px -2px 4px rgba(217, 119, 6, 0.07) !important;
+      inset 2px 2px 5px #ffffff,
+      inset -2px -2px 5px rgba(2, 132, 199, 0.08) !important;
     display: grid !important;
     grid-template-columns: 1fr 1fr 1.25fr 1fr 1fr !important;
     align-items: center !important;
-    height: 56px !important;
+    height: 58px !important;
     padding: 0 6px !important;
     z-index: 9999 !important;
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   }
 
-  body { padding-bottom: 78px !important; }
+  body { padding-bottom: 84px !important; }
 
   /* CLAY NAV ITEMS */
   .nav-item {
@@ -37,12 +37,12 @@
     align-items: center !important;
     justify-content: center !important;
     text-decoration: none !important;
-    color: #92400e !important;
+    color: #64748b !important;
     font-size: 9px !important;
     font-weight: 800 !important;
     font-family: 'Nunito', sans-serif !important;
     gap: 2px !important;
-    height: 44px !important;
+    height: 46px !important;
     border-radius: 16px !important;
     transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     position: relative;
@@ -55,32 +55,32 @@
   }
   .nav-item i {
     font-size: 20px !important;
-    color: #92400e !important;
+    color: #64748b !important;
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s !important;
   }
 
-  /* ACTIVE STATE - CLAY PILL ACCENT */
+  /* ACTIVE STATE - OCEANIC CLAY PILL ACCENT */
   .nav-item.active {
-    color: #78350f !important;
+    color: #0284c7 !important;
     font-weight: 900 !important;
   }
   .nav-item.active i {
-    color: #d97706 !important;
+    color: #0284c7 !important;
     transform: scale(1.12) !important;
-    filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.35));
+    filter: drop-shadow(0 2px 6px rgba(2, 132, 199, 0.35));
   }
   .nav-item.active::after {
     content: '';
     position: absolute;
-    bottom: 1px;
-    width: 14px;
-    height: 3px;
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    bottom: 2px;
+    width: 16px;
+    height: 3.5px;
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
     border-radius: 999px;
-    box-shadow: 0 1px 3px rgba(245, 158, 11, 0.4);
+    box-shadow: 0 1px 4px rgba(2, 132, 199, 0.5);
   }
 
-  /* CENTER PLAY BUTTON (CLAY HONEY GEM - BORDER TEGAS) */
+  /* CENTER PLAY BUTTON (CLAY AQUATIC 3D GEM) */
   .nav-item--play {
     position: relative !important;
     overflow: visible !important;
@@ -95,37 +95,37 @@
     flex-direction: column;
     align-items: center;
     position: relative;
-    margin-top: -18px;
+    margin-top: -20px;
   }
   .nav-play-btn {
-    width: 46px; height: 46px;
-    background: linear-gradient(145deg, #fde047 0%, #f59e0b 55%, #d97706 100%) !important;
+    width: 48px; height: 48px;
+    background: linear-gradient(145deg, #38bdf8 0%, #0284c7 55%, #0369a1 100%) !important;
     border-radius: 18px !important;
-    border: 2px solid #b45309 !important;
+    border: 2.5px solid #ffffff !important;
     display: flex; align-items: center; justify-content: center;
     position: relative;
     z-index: 5;
     box-shadow: 
-      0 10px 20px rgba(245, 158, 11, 0.4),
-      0 2px 6px rgba(0, 0, 0, 0.05),
+      0 10px 22px rgba(2, 132, 199, 0.45),
+      0 2px 6px rgba(0, 0, 0, 0.06),
       inset 3px 3px 6px rgba(255, 255, 255, 0.8),
-      inset -3px -3px 6px rgba(180, 83, 9, 0.35) !important;
+      inset -3px -3px 6px rgba(3, 105, 161, 0.4) !important;
     transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s !important;
   }
   .nav-item--play:active .nav-play-btn {
     transform: translateY(2px) scale(0.94) !important;
     box-shadow: 
-      0 4px 10px rgba(245, 158, 11, 0.3),
-      inset 2px 2px 4px rgba(180, 83, 9, 0.4),
+      0 4px 10px rgba(2, 132, 199, 0.3),
+      inset 2px 2px 4px rgba(3, 105, 161, 0.4),
       inset -1px -1px 3px rgba(255, 255, 255, 0.5) !important;
   }
   .nav-item--play.active .nav-play-btn {
-    background: linear-gradient(145deg, #fef08a 0%, #fbbf24 60%, #ea580c 100%) !important;
+    background: linear-gradient(145deg, #67e8f9 0%, #0ea5e9 60%, #0284c7 100%) !important;
     box-shadow: 
-      0 12px 24px rgba(245, 158, 11, 0.5),
-      0 0 14px rgba(251, 191, 36, 0.55),
+      0 12px 26px rgba(2, 132, 199, 0.55),
+      0 0 16px rgba(56, 189, 248, 0.6),
       inset 3px 3px 6px rgba(255, 255, 255, 0.9),
-      inset -3px -3px 6px rgba(180, 83, 9, 0.4) !important;
+      inset -3px -3px 6px rgba(3, 105, 161, 0.4) !important;
   }
   .nav-play-btn i {
     font-size: 24px !important;
@@ -137,7 +137,7 @@
   .nav-play-label {
     font-size: 8.5px;
     font-weight: 900;
-    color: #78350f;
+    color: #0369a1;
     font-family: 'Nunito', sans-serif;
     margin-top: 2px;
     letter-spacing: -0.2px;
@@ -145,26 +145,26 @@
     z-index: 6;
   }
   .nav-item--play.active .nav-play-label {
-    color: #d97706;
+    color: #0284c7;
   }
 
   /* Floating contact adjustment */
   .float-contact-wrap {
-    bottom: 76px !important;
+    bottom: 80px !important;
   }
   </style>
 
   <nav class="bottom-nav">
     <a href="/home" class="nav-item <?= ($activePage??'')==='home'?'active':'' ?>">
       <i class="<?= ($activePage??'')==='home'?'ph-fill':'ph-bold' ?> ph-house-simple"></i>
-      Lobby
+      Dermaga
     </a>
     <a href="/upgrade" class="nav-item <?= ($activePage??'')==='upgrade'?'active':'' ?>">
       <i class="<?= ($activePage??'')==='upgrade'?'ph-fill':'ph-bold' ?> ph-crown-simple"></i>
-      Level
+      Pangkat
     </a>
 
-    <!-- Center: NONTON VIDEO button -->
+    <!-- Center: NONTON SAMUDRA BUTTON -->
     <a href="/videos" class="nav-item nav-item--play <?= ($activePage??'')==='videos'?'active':'' ?>">
       <div class="nav-play-wrap">
         <div class="nav-play-btn">
@@ -176,11 +176,11 @@
 
     <a href="/referral" class="nav-item <?= ($activePage??'')==='referral'?'active':'' ?>">
       <i class="<?= ($activePage??'')==='referral'?'ph-fill':'ph-bold' ?> ph-users-three"></i>
-      Undang
+      Kru Laut
     </a>
     <a href="/profile" class="nav-item <?= ($activePage??'')==='profile'?'active':'' ?>">
       <i class="<?= ($activePage??'')==='profile'?'ph-fill':'ph-bold' ?> ph-user-circle"></i>
-      Akun
+      Kabin
     </a>
   </nav>
 </div>

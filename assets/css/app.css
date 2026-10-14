@@ -1,45 +1,47 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  --ink:         #451a03; /* Rich dark roasted honey/brown text */
-  --text-muted:  #78350f;
-  --bg:          #fef8ee; /* Soft warm honey cream */
+  --ink:         #0f172a; /* Deep maritime midnight text */
+  --text-muted:  #0369a1;
+  --bg:          #f0f7fc; /* Soft cool ocean breeze tint */
   --white:       #ffffff;
 
-  /* Brand: Vibrant Honey Amber */
-  --brand:       #f59e0b;
-  --brand-light: #fef3c7;
-  --brand-hover: #d97706;
-  --brand-dark:  #b45309;
-  --brand-deep:  #78350f;
-  --accent-1:    #fbbf24;
-  --accent-2:    #fde68a;
-  --honey-gold:  #eab308;
+  /* Brand: Ocean Marine Blue & Aquatic Cyan */
+  --brand:       #0284c7;
+  --brand-light: #e0f2fe;
+  --brand-hover: #0369a1;
+  --brand-dark:  #0c4a6e;
+  --brand-deep:  #075985;
+  --accent-1:    #38bdf8;
+  --accent-2:    #bae6fd;
+  --ocean-gold:  #f59e0b;
+  --ocean-coral: #f43f5e;
+  --ocean-teal:  #06b6d4;
 
   /* Playful Functional Colors */
   --green:   #10b981;
   --red:     #ef4444;
-  --blue:    #3b82f6;
+  --blue:    #0284c7;
   --yellow:  #f59e0b;
-  --pink:    #ec4899;
-  --teal:    #14b8a6;
+  --pink:    #f43f5e;
+  --teal:    #06b6d4;
   --orange:  #ea580c;
-  --coral:   #f97316;
+  --coral:   #fb7185;
 
-  --mint:    #d1fae5;
-  --lavender:#ede9fe;
+  --mint:    #ccfbf1;
+  --lavender:#e0e7ff;
   --peach:   #ffedd5;
   --sky:     #e0f2fe;
-  --salmon:  #fce7f3;
+  --salmon:  #ffe4e6;
   --lime:    #dcfce7;
 
-  /* Bubbly 3D Amber Chocolate Borders & Shadows */
-  --border:       3px solid #78350f;
-  --border-amber: 3px solid #d97706;
-  --border-light: 1.5px solid #fde68a;
-  --shadow-sm: 0 4px 0 #78350f;
-  --shadow:    0 6px 0 #78350f;
-  --shadow-lg: 0 8px 0 #78350f, 0 12px 24px rgba(180,83,9,0.22);
+  /* Bubbly 3D Ocean Clay Borders & Shadows */
+  --border:       2.5px solid #0284c7;
+  --border-ocean: 2.5px solid #0ea5e9;
+  --border-light: 1.5px solid #bae6fd;
+  --shadow-sm: 0 4px 0 #0284c7;
+  --shadow:    0 6px 0 #0369a1;
+  --shadow-lg: 0 8px 0 #0369a1, 0 14px 28px rgba(2,132,199,0.25);
 
   --radius:    22px;
   --radius-sm: 14px;
@@ -53,10 +55,10 @@ html { font-size: 14px; scroll-behavior: smooth; overflow-x: hidden; }
 body {
   font-family: 'Nunito', sans-serif;
   background-color: var(--bg);
-  /* Geometric Honeycomb dots background */
+  /* Ocean Water Bubbles background */
   background-image:
-    radial-gradient(#fde68a 1.8px, transparent 1.8px),
-    radial-gradient(#fde68a 1.8px, transparent 1.8px);
+    radial-gradient(#bae6fd 1.8px, transparent 1.8px),
+    radial-gradient(#bae6fd 1.8px, transparent 1.8px);
   background-size: 28px 28px;
   background-position: 0 0, 14px 14px;
   color: var(--ink);
