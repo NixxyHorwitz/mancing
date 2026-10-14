@@ -108,18 +108,16 @@ $final_og_desc = $_seo_og_desc ?: $_seo_desc;
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/app.css?v=<?= filemtime(dirname(__DIR__) . '/assets/css/app.css') ?>">
 <style>
-/* ══ GLOBAL RESET & OCEANIC BACKGROUND ══ */
+/* ══ MINIMALIST HORIZON BACKGROUND & RESET ══ */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; }
 body {
-  font-family: 'Nunito', 'Inter', sans-serif !important;
-  background: #f0f7fc !important;
-  background-image:
-    radial-gradient(#bae6fd 1.5px, transparent 1.5px),
-    radial-gradient(#bae6fd 1.5px, transparent 1.5px) !important;
-  background-size: 26px 26px !important;
-  background-position: 0 0, 13px 13px !important;
-  padding-bottom: 86px !important;
+  font-family: 'Nunito', 'Inter', -apple-system, sans-serif !important;
+  background: #f8fafc !important;
+  background-image: radial-gradient(rgba(14, 165, 233, 0.08) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+  background-position: 0 0 !important;
+  padding-bottom: 84px !important;
   -webkit-font-smoothing: antialiased;
   color: #0f172a;
 }
@@ -129,547 +127,393 @@ i[class^="ph-"] {
   justify-content: center;
   vertical-align: middle;
 }
-.app-shell { width: 100%; max-width: 480px; margin: 0 auto; }
+.app-shell { width: 100%; max-width: 440px; margin: 0 auto; position: relative; }
 
-/* ══ FLOATING OCEANIC CLAY CAPSULE TOPBAR ══ */
+/* ══ DUAL FLOATING HORIZON ISLANDS NAVBAR ══ */
 .topbar-wrap {
   position: sticky; top: 0; z-index: 1000;
   width: 100%;
-  padding: 8px 10px 4px;
-  background: linear-gradient(180deg, rgba(240, 247, 252, 0.96) 0%, rgba(240, 247, 252, 0.8) 75%, transparent 100%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  padding: 8px 12px 4px;
+  pointer-events: none;
 }
-.topbar {
-  width: 100%;
-  height: 54px;
-  background: linear-gradient(135deg, #0369a1 0%, #0284c7 45%, #0ea5e9 100%);
-  border: 2px solid #38bdf8;
-  border-radius: 22px;
-  box-shadow: 
-    0 10px 24px rgba(2, 132, 199, 0.28),
-    0 2px 6px rgba(0, 0, 0, 0.05),
-    inset 0 2px 4px rgba(255, 255, 255, 0.55),
-    inset 0 -2px 4px rgba(3, 105, 161, 0.35);
-  display: flex;
-  align-items: center;
-}
-
-.topbar__inner {
+.topbar-floating-row {
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 10px;
-  height: 100%;
   width: 100%;
   gap: 8px;
 }
 
-/* ── Brand & Marine Mascot ── */
-.tb-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-.tb-mascot-box {
-  width: 34px; height: 34px;
-  background: #ffffff;
-  border: 1.5px solid #bae6fd;
-  border-radius: 12px;
-  box-shadow: 
-    0 4px 10px rgba(2, 132, 199, 0.2),
-    inset 2px 2px 4px #ffffff,
-    inset -2px -2px 4px rgba(2, 132, 199, 0.12);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
-}
-.tb-mascot-img {
-  width: 24px; height: 24px;
-  object-fit: contain;
-  animation: tbLogoFloat 2.6s ease-in-out infinite;
-}
-@keyframes tbLogoFloat {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-2px) rotate(4deg); }
-}
-
-.tb-brand-info {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.05;
-}
-.tb-brand-name {
-  font-size: 15px;
-  font-weight: 900;
-  color: #ffffff;
-  text-shadow: 0 1.5px 3px rgba(3, 105, 161, 0.8);
-  letter-spacing: -0.3px;
-}
-.tb-brand-name em {
-  font-style: normal;
-  color: #fde047;
-  text-shadow: 0 1.5px 3px rgba(3, 105, 161, 0.8);
-}
-.tb-brand-tag {
+/* Left Island: Brand Sculpted Pill */
+.island-brand-pill {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 7.5px;
-  font-weight: 900;
-  color: #0369a1;
-  background: #e0f2fe;
-  padding: 1.5px 6px;
-  border-radius: 6px;
+  gap: 8px;
+  height: 44px;
+  padding: 0 12px 0 8px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid #e0f2fe;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  text-decoration: none;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.island-brand-pill:active {
+  transform: scale(0.97);
+}
+.brand-fin-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
   border: 1px solid #7dd3fc;
-  width: fit-content;
-  margin-top: 1.5px;
-  box-shadow: inset 1px 1px 2px #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: #0284c7;
+  font-size: 15px;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15);
+}
+.brand-text {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.4px;
+  display: flex;
+  align-items: baseline;
+}
+.brand-dot {
+  color: #38bdf8;
+  font-weight: 900;
+}
+.brand-sub {
+  color: #0284c7;
+  font-weight: 900;
 }
 
-/* ── Actions HUD ── */
-.tb-actions {
+/* Right Island: Smart Balance & Alert Capsule */
+.island-cluster-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 8px 0 10px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid #e0f2fe;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.cluster-balance-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
-}
-
-/* ── Saldo Capsule (Marine Pearl Clay Pill) ── */
-.tb-saldo-capsule {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #ffffff;
-  border: 1.5px solid #bae6fd;
-  border-radius: 999px;
-  padding: 3px 9px 3px 4px;
-  box-shadow: 
-    0 4px 10px rgba(2, 132, 199, 0.16),
-    inset 2px 2px 4px #ffffff,
-    inset -2px -2px 4px rgba(2, 132, 199, 0.08);
   cursor: pointer;
   user-select: none;
-  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s;
+  transition: opacity 0.12s;
 }
-.tb-saldo-capsule:active {
-  transform: translateY(2px) scale(0.96);
-  box-shadow: 
-    0 1px 4px rgba(2, 132, 199, 0.14),
-    inset 1px 1px 2px rgba(2, 132, 199, 0.15);
+.cluster-balance-btn:active {
+  opacity: 0.75;
 }
-.tb-saldo-icon {
-  width: 23px; height: 23px;
-  background: linear-gradient(135deg, #fde047, #f59e0b);
-  border: 1.2px solid #ffffff;
+.pulse-emerald-dot {
+  width: 6px; height: 6px;
   border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  animation: pulseAura 2.2s infinite ease-in-out;
+}
+@keyframes pulseAura {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25); }
+  50% { box-shadow: 0 0 0 4.5px rgba(16, 185, 129, 0.12); }
+}
+.cluster-bal-txt {
   font-size: 12px;
-  color: #78350f;
-  flex-shrink: 0;
-  box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(245, 158, 11, 0.35);
-}
-.tb-saldo-texts {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.05;
-}
-.tb-saldo-lbl {
-  font-size: 7px;
   font-weight: 900;
   color: #0369a1;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  letter-spacing: -0.2px;
 }
-.tb-saldo-val {
-  font-size: 11px;
+.cluster-user-avatar {
+  width: 22px; height: 22px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: #ffffff;
+  font-size: 10px;
   font-weight: 900;
-  color: #0c4a6e;
-  white-space: nowrap;
-}
-.tb-saldo-plus {
-  width: 15px; height: 15px;
-  background: #e0f2fe;
-  border: 1px solid #7dd3fc;
-  border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 8.5px;
-  color: #0284c7;
-  font-weight: 900;
-  box-shadow: inset 1px 1px 2px #fff;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.tb-saldo-capsule.active .tb-saldo-plus {
-  transform: rotate(180deg);
+  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
 }
 
-/* ── Marine Buttons (Bell & Avatar) ── */
-.tb-btn-icon {
-  width: 32px; height: 32px;
-  background: #ffffff;
-  border: 1.5px solid #bae6fd;
-  border-radius: 11px;
-  box-shadow: 
-    0 4px 10px rgba(2, 132, 199, 0.16),
-    inset 2px 2px 4px #ffffff,
-    inset -2px -2px 4px rgba(2, 132, 199, 0.08);
+.cluster-divider {
+  width: 1px;
+  height: 18px;
+  background: #e2e8f0;
+}
+
+.cluster-bell-btn {
+  width: 28px; height: 28px;
+  border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  color: #0284c7;
+  color: #64748b;
+  font-size: 16px;
   text-decoration: none;
   position: relative;
-  font-weight: 900;
-  font-size: 15px;
-  flex-shrink: 0;
-  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: color 0.15s;
 }
-.tb-btn-icon:active {
-  transform: translateY(2px) scale(0.94);
-  box-shadow: 
-    0 1px 3px rgba(2, 132, 199, 0.14),
-    inset 1px 1px 2px rgba(2, 132, 199, 0.15);
+.cluster-bell-btn:active {
+  color: #0284c7;
 }
-.tb-avatar {
-  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-  color: #0369a1;
-  font-size: 13px;
-  border: 1.5px solid #7dd3fc;
-}
-.tb-badge-count {
+.cluster-badge-count {
   position: absolute;
-  top: -4px; right: -4px;
-  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  top: -2px; right: -2px;
+  background: #f43f5e;
   color: #fff;
-  font-size: 8.5px;
+  font-size: 8px;
   font-weight: 900;
-  min-width: 16px; height: 16px;
+  min-width: 14px; height: 14px;
   border-radius: 999px;
   padding: 0 3px;
   border: 1.5px solid #fff;
-  box-shadow: 0 2px 5px rgba(225, 29, 72, 0.4);
   display: none;
   align-items: center; justify-content: center;
-  line-height: 1;
 }
 
 /* Guest buttons */
-.tb-login-btn {
-  background: #ffffff;
-  border: 1.5px solid #bae6fd;
-  border-radius: 999px;
-  padding: 5px 11px;
-  color: #0284c7;
-  font-weight: 900;
-  font-size: 11px;
-  text-decoration: none;
-  box-shadow: 0 3px 6px rgba(2, 132, 199, 0.15), inset 1px 1px 2px #fff;
+.island-cluster-pill.guest {
+  padding: 0 6px;
+  gap: 4px;
 }
-.tb-reg-btn {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  border: 1.5px solid #fde68a;
-  border-radius: 999px;
-  padding: 5px 11px;
-  color: #ffffff;
-  font-weight: 900;
-  font-size: 11px;
-  text-decoration: none;
-  box-shadow: 0 3px 6px rgba(217, 119, 6, 0.3), inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+.island-guest-link {
+  color: #0284c7; font-size: 11px; font-weight: 900; text-decoration: none; padding: 4px 8px;
+}
+.island-guest-btn {
+  background: #0284c7; color: #fff; font-size: 11px; font-weight: 900; text-decoration: none;
+  padding: 5px 12px; border-radius: 12px; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
 }
 
-@media (max-width: 360px) {
-  .tb-brand-tag { display: none; }
-  .tb-saldo-lbl { display: none; }
-  .tb-saldo-capsule { padding: 3px 5px; }
-  .tb-btn-icon { width: 30px; height: 30px; font-size: 14px; }
-  .tb-brand-name { font-size: 14px; }
-  .tb-mascot-box { width: 30px; height: 30px; }
-  .tb-mascot-img { width: 21px; height: 21px; }
-}
-
-/* ── WALLET POPOVER DRAWER (UNDERWATER VAULT CLAY) ── */
+/* ── WALLET POPOVER DRAWER ── */
 .tb-wallet-backdrop {
   display: none;
   position: fixed; inset: 0;
-  background: rgba(12, 74, 110, 0.45);
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   z-index: 9998;
-  animation: tbFadeIn .2s ease;
 }
 .tb-wallet-backdrop.open { display: block; }
 
 .tb-wallet-popover {
   display: none;
   position: fixed;
-  top: 66px; left: 50%;
+  top: 60px; left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 20px); max-width: 420px;
+  width: calc(100% - 24px); max-width: 400px;
   background: #ffffff;
-  border: 2px solid #bae6fd;
+  border: 1.5px solid #e0f2fe;
   border-radius: 24px;
-  box-shadow: 
-    0 18px 40px rgba(2, 132, 199, 0.25),
-    0 4px 10px rgba(0, 0, 0, 0.04),
-    inset 3px 3px 7px #ffffff,
-    inset -3px -3px 7px rgba(2, 132, 199, 0.06);
+  box-shadow: 0 20px 48px rgba(2, 132, 199, 0.16), 0 4px 12px rgba(0, 0, 0, 0.04);
   z-index: 9999;
   overflow: hidden;
-  animation: tbPopIn .22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: islandPop .18s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .tb-wallet-popover.open { display: block; }
-
-@keyframes tbPopIn {
-  from { transform: translateX(-50%) translateY(-8px) scale(0.97); opacity: 0; }
+@keyframes islandPop {
+  from { transform: translateX(-50%) translateY(-6px) scale(0.98); opacity: 0; }
   to { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
-}
-@keyframes tbFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .twp-header {
-  background: linear-gradient(135deg, #0369a1, #0284c7);
-  padding: 12px 16px;
+  padding: 14px 16px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 2px solid #38bdf8;
-  color: #fff;
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.4);
 }
 .twp-title {
   font-size: 13.5px;
   font-weight: 900;
+  color: #0f172a;
   display: flex;
   align-items: center;
   gap: 6px;
-  text-shadow: 0 1px 2px rgba(3, 105, 161, 0.6);
 }
 .twp-close {
-  background: #ffffff;
-  color: #0369a1;
-  border: 1.5px solid #bae6fd;
-  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: none;
+  border-radius: 50%;
   width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px;
-  font-weight: 900;
+  font-size: 14px;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.15), inset 1px 1px 2px #fff;
-  transition: transform 0.1s;
 }
-.twp-close:active { transform: scale(0.9); }
 
 .twp-body {
-  padding: 12px 14px;
+  padding: 0 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
-
 .twp-card {
   background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 9px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  box-shadow: 
-    0 4px 10px rgba(2, 132, 199, 0.05),
-    inset 2px 2px 4px #ffffff,
-    inset -2px -2px 4px rgba(2, 132, 199, 0.04);
 }
 .twp-card-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
 }
 .twp-card-icon {
-  width: 36px; height: 36px;
-  border-radius: 12px;
-  border: 1.2px solid #bae6fd;
+  width: 32px; height: 32px;
+  border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12), inset 1px 1px 2px #ffffff;
+  font-size: 16px;
 }
-.twp-card-icon.wd { background: #e0f2fe; color: #0284c7; border-color: #7dd3fc; }
-.twp-card-icon.dep { background: #fef3c7; color: #d97706; border-color: #fde68a; }
-.twp-card-icon.baits { background: #ccfbf1; color: #0f766e; border-color: #99f6e4; }
+.twp-card-icon.wd { background: #e0f2fe; color: #0284c7; }
+.twp-card-icon.dep { background: #ecfdf5; color: #059669; }
+.twp-card-icon.baits { background: #fef3c7; color: #d97706; }
 
-.twp-card-info {
-  display: flex;
-  flex-direction: column;
-}
 .twp-card-lbl {
-  font-size: 8.5px;
+  font-size: 8px;
   font-weight: 800;
   color: #64748b;
   text-transform: uppercase;
-  line-height: 1.1;
 }
 .twp-card-val {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 900;
   color: #0f172a;
-  line-height: 1.2;
 }
-
 .twp-card-btn {
-  padding: 6px 12px;
+  padding: 5px 11px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 900;
   text-decoration: none;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1), inset 1px 1px 2px rgba(255,255,255,0.7);
-  transition: transform 0.12s;
-  display: inline-flex; align-items: center; gap: 4px;
 }
-.twp-card-btn:active { transform: translateY(1px) scale(0.95); }
-.twp-card-btn.wd { background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: 1px solid #38bdf8; }
-.twp-card-btn.dep { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: 1px solid #fde68a; }
-.twp-card-btn.baits { background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: 1px solid #6ee7b7; }
+.twp-card-btn.wd { background: #0284c7; color: #fff; }
+.twp-card-btn.dep { background: #059669; color: #fff; }
+.twp-card-btn.baits { background: #d97706; color: #fff; }
 </style>
 </head>
 <body>
 <div class="app-shell">
-  <!-- ══ FLOATING OCEANIC TOPBAR ══ -->
+  <!-- ══ DUAL FLOATING HORIZON ISLANDS ══ -->
   <div class="topbar-wrap">
-    <header class="topbar">
-      <div class="topbar__inner">
-        <!-- Left: Logo & Marine Mascot -->
-        <a href="/home" class="tb-brand">
-          <div class="tb-mascot-box">
-            <img src="<?= htmlspecialchars($_site_logo) ?>" alt="<?= htmlspecialchars($_site_name) ?>" class="tb-mascot-img">
-          </div>
-          <div class="tb-brand-info">
-            <div class="tb-brand-name">Mancing<em>Cuan</em></div>
-            <div class="tb-brand-tag"><i class="ph-bold ph-anchor"></i> Samudra Cuan</div>
-          </div>
-        </a>
-
-        <!-- Right: Ocean HUD / Actions -->
-        <?php if (!empty($user)): ?>
-        <?php
-        if (!function_exists('fmt_short_tb')) {
-          function fmt_short_tb(float $n): string {
-            if ($n >= 1_000_000_000) return 'Rp ' . number_format($n/1_000_000_000, 1, '.', '') . 'M';
-            if ($n >= 1_000_000)     return 'Rp ' . number_format($n/1_000_000, 1, '.', '') . 'jt';
-            if ($n >= 100_000)       return 'Rp ' . number_format($n/1_000, 0, '.', '') . 'rb';
-            return 'Rp ' . number_format($n, 0, ',', '.');
-          }
-        }
-        ?>
-        <div class="tb-actions">
-          <!-- Saldo Capsule HUD -->
-          <div class="tb-saldo-capsule" id="tb-saldo-trigger" onclick="toggleWalletPopover()" title="Klik untuk rincian dompet laut">
-            <div class="tb-saldo-icon">
-              <i class="ph-fill ph-coins"></i>
-            </div>
-            <div class="tb-saldo-texts">
-              <span class="tb-saldo-lbl">SALDO WD</span>
-              <span class="tb-saldo-val"><?= fmt_short_tb((float)$user['balance_wd']) ?></span>
-            </div>
-            <div class="tb-saldo-plus">
-              <i class="ph-bold ph-caret-down"></i>
-            </div>
-          </div>
-
-          <!-- Notifikasi Bahari -->
-          <a href="/notifications" class="tb-btn-icon" id="notif-bell-btn" title="Pengumuman & Notifikasi">
-            <i class="ph-bold ph-bell"></i>
-            <span id="notif-badge" class="tb-badge-count"></span>
-          </a>
-
-          <!-- Avatar Pelaut -->
-          <a href="/profile" class="tb-btn-icon tb-avatar" title="Kabin Akun">
-            <?= strtoupper(substr($user['username'], 0, 1)) ?>
-          </a>
+    <div class="topbar-floating-row">
+      <!-- Left Island: Geometric Nautical Brand -->
+      <a href="/home" class="island-brand-pill">
+        <div class="brand-fin-icon">
+          <i class="ph-fill ph-fish-simple"></i>
         </div>
-        <?php else: ?>
-        <div class="tb-actions">
-          <a href="/login" class="tb-login-btn">Masuk</a>
-          <a href="/register" class="tb-reg-btn">Daftar</a>
-        </div>
-        <?php endif; ?>
-      </div>
+        <span class="brand-text">mancing<span class="brand-dot">.</span><span class="brand-sub">cuan</span></span>
+      </a>
 
+      <!-- Right Island: Smart Balance & Alert Capsule -->
       <?php if (!empty($user)): ?>
-      <!-- Wallet Popover Modal (Treasure Vault) -->
-      <div class="tb-wallet-backdrop" id="tb-wallet-backdrop" onclick="toggleWalletPopover(false)"></div>
-      <div class="tb-wallet-popover" id="tb-wallet-popover">
-        <div class="twp-header">
-          <div class="twp-title">
-            <i class="ph-bold ph-wallet"></i> Peti Dompet Samudra
-          </div>
-          <button type="button" class="twp-close" onclick="toggleWalletPopover(false)">&times;</button>
-        </div>
-        <div class="twp-body">
-          <!-- Card 1: Saldo WD -->
-          <div class="twp-card">
-            <div class="twp-card-left">
-              <div class="twp-card-icon wd"><i class="ph-bold ph-coins"></i></div>
-              <div class="twp-card-info">
-                <span class="twp-card-lbl">Saldo Siap Tarik (WD)</span>
-                <span class="twp-card-val"><?= format_rp((float)$user['balance_wd']) ?></span>
-              </div>
-            </div>
-            <a href="/withdraw" class="twp-card-btn wd">Tarik &rarr;</a>
-          </div>
-
-          <!-- Card 2: Saldo Depo -->
-          <div class="twp-card">
-            <div class="twp-card-left">
-              <div class="twp-card-icon dep"><i class="ph-bold ph-wallet"></i></div>
-              <div class="twp-card-info">
-                <span class="twp-card-lbl">Saldo Kas Pembelian (Depo)</span>
-                <span class="twp-card-val"><?= format_rp((float)$user['balance_dep']) ?></span>
-              </div>
-            </div>
-            <a href="/deposit" class="twp-card-btn dep">+ Isi Kas</a>
-          </div>
-
-          <!-- Card 3: Umpan Pancing -->
-          <div class="twp-card">
-            <div class="twp-card-left">
-              <div class="twp-card-icon baits"><i class="ph-fill ph-fish"></i></div>
-              <div class="twp-card-info">
-                <span class="twp-card-lbl">Umpan Pancing Anda</span>
-                <span class="twp-card-val"><?= (int)($user['fishing_baits'] ?? 0) ?> Umpan</span>
-              </div>
-            </div>
-            <a href="/minigame" class="twp-card-btn baits">Mancing &rarr;</a>
-          </div>
-        </div>
-      </div>
-
-      <script>
-      function toggleWalletPopover(force) {
-        const popover = document.getElementById('tb-wallet-popover');
-        const backdrop = document.getElementById('tb-wallet-backdrop');
-        const trigger = document.getElementById('tb-saldo-trigger');
-        if (!popover || !backdrop) return;
-
-        const shouldOpen = typeof force === 'boolean' ? force : !popover.classList.contains('open');
-        if (shouldOpen) {
-          popover.classList.add('open');
-          backdrop.classList.add('open');
-          if (trigger) trigger.classList.add('active');
-        } else {
-          popover.classList.remove('open');
-          backdrop.classList.remove('open');
-          if (trigger) trigger.classList.remove('active');
+      <?php
+      if (!function_exists('fmt_short_tb')) {
+        function fmt_short_tb(float $n): string {
+          if ($n >= 1_000_000_000) return 'Rp ' . number_format($n/1_000_000_000, 1, '.', '') . 'M';
+          if ($n >= 1_000_000)     return 'Rp ' . number_format($n/1_000_000, 1, '.', '') . 'jt';
+          if ($n >= 100_000)       return 'Rp ' . number_format($n/1_000, 0, '.', '') . 'rb';
+          return 'Rp ' . number_format($n, 0, ',', '.');
         }
       }
-      </script>
+      ?>
+      <div class="island-cluster-pill">
+        <!-- Balance Tap Area -->
+        <div class="cluster-balance-btn" id="tb-saldo-trigger" onclick="toggleWalletPopover()" title="Klik untuk rincian dompet">
+          <span class="pulse-emerald-dot"></span>
+          <span class="cluster-bal-txt"><?= fmt_short_tb((float)$user['balance_wd']) ?></span>
+          <div class="cluster-user-avatar"><?= strtoupper(substr($user['username'] ?? 'U', 0, 1)) ?></div>
+        </div>
+        
+        <span class="cluster-divider"></span>
+
+        <!-- Notification Bell -->
+        <a href="/notifications" class="cluster-bell-btn" id="notif-bell-btn" title="Notifikasi">
+          <i class="ph-bold ph-bell-simple"></i>
+          <span id="notif-badge" class="cluster-badge-count"></span>
+        </a>
+      </div>
+      <?php else: ?>
+      <div class="island-cluster-pill guest">
+        <a href="/login" class="island-guest-link">Masuk</a>
+        <a href="/register" class="island-guest-btn">Daftar</a>
+      </div>
       <?php endif; ?>
-    </header>
+    </div>
+
+    <?php if (!empty($user)): ?>
+    <!-- Wallet Popover Drawer Modal -->
+    <div class="tb-wallet-backdrop" id="tb-wallet-backdrop" onclick="toggleWalletPopover(false)"></div>
+    <div class="tb-wallet-popover" id="tb-wallet-popover">
+      <div class="twp-header">
+        <div class="twp-title">
+          <i class="ph-bold ph-wallet"></i> Dompet Anda
+        </div>
+        <button type="button" class="twp-close" onclick="toggleWalletPopover(false)">&times;</button>
+      </div>
+      <div class="twp-body">
+        <!-- Card 1: Saldo WD -->
+        <div class="twp-card">
+          <div class="twp-card-left">
+            <div class="twp-card-icon wd"><i class="ph-bold ph-coins"></i></div>
+            <div>
+              <div class="twp-card-lbl">Saldo Siap Tarik</div>
+              <div class="twp-card-val"><?= format_rp((float)$user['balance_wd']) ?></div>
+            </div>
+          </div>
+          <a href="/withdraw" class="twp-card-btn wd">Tarik &rarr;</a>
+        </div>
+
+        <!-- Card 2: Saldo Depo -->
+        <div class="twp-card">
+          <div class="twp-card-left">
+            <div class="twp-card-icon dep"><i class="ph-bold ph-wallet"></i></div>
+            <div>
+              <div class="twp-card-lbl">Saldo Kas Pembelian</div>
+              <div class="twp-card-val"><?= format_rp((float)$user['balance_dep']) ?></div>
+            </div>
+          </div>
+          <a href="/deposit" class="twp-card-btn dep">+ Top Up</a>
+        </div>
+
+        <!-- Card 3: Umpan Pancing -->
+        <div class="twp-card">
+          <div class="twp-card-left">
+            <div class="twp-card-icon baits"><i class="ph-fill ph-fish"></i></div>
+            <div>
+              <div class="twp-card-lbl">Umpan Pancing</div>
+              <div class="twp-card-val"><?= (int)($user['fishing_baits'] ?? 0) ?> Umpan</div>
+            </div>
+          </div>
+          <a href="/minigame" class="twp-card-btn baits">Mancing &rarr;</a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    function toggleWalletPopover(force) {
+      const popover = document.getElementById('tb-wallet-popover');
+      const backdrop = document.getElementById('tb-wallet-backdrop');
+      if (!popover || !backdrop) return;
+
+      const shouldOpen = typeof force === 'boolean' ? force : !popover.classList.contains('open');
+      if (shouldOpen) {
+        popover.classList.add('open');
+        backdrop.classList.add('open');
+      } else {
+        popover.classList.remove('open');
+        backdrop.classList.remove('open');
+      }
+    }
+    </script>
+    <?php endif; ?>
   </div>
 
   <main class="page-content">

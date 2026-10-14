@@ -1,8 +1,8 @@
   </main>
 
-  <style>
+    <style>
   /* ══════════════════════════════════════════════════════
-     CLAYMORPHISM FLOATING OCEAN DOCK WITH AQUATIC 3D GEM
+     MINIMALIST FLOATING HORIZON DOCK
      ══════════════════════════════════════════════════════ */
   .bottom-nav {
     position: fixed !important;
@@ -10,27 +10,25 @@
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: calc(100% - 20px) !important;
-    max-width: 430px !important;
-    background: #ffffff !important;
-    border: 2px solid #bae6fd !important;
-    border-radius: 28px !important;
-    box-shadow: 
-      0 14px 32px rgba(2, 132, 199, 0.22),
-      0 3px 8px rgba(0, 0, 0, 0.04),
-      inset 2px 2px 5px #ffffff,
-      inset -2px -2px 5px rgba(2, 132, 199, 0.08) !important;
+    max-width: 420px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1.5px solid #e0f2fe !important;
+    border-radius: 22px !important;
+    box-shadow: 0 10px 24px rgba(2, 132, 199, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02) !important;
     display: grid !important;
-    grid-template-columns: 1fr 1fr 1.25fr 1fr 1fr !important;
+    grid-template-columns: 1fr 1fr 1.2fr 1fr 1fr !important;
     align-items: center !important;
-    height: 58px !important;
+    height: 52px !important;
     padding: 0 6px !important;
     z-index: 9999 !important;
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   }
 
-  body { padding-bottom: 84px !important; }
+  body { padding-bottom: 80px !important; }
 
-  /* CLAY NAV ITEMS */
+  /* DOCK NAV ITEMS */
   .nav-item {
     display: flex !important;
     flex-direction: column !important;
@@ -38,13 +36,13 @@
     justify-content: center !important;
     text-decoration: none !important;
     color: #64748b !important;
-    font-size: 9px !important;
+    font-size: 9.5px !important;
     font-weight: 800 !important;
     font-family: 'Nunito', sans-serif !important;
     gap: 2px !important;
-    height: 46px !important;
-    border-radius: 16px !important;
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    height: 42px !important;
+    border-radius: 14px !important;
+    transition: color 0.15s, transform 0.12s !important;
     position: relative;
     background: transparent !important;
     border: none !important;
@@ -54,33 +52,31 @@
     transform: scale(0.92) !important;
   }
   .nav-item i {
-    font-size: 20px !important;
+    font-size: 19px !important;
     color: #64748b !important;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s !important;
+    transition: color 0.15s, transform 0.15s !important;
   }
 
-  /* ACTIVE STATE - OCEANIC CLAY PILL ACCENT */
+  /* ACTIVE STATE */
   .nav-item.active {
     color: #0284c7 !important;
     font-weight: 900 !important;
   }
   .nav-item.active i {
     color: #0284c7 !important;
-    transform: scale(1.12) !important;
-    filter: drop-shadow(0 2px 6px rgba(2, 132, 199, 0.35));
+    transform: scale(1.08) !important;
   }
   .nav-item.active::after {
     content: '';
     position: absolute;
     bottom: 2px;
-    width: 16px;
-    height: 3.5px;
-    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    width: 14px;
+    height: 3px;
+    background: #0284c7;
     border-radius: 999px;
-    box-shadow: 0 1px 4px rgba(2, 132, 199, 0.5);
   }
 
-  /* CENTER PLAY BUTTON (CLAY AQUATIC 3D GEM) */
+  /* CENTER PLAY BUTTON */
   .nav-item--play {
     position: relative !important;
     overflow: visible !important;
@@ -95,62 +91,47 @@
     flex-direction: column;
     align-items: center;
     position: relative;
-    margin-top: -20px;
+    margin-top: -16px;
   }
   .nav-play-btn {
-    width: 48px; height: 48px;
-    background: linear-gradient(145deg, #38bdf8 0%, #0284c7 55%, #0369a1 100%) !important;
-    border-radius: 18px !important;
-    border: 2.5px solid #ffffff !important;
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
+    border-radius: 16px !important;
+    border: 2px solid #ffffff !important;
     display: flex; align-items: center; justify-content: center;
     position: relative;
     z-index: 5;
-    box-shadow: 
-      0 10px 22px rgba(2, 132, 199, 0.45),
-      0 2px 6px rgba(0, 0, 0, 0.06),
-      inset 3px 3px 6px rgba(255, 255, 255, 0.8),
-      inset -3px -3px 6px rgba(3, 105, 161, 0.4) !important;
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.35) !important;
     transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s !important;
   }
   .nav-item--play:active .nav-play-btn {
-    transform: translateY(2px) scale(0.94) !important;
-    box-shadow: 
-      0 4px 10px rgba(2, 132, 199, 0.3),
-      inset 2px 2px 4px rgba(3, 105, 161, 0.4),
-      inset -1px -1px 3px rgba(255, 255, 255, 0.5) !important;
+    transform: scale(0.92) !important;
   }
   .nav-item--play.active .nav-play-btn {
-    background: linear-gradient(145deg, #67e8f9 0%, #0ea5e9 60%, #0284c7 100%) !important;
-    box-shadow: 
-      0 12px 26px rgba(2, 132, 199, 0.55),
-      0 0 16px rgba(56, 189, 248, 0.6),
-      inset 3px 3px 6px rgba(255, 255, 255, 0.9),
-      inset -3px -3px 6px rgba(3, 105, 161, 0.4) !important;
+    background: linear-gradient(135deg, #38bdf8, #0284c7) !important;
+    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.45) !important;
   }
   .nav-play-btn i {
-    font-size: 24px !important;
+    font-size: 20px !important;
     color: #ffffff !important;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
     margin-left: 2px;
   }
 
   .nav-play-label {
-    font-size: 8.5px;
-    font-weight: 900;
+    font-size: 9px;
+    font-weight: 800;
     color: #0369a1;
     font-family: 'Nunito', sans-serif;
     margin-top: 2px;
     letter-spacing: -0.2px;
-    position: relative;
-    z-index: 6;
   }
   .nav-item--play.active .nav-play-label {
     color: #0284c7;
+    font-weight: 900;
   }
 
-  /* Floating contact adjustment */
   .float-contact-wrap {
-    bottom: 80px !important;
+    bottom: 74px !important;
   }
   </style>
 
