@@ -26,11 +26,9 @@ $st = $pdo->prepare("SELECT COUNT(*) FROM watch_history WHERE user_id=?"); $st->
 $refs = $pdo->prepare("SELECT COUNT(*) FROM users WHERE referred_by=?"); $refs->execute([$user['referral_code']]); $refs = (int)$refs->fetchColumn();
 
 // Additional stats
-$total_deposits = 0; $total_withdrawals = 0; $total_hives = 0; $total_bees = 0;
+$total_deposits = 0; $total_withdrawals = 0;
 try { $s = $pdo->prepare("SELECT COUNT(*) FROM deposits WHERE user_id=? AND status='approved'"); $s->execute([$user['id']]); $total_deposits = (int)$s->fetchColumn(); } catch (\Throwable) {}
 try { $s = $pdo->prepare("SELECT COUNT(*) FROM withdrawals WHERE user_id=? AND status='approved'"); $s->execute([$user['id']]); $total_withdrawals = (int)$s->fetchColumn(); } catch (\Throwable) {}
-try { $s = $pdo->prepare("SELECT COUNT(*) FROM user_bee_hives WHERE user_id=?"); $s->execute([$user['id']]); $total_hives = (int)$s->fetchColumn(); } catch (\Throwable) {}
-try { $s = $pdo->prepare("SELECT COUNT(*) FROM user_bees WHERE user_id=?"); $s->execute([$user['id']]); $total_bees = (int)$s->fetchColumn(); } catch (\Throwable) {}
 
 // Active investments
 $active_investments = 0;
@@ -86,7 +84,7 @@ $_psvg = [
 
 <style>
 /* ══════════════════════════════════════════════
-   LEBAHCUAN INNOVATIVE PROFILE (AMBER HONEY THEME)
+   MANCINGCUAN INNOVATIVE PROFILE
    NO EMOJIS — CDN ICONS & VECTOR ART ONLY
    ══════════════════════════════════════════════ */
 :root {
@@ -984,14 +982,14 @@ body {
   </div>
   <?php endif; ?>
 
-  <!-- 1. DIGITAL BEEKEEPER PASS CARD -->
+  <!-- 1. DIGITAL MEMBER PASS CARD -->
   <div class="pass-card">
     <div class="pass-sheen"></div>
 
     <div class="pass-header">
       <div class="pass-brand">
         <i class="ph-fill ph-shield-check"></i>
-        <span>LebahCuan Citizen</span>
+        <span>MancingCuan Citizen</span>
       </div>
       <div class="pass-tier <?= $is_premium ? 'is-vip' : '' ?>">
         <i class="ph-fill ph-crown"></i>
@@ -1014,7 +1012,7 @@ body {
           <span>Bergabung <?= $member_since ?> (<?= number_format($days_member) ?> Hari)</span>
         </div>
       </div>
-      <div class="pass-chip" title="Verified Beekeeper Chip">
+      <div class="pass-chip" title="Verified Member Chip">
         <i class="ph-bold ph-cpu"></i>
       </div>
     </div>
@@ -1060,21 +1058,20 @@ body {
       </div>
     </div>
 
-    <!-- Zone 2: Honey Reservoir Tank -->
+    <!-- Zone 2: Total Video Ditonton -->
     <div class="vault-reserves">
       <div class="silo-meter">
         <div class="silo-info">
           <span class="silo-lbl">
-            <i class="ph-fill ph-drop"></i> Tangki Madu
+            <i class="ph-fill ph-film-strip"></i> Total Video Ditonton
           </span>
-          <span class="silo-val"><?= number_format((float)$user['honey_stock'], 1) ?> ml</span>
+          <span class="silo-val"><?= number_format($total_watches) ?> video</span>
         </div>
         <div class="silo-bar-track">
           <?php
-            $honey_val = (float)$user['honey_stock'];
-            $honey_pct = min(100, max(6, ($honey_val / 500) * 100));
+            $watch_pct = min(100, max(12, ($total_watches / 50) * 100));
           ?>
-          <div class="silo-bar-fill" style="width: <?= $honey_pct ?>%;"></div>
+          <div class="silo-bar-fill" style="width: <?= $watch_pct ?>%;"></div>
         </div>
       </div>
     </div>
@@ -1098,27 +1095,27 @@ body {
 
   <!-- ════════ TAB 1: RINGKASAN & AKTIVITAS ════════ -->
   <div class="tab-content <?= $initial_tab === 'summary' ? 'active' : '' ?>" id="pane-summary">
-    <!-- Colony Status Ribbon -->
+    <!-- Portfolio Ribbon -->
     <div class="colony-ribbon">
       <div class="cr-header">
         <div class="cr-title">
-          <i class="ph-fill ph-tree"></i>
-          <span>Status Koloni Peternakan</span>
+          <i class="ph-fill ph-chart-polar"></i>
+          <span>Ringkasan Portofolio</span>
         </div>
-        <a href="/farm" class="cr-link">
-          <span>Lahan Farm</span>
+        <a href="/history" class="cr-link">
+          <span>Riwayat</span>
           <i class="ph-bold ph-caret-right"></i>
         </a>
       </div>
       <div class="cr-grid">
         <div class="cr-item">
-          <span class="cr-item-val"><?= number_format($total_hives) ?></span>
-          <span class="cr-item-lbl"><i class="ph-bold ph-house-line"></i> Sarang</span>
+          <span class="cr-item-val"><?= number_format($total_watches) ?></span>
+          <span class="cr-item-lbl"><i class="ph-bold ph-film-strip"></i> Tonton</span>
         </div>
         <div class="cr-sep"></div>
         <div class="cr-item">
-          <span class="cr-item-val"><?= number_format($total_bees) ?></span>
-          <span class="cr-item-lbl"><i class="ph-bold ph-sparkle"></i> Lebah</span>
+          <span class="cr-item-val"><?= number_format($refs) ?></span>
+          <span class="cr-item-lbl"><i class="ph-bold ph-users"></i> Referral</span>
         </div>
         <div class="cr-sep"></div>
         <div class="cr-item">
@@ -1179,7 +1176,7 @@ body {
           <i class="ph-fill ph-users-three"></i>
         </div>
         <div class="stream-info">
-          <div class="stream-title">Mitra Peternak (Undang)</div>
+          <div class="stream-title">Undang Teman (Referral)</div>
           <div class="stream-desc">Teman bergabung lewat kodemu</div>
         </div>
         <div class="stream-value"><?= number_format($refs) ?> mitra</div>
@@ -1189,20 +1186,20 @@ body {
 
   <!-- ════════ TAB 2: FITUR & LAYANAN ════════ -->
   <div class="tab-content" id="pane-services">
-    <!-- Group: Game & Panen -->
+    <!-- Group: Game & Hiburan -->
     <div class="service-group">
       <div class="service-group-title">
         <i class="ph-bold ph-game-controller"></i>
-        <span>Game & Peternakan</span>
+        <span>Aktivitas &amp; Hiburan</span>
       </div>
       <div class="service-card">
-        <a href="/farm" class="service-tile">
+        <a href="/minigame" class="service-tile">
           <div class="st-icon-box" style="background: #dcfce7; color: #166534; border-color: #166534;">
-            <i class="ph-fill ph-tree"></i>
+            <i class="ph-fill ph-game-controller"></i>
           </div>
           <div class="st-text">
-            <div class="st-name">Kebun & Sarang Lebah (3D Farm)</div>
-            <div class="st-desc">Beli sarang, pekerjakan lebah & panen madu</div>
+            <div class="st-name">Minigame Cuan</div>
+            <div class="st-desc">Tantangan harian &amp; klaim bonus instan</div>
           </div>
           <i class="ph-bold ph-caret-right st-arrow"></i>
         </a>
@@ -1244,7 +1241,7 @@ body {
           </div>
           <div class="st-text">
             <div class="st-name">Upgrade Paket Member</div>
-            <div class="st-desc">Tingkatkan limit withdraw & profit peternak</div>
+            <div class="st-desc">Tingkatkan limit withdraw & penghasilan harian</div>
           </div>
           <i class="ph-bold ph-caret-right st-arrow"></i>
         </a>
@@ -1254,7 +1251,7 @@ body {
             <i class="ph-fill ph-chart-line-up"></i>
           </div>
           <div class="st-text">
-            <div class="st-name">Paket Investasi Madu</div>
+            <div class="st-name">Paket Investasi Cuan</div>
             <div class="st-desc">Kembangkan aset dengan return stabil</div>
           </div>
           <i class="ph-bold ph-caret-right st-arrow"></i>

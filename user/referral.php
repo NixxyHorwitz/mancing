@@ -1169,7 +1169,7 @@ function setCopySuccess() {
 function shareNative() {
   if (navigator.share) {
     navigator.share({
-      title: 'LebahCuan',
+      title: 'MancingCuan',
       text: shareText,
       url: refUrl
     }).catch(() => {});

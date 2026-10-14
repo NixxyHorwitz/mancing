@@ -1,4 +1,4 @@
-// popup.js - Controller logic for LebahCuan YT Scrapper Extension
+// popup.js - Controller logic for MancingCuan YT Scrapper Extension
 
 document.addEventListener("DOMContentLoaded", () => {
   const scrapedCount = document.getElementById("scrapedCount");
@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 2500);
   }
 
-  // Build Clean JSON for LebahCuan
+  // Build Clean JSON for MancingCuan
   function buildExportData(videos) {
     const isRateMode = extCalcRate && extCalcRate.checked;
     const rateAmt = parseFloat(extRateAmount?.value) || 2000;
@@ -241,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
         copyJsonBtn.innerHTML = `<span>✓</span> Tersalin (${exportData.length} Video)!`;
         copyJsonBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
 
-        showToast(`🎉 ${exportData.length} video siap di-paste ke LebahCuan!`);
+        showToast(`🎉 ${exportData.length} video siap di-paste ke MancingCuan!`);
 
         setTimeout(() => {
           copyJsonBtn.innerHTML = origText;
@@ -270,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = `lebahcuan_videos_${new Date().toISOString().slice(0,10)}.json`;
+      a.download = `mancingcuan_videos_${new Date().toISOString().slice(0,10)}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

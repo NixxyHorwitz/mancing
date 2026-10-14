@@ -781,7 +781,7 @@ body {
           <span class="survey-q-num">2</span> Bagaimana pengalamanmu dengan web ini?
         </div>
         <div class="survey-q-desc">
-          Ceritakan secara bebas pemikiran pribadimu tentang kemudahan web, peternakan lebah, tugas video, atau fitur yang kamu gunakan:
+          Ceritakan secara bebas pemikiran pribadimu tentang kemudahan web, minigame, tugas video, atau fitur yang kamu gunakan:
         </div>
 
         <textarea name="experience" id="experience" class="survey-input survey-textarea" placeholder="Tuliskan pengalaman pribadimu secara jujur di sini (gunakan kalimat sendiri, dilarang asal-asalan)..." required></textarea>
@@ -798,7 +798,7 @@ body {
           <span class="survey-q-num">3</span> Rating kepuasanmu:
         </div>
         <div class="survey-q-desc">
-          Pilih salah satu emoji yang paling menggambarkan kepuasanmu menggunakan web LebahCuan:
+          Pilih salah satu emoji yang paling menggambarkan kepuasanmu menggunakan web MancingCuan:
         </div>
 
         <div class="emoji-rating-row">

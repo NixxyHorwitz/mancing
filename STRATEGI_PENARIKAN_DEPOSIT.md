@@ -1,7 +1,7 @@
-# 🐝 Masterplan Strategi Konversi Deposit LebahCuan
+﻿# 🐝 Masterplan Strategi Konversi Deposit MancingCuan
 ## Analisis Kritis, Psikologi Pemain & Ekosistem Akuisisi Likuiditas
 
-Dokumen ini menyajikan rancangan strategi komprehensif untuk **mendorong pengguna melakukan deposit secara sukarela, cepat, dan berkelanjutan** pada ekosistem platform LebahCuan. Seluruh strategi dirumuskan secara kritis dengan mengawinkan ilmu **Behavioral Economics**, **GameFi Engagement Loops**, **Neuro-Marketing**, serta arsitektur teknis yang telah terpasang di codebase LebahCuan.
+Dokumen ini menyajikan rancangan strategi komprehensif untuk **mendorong pengguna melakukan deposit secara sukarela, cepat, dan berkelanjutan** pada ekosistem platform MancingCuan. Seluruh strategi dirumuskan secara kritis dengan mengawinkan ilmu **Behavioral Economics**, **GameFi Engagement Loops**, **Neuro-Marketing**, serta arsitektur teknis yang telah terpasang di codebase MancingCuan.
 
 ---
 
@@ -10,7 +10,7 @@ Dokumen ini menyajikan rancangan strategi komprehensif untuk **mendorong penggun
 2. [Fase 1: Pancingan Kepercayaan & Proof-of-Value (The Taste of Blood)](#2-fase-1-pancingan-kepercayaan--proof-of-value-the-taste-of-blood)
 3. [Fase 2: Perangkap Saldo Mengendap & Loss Aversion (The Endowment Effect)](#3-fase-2-perangkap-saldo-mengendap--loss-aversion-the-endowment-effect)
 4. [Fase 3: Micro-Deposit "Starter Pack" (Penghancur Hambatan Pertama)](#4-fase-3-micro-deposit-starter-pack-penghancur-hambatan-pertama)
-5. [Fase 4: Gamifikasi FOMO & Urgensi di Kebun Madu 3D](#5-fase-4-gamifikasi-fomo--urgensi-di-kebun-madu-3d)
+5. [Fase 4: Gamifikasi FOMO & Urgensi di Minigame Cuan](#5-fase-4-gamifikasi-fomo--urgensi-di-kebun-cuan-3d)
 6. [Fase 5: Mesin Social Proof & Viral Multiplier (Undang Teman 30%)](#6-fase-5-mesin-social-proof--viral-multiplier-undang-teman-30)
 7. [Fase 6: Rekayasa Antarmuka Pembayaran & Behavioral Nudges](#7-fase-6-rekayasa-antarmuka-pembayaran--behavioral-nudges)
 8. [Matriks Aksi Konkret Implementasi di Codebase](#8-matriks-aksi-konkret-implementasi-di-codebase)
@@ -30,7 +30,7 @@ graph TD
         F3[3. Zero Urgency: Bisa dipikir-pikir nanti, tidak ada desakan waktu]
     end
 
-    subgraph Solusi_LebahCuan [Solusi Strategis Ekosistem]
+    subgraph Solusi_MancingCuan [Solusi Strategis Ekosistem]
         S1[Taste of Blood: WD Rp 2.000 Gratis Masuk DANA dalam 3 Menit]
         S2[Micro-Commitment: Starter Pack Rp 15.000 - Rp 25.000]
         S3[Loss Aversion: Saldo Rp 50.000 Terlihat di Layar Namun Terkunci]
@@ -56,7 +56,7 @@ Kunci agar orang mau menyetor uang adalah **memberi mereka rasa menang (*First Q
 sequenceDiagram
     autonumber
     actor User as Pengguna Baru (Free)
-    participant App as Web LebahCuan
+    participant App as Web MancingCuan
     participant Admin as Telegram / Admin Bot
     participant Ewallet as DANA Pengguna
 
@@ -85,7 +85,7 @@ Teori ekonomi perilaku pemenang Nobel, Richard Thaler (*The Endowment Effect*), 
 
 ```mermaid
 flowchart TD
-    A[Hari ke-2: User Selesaikan Misi Video & Panen Madu] --> B[Saldo Tarik Terkumpul Rp 42.500]
+    A[Hari ke-2: User Selesaikan Misi Video & Aktivitas Cuan] --> B[Saldo Tarik Terkumpul Rp 42.500]
     B --> C[User Berniat Melakukan Penarikan Kedua]
     C --> D[Pintu Terkunci: Muncul Modal Eksklusif!]
     D --> E["🔒 Saldo Rp 42.500 Kamu Siap Dicairkan!"]
@@ -115,11 +115,11 @@ graph LR
     end
 ```
 
-### Desain "Paket Pemula Peternak Lebah (Flash Offer 15 Menit)":
+### Desain "Paket Pemula Peternak Mancing (Flash Offer 15 Menit)":
 * **Harga**: **Rp 15.000** (Harga semangkuk bakso / secangkir kopi, zero friction).
 * **Isi Paket**:
-  - 1 Sarang Kayu Starter (Menghasilkan madu 15 ml/hari senilai Rp 3.000/hari).
-  - 3 Ekor Lebah Pekerja (Menambah kecepatan panen 2x lipat).
+  - 1 Sarang Kayu Starter (Menghasilkan cuan 15 ml/hari senilai Rp 3.000/hari).
+  - 3 Ekor Mancing Pekerja (Menambah kecepatan panen 2x lipat).
   - 5 Tiket Spin Roda Keberuntungan.
 * **Pemicu Urgensi**:
   - Banner countdown 15:00 menit di halaman lobi setelah registrasi.
@@ -130,16 +130,16 @@ graph LR
 
 ---
 
-## 5. Fase 4: Gamifikasi FOMO & Urgensi di Kebun Madu 3D
+## 5. Fase 4: Gamifikasi FOMO & Urgensi di Minigame Cuan
 
 Fitur visual 3D Farm bukan sekadar hiasan, melainkan **mesin pemeras komitmen (*retention & upsell engine*)**:
 
 ```mermaid
 flowchart TD
     subgraph Siklus_Farm [Siklus Produksi Kebun]
-        Hives[Sarang Menghasilkan Madu Otomatis] --> Silo[Tangki Silo Madu]
+        Hives[Sarang Menghasilkan cuan Otomatis] --> Silo[Tangki Silo cuan]
         Silo --> CekKapasitas{Tangki Menyentuh 90 Persen Kapasitas?}
-        CekKapasitas -->|Ya| Warning[🚨 PERINGATAN: Tangki Madu Hampir Penuh!]
+        CekKapasitas -->|Ya| Warning[🚨 PERINGATAN: Tangki cuan Hampir Penuh!]
         Warning --> Opsi1[Upgrade Kapasitas Tangki: Butuh Saldo Beli Rp 25.000]
         Warning --> Opsi2[Sewa Mesin Pemeras Cepat: Butuh Saldo Beli Rp 20.000]
         CekKapasitas -->|Tidak| Santai[Produksi Berjalan Normal]
@@ -147,9 +147,9 @@ flowchart TD
 ```
 
 ### 1. Mekanisme "Silo Overflow" (Ketakutan Aset Terbuang):
-* Kapasitas tangki madu (*silo reservoir*) dibuat terbatas pada akun standar (misal 50 ml).
-* Ketika lebah memproduksi madu dan tangki mencapai batas, tampilkan animasi madu meluap dengan teks:
-  > *"⚠️ Tangki Madumu sudah penuh 50/50 ml! 15 ml madu berikutnya akan terbuang sia-sia jika tangki tidak di-upgrade sekarang."*
+* Kapasitas tangki cuan (*silo reservoir*) dibuat terbatas pada akun standar (misal 50 ml).
+* Ketika mancing memproduksi cuan dan tangki mencapai batas, tampilkan animasi cuan meluap dengan teks:
+  > *"⚠️ Tangki cuanmu sudah penuh 50/50 ml! 15 ml cuan berikutnya akan terbuang sia-sia jika tangki tidak di-upgrade sekarang."*
 * Pemain akan segera deposit Rp 20.000 – Rp 25.000 untuk memperluas tangki agar panen mereka tidak hangus.
 
 ---
@@ -180,13 +180,13 @@ graph TD
    - Komisi 30% dari deposit langsung masuk ke **Saldo Tarik** (bisa ditarik tunai).
    - Di halaman Undang / Referral, sediakan:
      - Tombol 1-klik: "Salin Kata-Kata Promosi Siap Posting ke Grup WA/FB".
-     - Gambar promosi bertema lebah cuan yang otomatis ditempeli kode referral pengguna.
+     - Gambar promosi bertema mancing cuan yang otomatis ditempeli kode referral pengguna.
 
 ---
 
 ## 7. Fase 6: Rekayasa Antarmuka Pembayaran & Behavioral Nudges
 
-Friksi terkecil di layar deposit bisa menggagalkan niat bayar. Berikut optimasi kritis pada halaman [`user/deposit.php`](file:///c:/laragon/www/lebahcuan/user/deposit.php):
+Friksi terkecil di layar deposit bisa menggagalkan niat bayar. Berikut optimasi kritis pada halaman [`user/deposit.php`](file:///c:/laragon/www/mancing/user/deposit.php):
 
 ```mermaid
 flowchart LR
@@ -199,12 +199,12 @@ flowchart LR
 
 ### 1. The Anchoring & Default Selection Bias:
 * Jangan biarkan kolom input nominal kosong melompong.
-* Sorot (*highlight*) secara default chip **Rp 50.000** atau **Rp 100.000** dengan label **"🔥 PALING BANYAK DIPILIH"** atau **"⚡ PROMO +10% MADU"**.
+* Sorot (*highlight*) secara default chip **Rp 50.000** atau **Rp 100.000** dengan label **"🔥 PALING BANYAK DIPILIH"** atau **"⚡ PROMO +10% cuan"**.
 * Ketika pengguna disodori opsi default, 68% dari mereka cenderung memilih opsi tersebut daripada mengetik nominal terendah.
 
 ### 2. Time-Limited Deposit Match (Urgensi Waktu Nyata):
 * Tambahkan widget penawaran berbatas waktu:
-  > *"⏳ HAPPY HOUR PANEN (12:00 - 15:00 WIB): Setiap deposit minimal Rp 50.000 dapatkan BONUS 20% Saldo Beli + 1 Lebah Pekerja Gratis!"*
+  > *"⏳ HAPPY HOUR PANEN (12:00 - 15:00 WIB): Setiap deposit minimal Rp 50.000 dapatkan BONUS 20% Saldo Beli + 1 Mancing Pekerja Gratis!"*
 * Timer hitung mundur (*countdown bar*) menciptakan dorongan impulsif untuk membuka aplikasi m-Banking sekarang juga.
 
 ### 3. QRIS Dinamis Otomatis:
@@ -221,7 +221,7 @@ Langkah operasional yang siap dieksekusi pada fitur-fitur yang ada:
 | :--- | :--- | :--- | :--- |
 | 1 | `user/upgrade.php` | **Genjutsu Shortfall & 25k Chip Trap** | Memaksa deposit kedua untuk menutup kekurangan nominal paket. |
 | 2 | `user/withdraw.php` | **Paywall Trigger Modal** | Menampilkan saldo terkumpul yang siap dicairkan jika upgrade akun. |
-| 3 | `user/farm.php` | **Silo Capacity Alert** | Mengancam madu terbuang jika tidak menambah slot/tangki dengan deposit. |
+| 3 | `user/minigame.php` | **Silo Capacity Alert** | Mengancam cuan terbuang jika tidak menambah slot/tangki dengan deposit. |
 | 4 | `user/deposit.php` | **Preset Chip & Happy Hour Timer** | Mempercepat keputusan transfer dengan zero typing dan bonus waktu terbatas. |
 | 5 | `partials/footer.php` | **Live Ticker Payout Notification** | Memberikan bukti sosial (*social proof*) berkelanjutan di semua halaman. |
 | 6 | `user/referral.php` | **Ready-to-Post Promo Banners** | Memberdayakan member menjadi mesin promosi deposit organik demi komisi 30%. |
@@ -250,10 +250,10 @@ pie title Komposisi Perputaran Arus Kas Platform
    - Pemilik platform memegang dana segar dalam jumlah besar (*float*) untuk diakumulasikan.
 3. **Penyekatan Saldo Beli (*Non-Withdrawable Wall*)**:
    - Saldo yang dimasukkan melalui deposit **TIDAK PERNAH BISA ditarik kembali secara langsung**.
-   - Saldo hanya bisa ditukarkan menjadi aset virtual (paket/sarang/lebah) yang pencairannya diatur oleh kuota waktu dan verifikasi admin.
+   - Saldo hanya bisa ditukarkan menjadi aset virtual (paket/sarang/mancing) yang pencairannya diatur oleh kuota waktu dan verifikasi admin.
 
 ---
 
 > [!TIP]
 > **Kesimpulan Eksekutif:**
-> Orang mendepositkan uang bukan karena mereka ingin menghabiskan uang, melainkan karena mereka percaya mereka sedang **menginvestasikan nominal kecil untuk menarik uang yang jauh lebih besar**. Dengan memadukan bukti pembayaran instan di awal (Rp 2.000), visualisasi saldo yang terkunci (Loss Aversion), dan friksi pembayaran yang minimal via QRIS, konversi deposit dapat didorong ke level maksimal.
+> Orang mendepositkan uang bukan karena mereka ingin menghabiskan uang, melainkan karena mereka percaya mereka sedang **menginvestasikan nominal kecil untuk menarik uang yang jauh lebih besar**. Dengan mecuankan bukti pembayaran instan di awal (Rp 2.000), visualisasi saldo yang terkunci (Loss Aversion), dan friksi pembayaran yang minimal via QRIS, konversi deposit dapat didorong ke level maksimal.

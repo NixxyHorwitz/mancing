@@ -37,7 +37,7 @@ function generate_captcha_challenge(): array {
         'n'   => bin2hex(random_bytes(6))
     ];
     $token = base64_encode(json_encode($payload));
-    $secret = 'LebahCuan_SecCap_' . date('Ymd');
+    $secret = 'MancingCuan_SecCap_' . date('Ymd');
     $sig = hash_hmac('sha256', $token, $secret);
     
     $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 38" width="120" height="38" style="display:block;border-radius:10px;background:#fffbeb;border:2px solid #78350f;">'
@@ -113,10 +113,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cap_token  = $_POST['captcha_token'] ?? '';
     $cap_sig    = $_POST['captcha_sig'] ?? '';
     
-    $secret = 'LebahCuan_SecCap_' . date('Ymd');
+    $secret = 'MancingCuan_SecCap_' . date('Ymd');
     $calc_sig = hash_hmac('sha256', $cap_token, $secret);
     if (!hash_equals($calc_sig, $cap_sig)) {
-        $secret_prev = 'LebahCuan_SecCap_' . date('Ymd', strtotime('-1 day'));
+        $secret_prev = 'MancingCuan_SecCap_' . date('Ymd', strtotime('-1 day'));
         $calc_sig = hash_hmac('sha256', $cap_token, $secret_prev);
     }
 
@@ -413,12 +413,12 @@ if ($_selected_type === 'bank') {
     $_ph_acc_name  = 'Nama Terdaftar di ' . (!empty($_post_bank) ? htmlspecialchars($_post_bank) : 'Akun E-Wallet');
 }
 
-$_seo_title  = setting($pdo, 'seo_title', 'LebahCuan — Game Ternak Lebah & Nonton Video Penghasil Saldo Cuan');
-$_seo_desc   = setting($pdo, 'seo_description', 'Platform nonton video dan ternak lebah penghasil cuan resmi.');
+$_seo_title  = setting($pdo, 'seo_title', 'MancingCuan — Nonton Video & Minigame Penghasil Saldo Cuan');
+$_seo_desc   = setting($pdo, 'seo_description', 'Platform nonton video dan minigame penghasil saldo cuan resmi.');
 $_favicon    = setting($pdo, 'favicon_path', '/assets/favicon.png');
-$_site_name  = setting($pdo, 'site_name', 'LebahCuan');
-$_seo_kw     = setting($pdo, 'seo_keywords', 'lebahcuan, lebah cuan, game ternak lebah 3d, nonton video dapat uang, panen madu cuan, aplikasi penghasil saldo dana, game cuan terpercaya, withdraw instan');
-$_seo_author = setting($pdo, 'seo_author', 'LebahCuan Official');
+$_site_name  = setting($pdo, 'site_name', 'MancingCuan');
+$_seo_kw     = setting($pdo, 'seo_keywords', 'mancingcuan, mancing cuan, nonton video dapat uang, aplikasi penghasil saldo dana, game cuan terpercaya, withdraw instan');
+$_seo_author = setting($pdo, 'seo_author', 'MancingCuan Official');
 $_seo_twcard = setting($pdo, 'seo_twitter_card', 'summary_large_image');
 $_seo_og_img = setting($pdo, 'seo_og_image', '/assets/seobanner.jpg');
 
@@ -444,10 +444,10 @@ if (!empty($ref_from_url)) {
 if (!empty($ref_inviter_name)) {
     $_page_title     = "Undangan dari @{$ref_inviter_name} — Daftar Akun Baru {$_site_name}";
     $_final_og_title = "Undangan Khusus dari @{$ref_inviter_name} — Gabung {$_site_name} & Dapatkan Bonus!";
-    $_final_og_desc  = "Kamu diundang oleh @{$ref_inviter_name} untuk bermain di {$_site_name}! Nonton video harian dapat saldo tunai, ternak lebah madu 3D, dan cairkan saldo instan ke DANA, OVO, GoPay, atau Bank!";
+    $_final_og_desc  = "Kamu diundang oleh @{$ref_inviter_name} untuk bergabung di {$_site_name}! Nonton video harian dapat saldo tunai, main minigame, dan cairkan saldo instan ke DANA, OVO, GoPay, atau Bank!";
 } else {
     $_page_title     = 'Daftar Akun Baru — ' . $_seo_title;
-    $_final_og_title = setting($pdo, 'seo_og_title', 'LebahCuan — Main Game Ternak Lebah & Panen Saldo Nyata Tiap Hari!');
+    $_final_og_title = setting($pdo, 'seo_og_title', 'MancingCuan — Nonton Video & Main Game Panen Saldo Nyata Tiap Hari!');
     $_final_og_desc  = setting($pdo, 'seo_og_description', $_seo_desc);
 }
 
@@ -482,8 +482,8 @@ $current_url = base_url('register' . (!empty($ref_from_url) ? '/' . urlencode($r
 
 <!-- Twitter Card Meta Tags -->
 <meta name="twitter:card" content="<?= htmlspecialchars($_seo_twcard) ?>">
-<meta name="twitter:site" content="@LebahCuan">
-<meta name="twitter:creator" content="@LebahCuan">
+<meta name="twitter:site" content="@MancingCuan">
+<meta name="twitter:creator" content="@MancingCuan">
 <meta name="twitter:url" content="<?= htmlspecialchars($current_url) ?>">
 <meta name="twitter:title" content="<?= htmlspecialchars($_final_og_title) ?>">
 <meta name="twitter:description" content="<?= htmlspecialchars($_final_og_desc) ?>">
@@ -516,8 +516,8 @@ $current_url = base_url('register' . (!empty($ref_from_url) ? '/' . urlencode($r
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   LEBAHCUAN — CARDLESS COMPACT REGISTER (LIKE LOGIN PAGE)
-   Seamless Form • Themed Honey Background • Zero Emojis
+   MANCINGCUAN — CARDLESS COMPACT REGISTER (LIKE LOGIN PAGE)
+   Seamless Form • Themed Background • Zero Emojis
    ══════════════════════════════════════════════════════════ */
 * {
   box-sizing: border-box;
@@ -1011,10 +1011,10 @@ select.inp-field {
     </a>
     <div class="mascot-wrap">
       <div class="mascot-badge">
-        <img src="<?= htmlspecialchars(site_logo($pdo)) ?>" alt="LebahCuan">
+        <img src="<?= htmlspecialchars(site_logo($pdo)) ?>" alt="MancingCuan">
       </div>
     </div>
-    <h1 class="reg-title">Daftar Akun LebahCuan</h1>
+    <h1 class="reg-title">Daftar Akun MancingCuan</h1>
     <p class="reg-sub">Tonton Video &amp; Panen Cuan Setiap Hari</p>
   </div>
 
@@ -1138,7 +1138,7 @@ select.inp-field {
 
       <!-- Span 2: Compact Inline Captcha -->
       <div class="inp-group span-2">
-        <label class="inp-label">Verifikasi Keamanan (Hitung Madu)</label>
+        <label class="inp-label">Verifikasi Keamanan (Hitung Angka)</label>
         <div class="captcha-bar">
           <div class="captcha-svg-box" id="captcha-svg-wrap">
             <?= $captcha['svg'] ?>

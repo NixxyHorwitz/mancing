@@ -11,8 +11,8 @@ if (!$campaign_enabled) {
 $reward_amount  = (float)setting($pdo, 'threads_campaign_reward', '25000');
 $reward_amount2 = (float)setting($pdo, 'threads_campaign_reward_step2', '50000');
 
-$instructions = setting($pdo, 'threads_campaign_instructions', "Promosikan LebahCuan di Threads dan dapatkan cuan tambahan Rp 25.000! \n\nKriteria Postingan Langkah 1:\n1. Postingan harus menyertakan gambar (screenshot/bukti bayar/foto aplikasi).\n2. Di dalam gambar screenshot, HARUS tertera jelas Nama/Username Threads kalian.\n3. Teks postingan berupa kalimat ajakan atau cerita pengalaman positif kamu mendapatkan cuan di LebahCuan.\n4. Berikan komentar atau caption positif tentang LebahCuan.\n\nCara Klaim:\n1. Buat postingan sesuai kriteria di atas pada akun Threads kamu.\n2. Ambil screenshot postingan tersebut (harus terlihat username kalian).\n3. Upload screenshot di form bawah ini.");
-$instructions2 = setting($pdo, 'threads_campaign_instructions_step2', "Promosikan LebahCuan di Threads - Langkah 2 (Dapatkan Rp 50.000, Gaji Pasti & Chat Langsung WhatsApp Admin!)\n\nKriteria Postingan Langkah 2:\n1. Kamu telah mengundang minimal 10 referral bergabung di LebahCuan.\n2. Postingan Threads kamu viral / ramai dengan minimal 5.000 (5K) views / tayangan.\n3. Berikan screenshot (bukti SS) bahwa postingan Threads kamu tembus minimal 5.000 views (bisa kirim hingga 3 screenshot bukti statistik & interaksi).");
+$instructions = setting($pdo, 'threads_campaign_instructions', "Promosikan MancingCuan di Threads dan dapatkan cuan tambahan Rp 25.000! \n\nKriteria Postingan Langkah 1:\n1. Postingan harus menyertakan gambar (screenshot/bukti bayar/foto aplikasi).\n2. Di dalam gambar screenshot, HARUS tertera jelas Nama/Username Threads kalian.\n3. Teks postingan berupa kalimat ajakan atau cerita pengalaman positif kamu mendapatkan cuan di MancingCuan.\n4. Berikan komentar atau caption positif tentang MancingCuan.\n\nCara Klaim:\n1. Buat postingan sesuai kriteria di atas pada akun Threads kamu.\n2. Ambil screenshot postingan tersebut (harus terlihat username kalian).\n3. Upload screenshot di form bawah ini.");
+$instructions2 = setting($pdo, 'threads_campaign_instructions_step2', "Promosikan MancingCuan di Threads - Langkah 2 (Dapatkan Rp 50.000, Gaji Pasti & Chat Langsung WhatsApp Admin!)\n\nKriteria Postingan Langkah 2:\n1. Kamu telah mengundang minimal 10 referral bergabung di MancingCuan.\n2. Postingan Threads kamu viral / ramai dengan minimal 5.000 (5K) views / tayangan.\n3. Berikan screenshot (bukti SS) bahwa postingan Threads kamu tembus minimal 5.000 views (bisa kirim hingga 3 screenshot bukti statistik & interaksi).");
 
 $admin_contact = trim((string)setting($pdo, 'threads_admin_contact', ''));
 if (empty($admin_contact)) {
@@ -233,7 +233,7 @@ require dirname(__DIR__) . '/partials/header.php';
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   LEBAHCUAN — THREADS CAMPAIGN (HONEY & AMBER THEMED)
+   MANCINGCUAN — THREADS CAMPAIGN
    Compact, Ultra-Responsive Mobile-First UI
    ══════════════════════════════════════════════════════════ */
 .th-page {
@@ -749,7 +749,9 @@ require dirname(__DIR__) . '/partials/header.php';
     </div>
 
     <div class="th-mascot-row">
-      <img src="/assets/game/bee_golden.png" class="th-mascot-img" alt="Lebah Cuan">
+      <div style="width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;box-shadow:0 8px 18px rgba(245,158,11,0.35);border:2px solid #fff;flex-shrink:0;">
+        <i class="ph-bold ph-threads-logo"></i>
+      </div>
       <div class="th-bubble">
         <div class="th-bubble-title">
           <i class="ph-fill ph-sparkle" style="color:#f59e0b;"></i> Cuan Viral Threads!

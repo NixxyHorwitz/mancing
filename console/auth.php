@@ -30,8 +30,6 @@ define('STAFF_PERMISSIONS', [
     'staff'           => 'Manajemen Staff',
     'staff_roles'     => 'Peran & Izin',
     'orderkuota'      => 'OrderKuota API',
-    'bee_farm'        => 'Peternakan Lebah',
-    'bee_logs'        => 'Log Peternakan',
     'surveys'         => 'Survei Pengguna',
 ]);
 

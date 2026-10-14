@@ -81,11 +81,6 @@ $rewards = $pdo->prepare("
 $rewards->execute([$user['id']]);
 $rewards = $rewards->fetchAll(PDO::FETCH_ASSOC);
 
-// ── 4. Bee Honey Sales (Lapak Jual Madu) ──
-$honey_sales = $pdo->prepare("SELECT * FROM bee_sales_logs WHERE user_id=? ORDER BY created_at DESC LIMIT 50");
-$honey_sales->execute([$user['id']]);
-$honey_sales = $honey_sales->fetchAll(PDO::FETCH_ASSOC);
-
 // ── 5. User Surveys ──
 $surveys = $pdo->prepare("SELECT * FROM user_surveys WHERE user_id=? ORDER BY created_at DESC LIMIT 20");
 $surveys->execute([$user['id']]);
@@ -201,28 +196,11 @@ foreach ($rewards as $r) {
     ];
 }
 
-foreach ($honey_sales as $hs) {
-    $unified[] = [
-        'type'        => 'farm',
-        'sub_type'    => 'Hasil Peternakan',
-        'title'       => 'Jual ' . number_format((float)$hs['amount_ml'], 0) . ' ml Madu',
-        'sub'         => 'Lapak Pasar Madu (@Rp ' . number_format((float)$hs['price_per_ml'], 0) . '/ml)',
-        'amount'      => (float)$hs['total_revenue'],
-        'is_income'   => true,
-        'status'      => 'approved',
-        'admin_note'  => null,
-        'time'        => $hs['created_at'],
-        'icon'        => 'ph-drop',
-        'logo'        => null,
-        'raw'         => $hs
-    ];
-}
-
 foreach ($surveys as $sv) {
     $unified[] = [
         'type'        => 'bonus',
         'sub_type'    => 'Survei Pengguna',
-        'title'       => 'Hadiah Survei LebahCuan',
+        'title'       => 'Hadiah Survei MancingCuan',
         'sub'         => 'Rating: ' . $sv['satisfaction_rating'] . '/5 · Sumber: ' . $sv['source_info'],
         'amount'      => (float)$sv['reward_amount'],
         'is_income'   => $sv['status'] !== 'revoked',
@@ -315,7 +293,6 @@ $counts = [
     'withdraw' => count($wds),
     'deposit'  => count($deposits),
     'reward'   => count($rewards),
-    'farm'     => count($honey_sales),
     'bonus'    => count($surveys) + count($missions) + count($commissions) + count($redeems),
 ];
 
@@ -865,11 +842,11 @@ require dirname(__DIR__) . '/partials/header.php';
 
     <!-- Dialogue Box Mascot -->
     <div class="hist-notice-box">
-      <div class="hist-notice-avatar">
-        <img src="/assets/game/bee_worker.png" alt="Buzzy Lebah">
+      <div class="hist-notice-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;border-radius:12px;color:#fff;font-size:20px;">
+        <i class="ph-fill ph-wallet"></i>
       </div>
       <div class="hist-notice-text">
-        Halo <strong><?= htmlspecialchars($user['username']) ?></strong>! Catatan cuan nonton video, penjualan madu, reward survei, top up, dan penarikan saldomu tercatat lengkap di sini.
+        Halo <strong><?= htmlspecialchars($user['username']) ?></strong>! Catatan cuan nonton video, reward survei, misi tantangan, top up, dan penarikan saldomu tercatat lengkap di sini.
       </div>
     </div>
   </div>
@@ -958,12 +935,6 @@ require dirname(__DIR__) . '/partials/header.php';
         <span class="h-tab-count"><?= $counts['reward'] ?></span>
       </a>
 
-      <a href="?tab=farm" class="h-tab-btn <?= $tab==='farm'?'h-tab-btn--active':'' ?>">
-        <i class="ph-bold ph-drop"></i>
-        <span>Madu</span>
-        <span class="h-tab-count"><?= $counts['farm'] ?></span>
-      </a>
-
       <a href="?tab=bonus" class="h-tab-btn <?= $tab==='bonus'?'h-tab-btn--active':'' ?>">
         <i class="ph-bold ph-gift"></i>
         <span>Bonus &amp; Misi</span>
@@ -982,7 +953,7 @@ require dirname(__DIR__) . '/partials/header.php';
           <div class="h-empty-state">
             <div class="h-empty-icon"><i class="ph-bold ph-clock-counter-clockwise"></i></div>
             <div class="h-empty-title">Belum Ada Transaksi</div>
-            <div class="h-empty-sub">Mulai tonton video atau jual madu untuk mengumpulkan cuan pertamamu!</div>
+            <div class="h-empty-sub">Mulai tonton video atau selesaikan misi untuk mengumpulkan cuan pertamamu!</div>
           </div>
         <?php else: ?>
           <?php foreach ($unified as $item): ?>
@@ -1165,7 +1136,7 @@ require dirname(__DIR__) . '/partials/header.php';
           <div class="h-empty-state">
             <div class="h-empty-icon"><i class="ph-bold ph-wallet"></i></div>
             <div class="h-empty-title">Belum Ada Top Up</div>
-            <div class="h-empty-sub">Top up saldo untuk upgrade paket VIP atau ekspansi sarang lebahmu!</div>
+            <div class="h-empty-sub">Top up saldo untuk upgrade paket VIP atau investasi cuanmu!</div>
           </div>
         <?php else: ?>
           <?php foreach ($deposits as $d): ?>
@@ -1272,45 +1243,7 @@ require dirname(__DIR__) . '/partials/header.php';
         <?php endif; ?>
 
       <!-- ══════════════════════════════════════
-           TAB 5: MADU & TERNAK LEBAH
-           ══════════════════════════════════════ -->
-      <?php elseif ($tab === 'farm'): ?>
-        <?php if (empty($honey_sales)): ?>
-          <div class="h-empty-state">
-            <div class="h-empty-icon"><i class="ph-bold ph-drop"></i></div>
-            <div class="h-empty-title">Belum Ada Penjualan Madu</div>
-            <div class="h-empty-sub">Beri makan lebahmu, panen madu, lalu jual di Lapak Madu untuk cuan!</div>
-          </div>
-        <?php else: ?>
-          <?php foreach ($honey_sales as $hs): ?>
-            <div class="c-item-card">
-              <div class="c-item-top">
-                <div class="c-item-icon income" style="background:#fef3c7;color:#d97706;">
-                  <i class="ph-fill ph-drop"></i>
-                </div>
-                <div class="c-item-body">
-                  <div class="c-item-title-row">
-                    <span class="c-item-type-badge" style="background:#fef3c7;color:#b45309;">Lapak Madu</span>
-                    <div class="c-item-title">Jual <?= number_format((float)$hs['amount_ml'], 0) ?> ml Madu</div>
-                  </div>
-                  <div class="c-item-sub">
-                    <i class="ph-bold ph-calendar"></i>
-                    <span><?= date('d M Y, H:i', strtotime((string)$hs['created_at'])) ?> WIB</span>
-                    <span>&bull;</span>
-                    <span>Harga: Rp <?= number_format((float)$hs['price_per_ml'], 0) ?>/ml</span>
-                  </div>
-                </div>
-                <div class="c-item-right">
-                  <div class="c-item-amt income">+<?= format_rp((float)$hs['total_revenue']) ?></div>
-                  <span class="c-badge succ">Cair ke WD</span>
-                </div>
-              </div>
-            </div>
-          <?php endforeach; ?>
-        <?php endif; ?>
-
-      <!-- ══════════════════════════════════════
-           TAB 6: BONUS, SURVEI & MISI
+           TAB 5: BONUS, SURVEI & MISI
            ══════════════════════════════════════ -->
       <?php elseif ($tab === 'bonus'): ?>
         <?php 

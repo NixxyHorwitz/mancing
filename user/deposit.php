@@ -425,13 +425,13 @@ require dirname(__DIR__) . '/partials/header.php';
       <div style="width:38px;"></div> <!-- Spacer -->
     </div>
 
-    <!-- Mascot Dialogue -->
+    <!-- Dialogue -->
     <div class="dep-mascot-row">
-      <div class="dep-mascot-avatar">
-        <img src="/assets/game/bee_worker.png" alt="Buzzy Lebah">
+      <div class="dep-mascot-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;border-radius:12px;color:#fff;font-size:20px;">
+        <i class="ph-fill ph-wallet"></i>
       </div>
       <div class="dep-mascot-text">
-        Hai! Buzzy siap bantu isi saldo belimu. Saldo ini bisa kamu pakai untuk <strong>sewa sarang & beli bibit lebah</strong>!
+        Halo! Isi saldo beli kamu dengan cepat dan aman. Saldo ini dapat digunakan untuk <strong>upgrade keanggotaan VIP &amp; paket investasi</strong>!
       </div>
     </div>
   </div>
@@ -440,7 +440,7 @@ require dirname(__DIR__) . '/partials/header.php';
     <!-- SALDO BELI CARD (HERO DISPLAY) -->
     <div class="dep-balance-card">
       <div class="dep-bal-header">
-        <span class="dep-bal-tag"><i class="ph-fill ph-drop" style="color:#d97706;"></i> Dompet Pembelian</span>
+        <span class="dep-bal-tag"><i class="ph-fill ph-wallet" style="color:#d97706;"></i> Dompet Pembelian</span>
         <span class="dep-bal-status"><i class="ph-fill ph-shield-check"></i> Aktif</span>
       </div>
       <div class="dep-bal-main">
@@ -555,7 +555,7 @@ require dirname(__DIR__) . '/partials/header.php';
     <div class="dep-form-card" id="form-bank">
       <!-- Rekening Tujuan Box -->
       <div class="dep-rek-card">
-        <div class="dep-rek-tag"><i class="ph-bold ph-bank"></i> Rekening Resmi LebahCuan</div>
+        <div class="dep-rek-tag"><i class="ph-bold ph-bank"></i> Rekening Resmi MancingCuan</div>
         <div class="dep-rek-bank">Bank <?= htmlspecialchars($bankName) ?></div>
         <div class="dep-rek-num" id="rek-num"><?= htmlspecialchars($bankAccount) ?></div>
         <div class="dep-rek-name">Atas Nama: <?= htmlspecialchars($bankHolder) ?></div>

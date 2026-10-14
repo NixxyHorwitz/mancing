@@ -127,16 +127,11 @@
       inset 3px 3px 6px rgba(255, 255, 255, 0.9),
       inset -3px -3px 6px rgba(180, 83, 9, 0.4) !important;
   }
-  .nav-play-btn img {
-    width: 26px; height: 26px;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-    animation: navBeeWiggle 3.5s ease-in-out infinite;
-  }
-  @keyframes navBeeWiggle {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    25% { transform: translateY(-2px) rotate(-4deg); }
-    75% { transform: translateY(-1px) rotate(4deg); }
+  .nav-play-btn i {
+    font-size: 24px !important;
+    color: #ffffff !important;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+    margin-left: 2px;
   }
 
   .nav-play-label {
@@ -155,7 +150,7 @@
 
   /* Floating contact adjustment */
   .float-contact-wrap {
-    bottom: <?= ($activePage ?? '') === 'farm' && ($farmSubPage ?? '') === 'meadow' ? '144px' : '76px' ?> !important;
+    bottom: 76px !important;
   }
   </style>
 
@@ -164,18 +159,18 @@
       <i class="<?= ($activePage??'')==='home'?'ph-fill':'ph-bold' ?> ph-house-simple"></i>
       Lobby
     </a>
-    <a href="/videos" class="nav-item <?= ($activePage??'')==='videos'?'active':'' ?>">
-      <i class="<?= ($activePage??'')==='videos'?'ph-fill':'ph-bold' ?> ph-film-strip"></i>
-      Video
+    <a href="/upgrade" class="nav-item <?= ($activePage??'')==='upgrade'?'active':'' ?>">
+      <i class="<?= ($activePage??'')==='upgrade'?'ph-fill':'ph-bold' ?> ph-crown-simple"></i>
+      Level
     </a>
 
-    <!-- Center: SIDEJOB TERNAK LEBAH button -->
-    <a href="/farm" class="nav-item nav-item--play <?= ($activePage??'')==='farm'?'active':'' ?>">
+    <!-- Center: NONTON VIDEO button -->
+    <a href="/videos" class="nav-item nav-item--play <?= ($activePage??'')==='videos'?'active':'' ?>">
       <div class="nav-play-wrap">
         <div class="nav-play-btn">
-          <img src="/assets/game/bee_worker.png" alt="Ternak Lebah">
+          <i class="ph-fill ph-play"></i>
         </div>
-        <span class="nav-play-label">Ternak Lebah</span>
+        <span class="nav-play-label">Nonton</span>
       </div>
     </a>
 
@@ -266,7 +261,7 @@ $_fsvg = [
      ══════════════════════════════════════════════════════════ -->
 <style>
 /* Global Spotlight Backdrop (allows pointer events to pass so user can freely scroll) */
-#lebah-tour-overlay {
+#app-tour-overlay {
   position: fixed;
   inset: 0;
   z-index: 99990;
@@ -276,7 +271,7 @@ $_fsvg = [
 }
 
 /* Spotlight Cutout Box with Real-time Sync & Dynamic Border Radius */
-#lebah-tour-spotlight {
+#app-tour-spotlight {
   position: fixed;
   z-index: 99992;
   border-radius: 18px;
@@ -288,13 +283,13 @@ $_fsvg = [
   transform: scale(0.98);
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
-#lebah-tour-spotlight.active {
+#app-tour-spotlight.active {
   opacity: 1;
   transform: scale(1);
 }
 
 /* Spotlight pulsing beacon indicator */
-#lebah-tour-spotlight::after {
+#app-tour-spotlight::after {
   content: '';
   position: absolute;
   inset: -6px;
@@ -309,7 +304,7 @@ $_fsvg = [
 }
 
 /* Floating Tour Popover Card - Clay Style */
-#lebah-tour-popover {
+#app-tour-popover {
   position: fixed;
   z-index: 99999;
   background: #ffffff;
@@ -331,7 +326,7 @@ $_fsvg = [
   transform: translateY(6px);
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
-#lebah-tour-popover.active {
+#app-tour-popover.active {
   opacity: 1;
   transform: translateY(0);
 }
@@ -492,12 +487,12 @@ $_fsvg = [
 </style>
 
 <!-- Fullscreen Spotlight Tour Overlay & Popover Container -->
-<div id="lebah-tour-overlay">
-  <div id="lebah-tour-spotlight"></div>
-  <div id="lebah-tour-popover">
+<div id="app-tour-overlay">
+  <div id="app-tour-spotlight"></div>
+  <div id="app-tour-popover">
     <div class="tour-pop-header">
       <div class="tour-pop-track-tag">
-        <span id="tour-pop-track-text">🐝 Tour Fitur Lebah</span>
+        <span id="tour-pop-track-text">🎬 Panduan MancingCuan</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="tour-pop-step-count" id="tour-pop-step-text">1/7</span>
@@ -571,78 +566,6 @@ if ($show_wd_notif) {
 (function() {
   // ── 1. DEFINISI LANGKAH TOUR LENGKAP LINTAS HALAMAN (CROSS-PAGE) ──
   const GLOBAL_TOUR_CONFIG = {
-    lebah: [
-      {
-        url: '/home',
-        selector: '#tour-balance-box, .cuan-card-balance-box',
-        trackName: '🐝 Tour Fitur Lebah',
-        title: '<i class="ph-fill ph-wallet" style="color:#d97706;"></i> Saldo Siap Tarik (WD)',
-        desc: 'Semua hasil penjualan madu murni dan dividen peternakan lebahmu akan langsung masuk ke Saldo Siap Tarik ini dan siap kamu cairkan 24 jam.',
-        tip: '💡 Saldo bisa ditarik langsung ke rekening Bank atau E-Wallet (DANA, GoPay, OVO, ShopeePay).',
-        btnNext: 'Menu Ternak ➔',
-        pad: 6
-      },
-      {
-        url: '/home',
-        selector: '#tour-tile-farm, [href="/farm"].b-tile, .nav-item--play',
-        trackName: '🐝 Tour Fitur Lebah',
-        title: '<i class="ph-fill ph-drop" style="color:#16a34a;"></i> Akses Ternak Lebah',
-        desc: 'Menu utama untuk mengelola kandang dan kawanan lebah pekerjamu. Dari sini lebah akan terus memproduksi madu otomatis setiap detik!',
-        tip: '💡 Kamu juga bisa mengakses kebun kapan saja melalui tombol lebah di navigasi bawah.',
-        btnNext: 'Buka Kebun Lebah ➔',
-        pad: 8
-      },
-      {
-        url: '/farm',
-        selector: '#farm3dCanvas, .farm3d-container, .farm-ground-ui',
-        trackName: '🐝 Tour Fitur Lebah',
-        title: '<i class="ph-fill ph-binoculars" style="color:#fbbf24;"></i> Kandang Sarang Lebah 3D',
-        desc: 'Selamat datang di kebun lebahmu! Di sini kamu bisa memantau kotak sarang kayu dan melihat lebah pekerjamu terbang aktif memproduksi madu secara otomatis.',
-        tip: '💡 Geser layar untuk melihat kebun sarang dari berbagai sudut pandang sinematik!',
-        btnNext: 'Lihat Tombol Panen ➔',
-        pad: 4
-      },
-      {
-        url: '/farm',
-        selector: '.btn-harvest-all, .meadow-sticky-bar, .hive-quick-list',
-        trackName: '🐝 Tour Fitur Lebah',
-        title: '<i class="ph-fill ph-hand-heart" style="color:#f59e0b;"></i> Tombol Panen Madu',
-        desc: 'Ketika sarang sudah terisi madu, tekan tombol Panen ini untuk memindahkan madu dari sarang ke gudang tokomu!',
-        tip: '💡 Panen secara rutin agar kapasitas sarang tidak penuh sehingga produksi madu terus mengalir lancar.',
-        btnNext: 'Buka Lapak Jual Madu ➔',
-        pad: 6
-      },
-      {
-        url: '/farm/stall',
-        selector: '.stall-hero-card, .cashout-card, .stall-container',
-        trackName: '🐝 Tour Fitur Lebah',
-        title: '<i class="ph-fill ph-storefront" style="color:#ca8a04;"></i> Lapak Jual Madu',
-        desc: 'Di Lapak Madu ini, madu yang sudah kamu panen siap dijual untuk langsung ditukarkan menjadi Uang Tunai Rupiah!',
-        tip: '💡 Tingkatkan level lapakmu di Toko agar memiliki kuota penjualan madu harian yang semakin besar.',
-        btnNext: 'Kunjungi Toko ➔',
-        pad: 6
-      },
-      {
-        url: '/farm/shop',
-        selector: '.shop-cat-tabs, .catalog-grid, .catalog-card',
-        trackName: '🐝 Tour Fitur Lebah',
-        title: '<i class="ph-fill ph-shopping-bag" style="color:#0284c7;"></i> Toko Bibit & Kandang Baru',
-        desc: 'Beli bibit lebah pekerja baru atau tambah kotak sarang kayu baru di sini agar produksi madumu semakin deras dan cuan berlipat ganda!',
-        tip: '💡 Semakin banyak lebah pekerja dan sarang, semakin kencang passive income yang mengalir ke akunmu.',
-        btnNext: 'Kembali ke Beranda ➔',
-        pad: 8
-      },
-      {
-        url: '/home',
-        selector: '#tour-sidejob-card, .sidejob-3d-card',
-        trackName: '🐝 Tour Fitur Lebah',
-        title: '<i class="ph-fill ph-chart-line-up" style="color:#16a34a;"></i> Live Monitor Beranda',
-        desc: 'Hebat! Sekarang kamu sudah menguasai seluruh alur peternakan lebah. Dari beranda depan ini kamu selalu bisa memantau sarang aktif dan produksi ml/jam secara real-time!',
-        tip: '💡 Selesai! Kamu siap menjadi juragan madu terkaya di LebahCuan! 🐝🍯',
-        btnNext: 'Selesai 🎉',
-        pad: 8
-      }
-    ],
     watch: [
       {
         url: '/home',
@@ -677,9 +600,9 @@ if ($show_wd_notif) {
       {
         url: '/checkin',
         selector: '.honeycomb-hive-stage, .hex-row, .ci-streak-strip, .ci-wrap',
-        trackName: '🎬 Tour Cuan Nonton',
-        title: '<i class="ph-fill ph-hexagon" style="color:#f59e0b;"></i> Buka Sarang Madu Harian',
-        desc: 'Klaim hadiah gratis setiap hari! Cukup 1 klik buka hexagon sarang madu untuk mendapatkan kejutan uang tunai gratis tanpa syarat.',
+        trackName: '🎬 Panduan MancingCuan',
+        title: '<i class="ph-fill ph-gift" style="color:#f59e0b;"></i> Hadiah Check-in Harian',
+        desc: 'Klaim hadiah gratis setiap hari! Cukup 1 klik check-in untuk mendapatkan kejutan uang tunai gratis tanpa syarat.',
         tip: '💡 Check-in rutin setiap hari untuk menjaga streak bonus uang yang semakin melimpah!',
         btnNext: 'Lanjut ke Misi Cuan ➔',
         pad: 8
@@ -687,7 +610,7 @@ if ($show_wd_notif) {
       {
         url: '/missions',
         selector: '.ms-tabs, .ms-card',
-        trackName: '🎬 Tour Cuan Nonton',
+        trackName: '🎬 Panduan MancingCuan',
         title: '<i class="ph-fill ph-target" style="color:#8b5cf6;"></i> Misi & Tantangan Harian',
         desc: 'Dapatkan saldo tambahan berlipat dengan menyelesaikan berbagai misi harian, mingguan, dan pencapaian spesial!',
         tip: '💡 Tekan tombol Klaim begitu progress misi sudah tercapai 100%.',
@@ -697,7 +620,7 @@ if ($show_wd_notif) {
       {
         url: '/withdraw',
         selector: '.wd-top-banner, .wd-balance-card, .wd-form',
-        trackName: '🎬 Tour Cuan Nonton',
+        trackName: '🎬 Panduan MancingCuan',
         title: '<i class="ph-fill ph-arrow-up-right" style="color:#059669;"></i> Tarik Saldo ke Rekening',
         desc: 'Klaim uang tunaimu! Tarik saldo langsung ke rekening DANA, GoPay, OVO, ShopeePay, atau Bank transfer dalam hitungan menit.',
         tip: '💡 Penarikan diproses setiap hari dengan proses pencairan cepat dan aman.',
@@ -707,7 +630,7 @@ if ($show_wd_notif) {
       {
         url: '/home',
         selector: '#tour-balance-box, .cuan-card-balance-box',
-        trackName: '🎬 Tour Cuan Nonton',
+        trackName: '🎬 Panduan MancingCuan',
         title: '<i class="ph-fill ph-sparkle" style="color:#fbbf24;"></i> Siap Mendulang Rupiah!',
         desc: 'Luar biasa! Kamu sudah menyelesaikan seluruh panduan cuan nonton video. Mulai tonton video pertamamu sekarang dan nikmati cuan yang mengalir!',
         tip: '💡 Tonton video secara rutin setiap hari untuk hasil yang maksimal! 🚀💰',
@@ -719,7 +642,7 @@ if ($show_wd_notif) {
 
   // ── 2. STATE MANAGER ──
   let isTourRunning = false;
-  let currentTrack = 'lebah';
+  let currentTrack = 'watch';
   let currentStepIndex = 0;
   let activeElement = null;
   let activeStepConfig = null;
@@ -733,14 +656,14 @@ if ($show_wd_notif) {
 
   function getSavedTourState() {
     try {
-      const raw = localStorage.getItem('lebahcuan_tour_active');
+      const raw = localStorage.getItem('mancing_tour_active');
       return raw ? JSON.parse(raw) : null;
     } catch(e) { return null; }
   }
 
   function setSavedTourState(track, step) {
     try {
-      localStorage.setItem('lebahcuan_tour_active', JSON.stringify({
+      localStorage.setItem('mancing_tour_active', JSON.stringify({
         track: track,
         step: step,
         isRunning: true,
@@ -751,7 +674,7 @@ if ($show_wd_notif) {
 
   function clearSavedTourState() {
     try {
-      localStorage.removeItem('lebahcuan_tour_active');
+      localStorage.removeItem('mancing_tour_active');
     } catch(e) {}
   }
 
@@ -771,8 +694,8 @@ if ($show_wd_notif) {
 
   // ── 4. RENDER SPOTLIGHT PADA ELEMENT TARGET ──
   function applySpotlightCoordinates(el, step, isSmooth = false) {
-    const spotlight = document.getElementById('lebah-tour-spotlight');
-    const popover = document.getElementById('lebah-tour-popover');
+    const spotlight = document.getElementById('app-tour-spotlight');
+    const popover = document.getElementById('app-tour-popover');
     if (!spotlight || !popover) return;
 
     const rect = el.getBoundingClientRect();
@@ -896,9 +819,9 @@ if ($show_wd_notif) {
     setSavedTourState(currentTrack, currentStepIndex);
 
     // Tampilkan container overlay
-    const overlay = document.getElementById('lebah-tour-overlay');
-    const spotlight = document.getElementById('lebah-tour-spotlight');
-    const popover = document.getElementById('lebah-tour-popover');
+    const overlay = document.getElementById('app-tour-overlay');
+    const spotlight = document.getElementById('app-tour-spotlight');
+    const popover = document.getElementById('app-tour-popover');
     if (overlay) overlay.style.display = 'block';
 
     // Cari element di halaman
@@ -960,12 +883,12 @@ if ($show_wd_notif) {
   }
 
   // ── 7. KONTROL TOUR PUBLIK (WINDOW EXPOSURE) ──
-  window.startGlobalTour = function(track = 'lebah', stepIndex = 0) {
-    currentTrack = (track === 'watch') ? 'watch' : 'lebah';
+  window.startGlobalTour = function(track = 'watch', stepIndex = 0) {
+    currentTrack = 'watch';
     currentStepIndex = stepIndex;
     isTourRunning = true;
 
-    const steps = GLOBAL_TOUR_CONFIG[currentTrack];
+    const steps = GLOBAL_TOUR_CONFIG[currentTrack] || GLOBAL_TOUR_CONFIG.watch;
     const targetPath = normalizePath(steps[currentStepIndex].url);
     const currentPath = normalizePath(window.location.pathname);
 
@@ -979,7 +902,7 @@ if ($show_wd_notif) {
   };
 
   window.nextGlobalTourStep = function() {
-    const steps = GLOBAL_TOUR_CONFIG[currentTrack];
+    const steps = GLOBAL_TOUR_CONFIG[currentTrack] || GLOBAL_TOUR_CONFIG.watch;
     if (!steps) return;
     if (currentStepIndex < steps.length - 1) {
       currentStepIndex++;
@@ -1001,7 +924,7 @@ if ($show_wd_notif) {
   window.prevGlobalTourStep = function() {
     if (currentStepIndex > 0) {
       currentStepIndex--;
-      const prevStep = GLOBAL_TOUR_CONFIG[currentTrack][currentStepIndex];
+      const prevStep = (GLOBAL_TOUR_CONFIG[currentTrack] || GLOBAL_TOUR_CONFIG.watch)[currentStepIndex];
       const currentPath = normalizePath(window.location.pathname);
       const prevPath = normalizePath(prevStep.url);
 
@@ -1018,9 +941,9 @@ if ($show_wd_notif) {
     isTourRunning = false;
     clearSavedTourState();
 
-    const overlay = document.getElementById('lebah-tour-overlay');
-    const spotlight = document.getElementById('lebah-tour-spotlight');
-    const popover = document.getElementById('lebah-tour-popover');
+    const overlay = document.getElementById('app-tour-overlay');
+    const spotlight = document.getElementById('app-tour-spotlight');
+    const popover = document.getElementById('app-tour-popover');
 
     if (spotlight) spotlight.classList.remove('active');
     if (popover) popover.classList.remove('active');
@@ -1031,30 +954,15 @@ if ($show_wd_notif) {
   };
 
   window.finishGlobalTour = function() {
-    const finishedTrack = currentTrack;
     window.closeGlobalTour();
     try {
-      localStorage.setItem('lebahcuan_tour_done_' + finishedTrack, '1');
-      const doneBee = localStorage.getItem('lebahcuan_tour_done_lebah') === '1';
-      const doneWatch = localStorage.getItem('lebahcuan_tour_done_watch') === '1';
-      if (doneBee && doneWatch) {
-        localStorage.setItem('lebahcuan_tour_done', '1');
-        const b = document.getElementById('tour-invite-card');
-        if (b) b.style.display = 'none';
-      }
+      localStorage.setItem('mancing_tour_done', '1');
+      const b = document.getElementById('tour-invite-card');
+      if (b) b.style.display = 'none';
     } catch(e) {}
 
-    const doneBee = localStorage.getItem('lebahcuan_tour_done_lebah') === '1';
-    const doneWatch = localStorage.getItem('lebahcuan_tour_done_watch') === '1';
-
     if (typeof window.nToast === 'function') {
-      if (doneBee && doneWatch) {
-        window.nToast('🎉 Luar biasa! Kamu telah menuntaskan kedua tour dan siap menjadi juragan LebahCuan! 🐝🍯', 'success', 5000);
-      } else if (finishedTrack === 'lebah') {
-        window.nToast('🎉 Hebat! Tour Peternakan Lebah selesai! Lanjutkan ke Tour Cuan Nonton Video yuk! 🎬', 'success', 5000);
-      } else {
-        window.nToast('🎉 Hebat! Tour Cuan Nonton selesai! Jangan lupa coba Tour Peternakan Lebah juga! 🐝', 'success', 5000);
-      }
+      window.nToast('🎉 Selamat! Kamu telah menguasai panduan MancingCuan dan siap mendulang rupiah!', 'success', 5000);
     }
   };
 
@@ -1074,11 +982,11 @@ if ($show_wd_notif) {
   document.addEventListener('DOMContentLoaded', () => {
     const saved = getSavedTourState();
     if (saved && saved.isRunning) {
-      currentTrack = saved.track || 'lebah';
+      currentTrack = 'watch';
       currentStepIndex = parseInt(saved.step, 10) || 0;
       isTourRunning = true;
 
-      // Tunggu layout dan canvas 3D siap render
+      // Tunggu layout siap render
       setTimeout(() => {
         renderActiveStep();
       }, 300);

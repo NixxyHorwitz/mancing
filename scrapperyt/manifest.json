@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "LebahCuan YT Scrapper",
+  "name": "MancingCuan YT Scrapper",
   "version": "1.2.0",
-  "description": "Scrape YouTube video IDs, titles & durations on scroll, and export them as clean JSON ready for LebahCuan.",
+  "description": "Scrape YouTube video IDs, titles & durations on scroll, and export them as clean JSON ready for MancingCuan.",
   "permissions": [
     "storage",
     "clipboardWrite"
@@ -12,7 +12,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "LebahCuan YT Scrapper"
+    "default_title": "MancingCuan YT Scrapper"
   },
   "background": {
     "service_worker": "background.js"

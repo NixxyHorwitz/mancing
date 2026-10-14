@@ -1,6 +1,6 @@
-// background.js - Service Worker for LebahCuan YT Scrapper
+// background.js - Service Worker for MancingCuan YT Scrapper
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("LebahCuan YT Scrapper extension installed successfully!");
+  console.log("MancingCuan YT Scrapper extension installed successfully!");
   
   chrome.storage.local.get(["scrapedVideos", "isScrapingActive", "scraperSettings"], (result) => {
     if (!result.scrapedVideos) {

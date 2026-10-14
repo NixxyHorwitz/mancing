@@ -7,7 +7,7 @@ $is_guest = false;
 if (!$user) {
     $is_guest = true;
     $user = [
-        'id' => 0, 'username' => 'Sobat Lebah', 'balance_wd' => 0, 'balance_dep' => 0, 'honey_stock' => 0,
+        'id' => 0, 'username' => 'Sobat Cuan', 'balance_wd' => 0, 'balance_dep' => 0,
         'membership_id' => null, 'membership_expires_at' => null, 'referral_code' => '-', 'is_promotor' => 0,
         'total_earned' => 0, 'watch_count_today' => 0, 'last_checkin' => null,
     ];
@@ -87,43 +87,6 @@ if (!$is_guest) {
     } catch (\Throwable) {}
 }
 
-// ── SIDEJOB: DATA PETERNAKAN LEBAH 3D ──
-$user_hives = [];
-$total_active_bees = 0;
-$total_hourly_rate = 0.0;
-$total_unharvested_honey = 0.0;
-
-if (!$is_guest) {
-    try {
-        $hivesStmt = $pdo->prepare("
-            SELECT h.*, m.name as master_name, m.image as master_image, m.max_slots, m.bonus_speed_pct
-            FROM user_bee_hives h
-            JOIN bee_hives_master m ON m.id = h.hive_master_id
-            WHERE h.user_id = ? AND h.is_active = 1 AND (h.expires_at IS NULL OR h.expires_at > NOW())
-            ORDER BY h.id ASC
-        ");
-        $hivesStmt->execute([$user['id']]);
-        $user_hives = $hivesStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($user_hives as &$uh) {
-            $det = BeeFarm::getHiveDetails($pdo, (int)$uh['id'], (int)$user['id']);
-            $uh['details'] = $det;
-            $total_active_bees += (int)($det['bee_count'] ?? 0);
-            $total_hourly_rate += (float)($det['hourly_production'] ?? 0.0);
-            $total_unharvested_honey += (float)($det['total_honey'] ?? 0.0);
-        }
-        unset($uh);
-    } catch (\Throwable) {}
-}
-
-// Lapak Madu Aktif
-$active_stall = null;
-if (!$is_guest) {
-    try {
-        $active_stall = BeeFarm::getUserActiveStall($pdo, (int)$user['id']);
-    } catch (\Throwable) {}
-}
-
 // Notifikasi Preview
 $notif_preview = [];
 if (!$is_guest) {
@@ -174,8 +137,8 @@ $show_upgrade_feature = $user_has_good_income || (!$is_guest && (float)($user['t
 
 // ── PENGATURAN POPUP ──
 $popup_enabled     = setting($pdo, 'popup_enabled', '1') === '1';
-$popup_title       = setting($pdo, 'popup_title', 'Informasi Spesial LebahCuan');
-$popup_body        = setting($pdo, 'popup_body', 'Biar makin lancar dapat reward, yuk tonton video pilihan dan buka sarang madu harian!');
+$popup_title       = setting($pdo, 'popup_title', 'Informasi Spesial MancingCuan');
+$popup_body        = setting($pdo, 'popup_body', 'Biar makin lancar dapat reward, yuk tonton video pilihan dan dapatkan bonus harian!');
 $popup_cta_text    = setting($pdo, 'popup_cta_text', 'Buka Sekarang');
 $popup_cta_url     = setting($pdo, 'popup_cta_url', '/panduan');
 $popup_delay       = max(200, (int) setting($pdo, 'popup_delay', '500'));
@@ -207,14 +170,14 @@ if (!$is_guest && !empty($user['id'])) {
     } catch (\Throwable) {}
 }
 
-$pageTitle = 'Nonton Video & Ternak Lebah Cuan';
+$pageTitle = 'Nonton Video & Cuan Harian';
 $activePage = 'home';
 require dirname(__DIR__) . '/partials/header.php';
 ?>
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   LEBAHCUAN — CLAYMORPHISM 3D DESIGN SYSTEM
+   MANCINGCUAN — CLAYMORPHISM 3D DESIGN SYSTEM
    Soft, Volumetric, Puffy 3D Elements with Tactile Depth
    ══════════════════════════════════════════════════════════ */
 
@@ -385,12 +348,6 @@ body {
   overflow: hidden;
 }
 
-/* Watermark bee illustration background */
-.cuan-card-bee-bg {
-  position: absolute; right: -10px; bottom: -10px;
-  width: 90px; height: 90px; opacity: 0.08; pointer-events: none;
-  background: url('/assets/game/bee_golden.png') no-repeat center center / contain;
-}
 
 /* Card Brand Header */
 .cuan-card-header {
@@ -1419,13 +1376,13 @@ body {
   <div class="hero-user-bar">
     <div class="hero-user-left">
       <div class="hero-avatar-box">
-        <img src="<?= htmlspecialchars(site_logo($pdo)) ?>" alt="LebahCuan">
+        <img src="<?= htmlspecialchars(site_logo($pdo)) ?>" alt="MancingCuan">
         <span class="hero-avatar-badge"><i class="ph-bold ph-check"></i></span>
       </div>
       <div class="hero-user-meta">
         <div class="hero-user-name">
           <span><?= htmlspecialchars($user['username']) ?></span>
-          <img src="/assets/game/crown_3d.png" alt="VIP" style="width:16px;height:16px;object-fit:contain;">
+          <i class="ph-fill ph-crown" style="font-size:16px;color:#fbbf24;"></i>
         </div>
         <div class="hero-tier-pill">
           <i class="ph-fill ph-crown"></i>
@@ -1447,7 +1404,7 @@ body {
   <!-- Mascot Speech Bubble -->
   <div class="mascot-dialogue">
     <div class="mascot-dialogue__icon">
-      <img src="/assets/game/bee_worker.png" alt="Buzzy" style="width:22px;height:22px;object-fit:contain;">
+      <i class="ph-fill ph-sparkle" style="font-size:18px;color:#d97706;"></i>
     </div>
     <div class="mascot-dialogue__text">
       Halo <strong><?= htmlspecialchars($user['username']) ?></strong>! Nonton video hari ini & kumpulkan saldo Rupiah. Bagikan screenshot bukti cuanmu ke teman untuk raih komisi!
@@ -1456,13 +1413,11 @@ body {
 
   <!-- ── THE VIP FLEX CARD (SCREENSHOT TARGET) ── -->
   <div class="cuan-flex-card" id="cuan-ss-target">
-    <div class="cuan-card-bee-bg"></div>
-
     <!-- Header Card -->
     <div class="cuan-card-header">
       <div class="cuan-card-brand">
         <span class="cuan-card-brand-badge"><i class="ph-fill ph-lightning"></i> VIP CASH</span>
-        <span>LEBAHCUAN RESMI</span>
+        <span>MANCINGCUAN RESMI</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px;">
         <div class="cuan-card-status-verified">
@@ -1592,22 +1547,14 @@ body {
         <i class="ph-bold ph-x"></i>
       </button>
     </div>
-    <div class="tour-invite-title">Baru di LebahCuan? Yuk Ikuti Tour Singkat! 🐝</div>
-    <div class="tour-invite-desc">Pilih panduan fitur yang ingin kamu pelajari agar langsung paham cara mendulang rupiah:</div>
+    <div class="tour-invite-title">Baru di MancingCuan? Yuk Ikuti Panduan Singkat! 🎣</div>
+    <div class="tour-invite-desc">Pelajari langkah mudah menghasilkan saldo rupiah dari nonton video dan selesaikan misi:</div>
     <div class="tour-invite-buttons">
-      <button type="button" class="btn-tour-choice btn-tour-choice--bee" onclick="startInteractiveTour('lebah')">
-        <div class="btn-tour-choice-icon"><i class="ph-fill ph-drop"></i></div>
-        <div class="btn-tour-choice-info">
-          <span class="btn-tour-choice-title">Tour Fitur Lebah</span>
-          <span class="btn-tour-choice-sub">Ternak, Sarang & Madu</span>
-        </div>
-        <i class="ph-bold ph-caret-right btn-tour-choice-arrow"></i>
-      </button>
-      <button type="button" class="btn-tour-choice btn-tour-choice--watch" onclick="startInteractiveTour('watch')">
+      <button type="button" class="btn-tour-choice btn-tour-choice--watch" onclick="startInteractiveTour('watch')" style="width:100%;">
         <div class="btn-tour-choice-icon"><i class="ph-fill ph-film-strip"></i></div>
         <div class="btn-tour-choice-info">
-          <span class="btn-tour-choice-title">Tour Cuan Nonton</span>
-          <span class="btn-tour-choice-sub">Misi Video & Tarik WD</span>
+          <span class="btn-tour-choice-title">Panduan Cuan Nonton Video</span>
+          <span class="btn-tour-choice-sub">Misi Tontonan & Tarik Saldo WD</span>
         </div>
         <i class="ph-bold ph-caret-right btn-tour-choice-arrow"></i>
       </button>
@@ -1636,39 +1583,39 @@ body {
       <span class="b-tile__lbl">Tonton</span>
     </a>
 
-    <!-- Tile 2: Sidejob Lebah -->
-    <a href="/farm" class="b-tile" id="tour-tile-farm">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#16a34a,#15803d);">
-        <i class="ph-fill ph-drop"></i>
+    <!-- Tile 2: Minigame Putar Roda -->
+    <a href="/minigame" class="b-tile" id="tour-tile-minigame">
+      <div class="b-tile__icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);border-color:#3730a3;">
+        <i class="ph-fill ph-game-controller"></i>
       </div>
-      <span class="b-tile__lbl">Ternak Lebah</span>
+      <span class="b-tile__lbl">Minigame</span>
     </a>
 
-    <!-- Tile 3: Lapak Jual Madu -->
-    <a href="/farm/stall" class="b-tile" id="tour-tile-stall">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#eab308,#ca8a04);">
-        <i class="ph-fill ph-storefront"></i>
+    <!-- Tile 3: Bonus Promo Threads -->
+    <a href="/threads" class="b-tile" id="tour-tile-threads">
+      <div class="b-tile__icon" style="background:linear-gradient(135deg,#18181b,#27272a);border-color:#52525b;">
+        <i class="ph-bold ph-threads-logo"></i>
       </div>
-      <span class="b-tile__lbl">Lapak Madu</span>
+      <span class="b-tile__lbl">Threads</span>
     </a>
 
-    <!-- Tile 4: Toko Bibit & Sarang -->
-    <a href="/farm/shop" class="b-tile" id="tour-tile-shop">
-      <div class="b-tile__icon" style="background:linear-gradient(135deg,#0284c7,#0369a1);border-color:#075985;">
-        <i class="ph-fill ph-shopping-bag"></i>
+    <!-- Tile 4: Survei Berbayar -->
+    <a href="/survey" class="b-tile" id="tour-tile-survey">
+      <div class="b-tile__icon" style="background:linear-gradient(135deg,#059669,#047857);border-color:#064e3b;">
+        <i class="ph-fill ph-clipboard-text"></i>
       </div>
-      <span class="b-tile__lbl">Toko Bibit</span>
+      <span class="b-tile__lbl">Survei</span>
     </a>
 
-    <!-- Tile 5: Absen Hexagon Sarang Madu (Checkin) -->
+    <!-- Tile 5: Absen Hadiah Harian (Checkin) -->
     <a href="/checkin" class="b-tile" id="tour-tile-checkin">
       <div class="b-tile__icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);border-color:#78350f;">
-        <i class="ph-fill ph-hexagon"></i>
+        <i class="ph-fill ph-calendar-check"></i>
         <?php if (!$has_checked_in_today): ?>
           <span class="b-tile-badge-dot"></span>
         <?php endif; ?>
       </div>
-      <span class="b-tile__lbl"><?= $has_checked_in_today ? 'Absen' : 'Buka Sarang' ?></span>
+      <span class="b-tile__lbl">Check-in</span>
     </a>
 
     <!-- Tile 6: Misi Harian -->
@@ -1808,8 +1755,8 @@ body {
         <span class="tph-badge-cuan">+Rp 75.000 &amp; Gaji Pasti</span>
       </div>
       <div class="tph-content">
-        <div class="tph-icon-box">
-          <img src="/assets/game/bee_golden.png" alt="Bee Mascot" class="tph-mascot-img">
+        <div class="tph-icon-box" style="display:flex;align-items:center;justify-content:center;background:#fffbeb;border:2px solid #f59e0b;border-radius:14px;width:48px;height:48px;flex-shrink:0;">
+          <i class="ph-bold ph-threads-logo" style="font-size:26px;color:#d97706;"></i>
         </div>
         <div class="tph-text-col">
           <div class="tph-title">Viral di Threads &amp; Jadi Promotor Khusus! 👑</div>
@@ -1881,65 +1828,43 @@ body {
 
 
   <!-- ══════════════════════════════════════════════════════════
-       3. SIDEJOB: PETERNAKAN LEBAH 3D REALISTIS (IDLE TYCOON)
+       3. FITUR SERU: MINIGAME PUTAR RODA & MISI CUAN
        ══════════════════════════════════════════════════════════ -->
-  <div class="sidejob-3d-card" id="tour-sidejob-card">
-    <div class="sidejob-badge-tag"><i class="ph-fill ph-hexagon"></i> Sidejob Cuan Pasif</div>
+  <div class="sidejob-3d-card" id="tour-sidejob-card" style="background:linear-gradient(145deg, #b45309 0%, #d97706 60%, #f59e0b 100%) !important;border:2px solid #fcd34d !important;">
+    <div class="sidejob-badge-tag"><i class="ph-fill ph-game-controller"></i> Game Berhadiah</div>
     
     <div class="sidejob-title-row">
-      <div class="sidejob-title">Peternakan Lebah Cuan <i class="ph-fill ph-plant" style="color:#16a34a;font-size:16px;"></i></div>
-      <img src="/assets/game/beehive_wooden.png" alt="Sarang Lebah" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.3));">
+      <div class="sidejob-title">Putar Roda & Minigame <i class="ph-fill ph-sparkle" style="color:#fef08a;font-size:16px;"></i></div>
+      <div style="width:38px;height:38px;border-radius:12px;background:#ffffff;display:flex;align-items:center;justify-content:center;color:#b45309;font-size:22px;box-shadow:0 4px 10px rgba(0,0,0,0.15);border:1.5px solid #fed7aa;">
+        <i class="ph-fill ph-spinner"></i>
+      </div>
     </div>
 
     <div class="sidejob-desc">
-      Gunakan cuan hasil nonton videomu untuk beternak lebah! Lebah akan bekerja otomatis memproduksi madu murni yang siap kamu panen dan cairkan ke rekening.
+      Raih kejutan bonus saldo tunai setiap hari! Mainkan minigame putar roda keberuntungan dan kumpulkan hadiah uang tunai langsung ke saldo akunmu.
     </div>
 
-    <!-- Live Farm Stats -->
-    <div class="sidejob-metrics-grid">
-      <div class="sidejob-metric-pill">
-        <div class="sidejob-metric-val"><?= count($user_hives) ?> Kandang</div>
-        <div class="sidejob-metric-lbl">Sarang Aktif</div>
-      </div>
-      <div class="sidejob-metric-pill">
-        <div class="sidejob-metric-val"><?= $total_active_bees ?> Ekor</div>
-        <div class="sidejob-metric-lbl">Lebah Bekerja</div>
-      </div>
-      <div class="sidejob-metric-pill">
-        <div class="sidejob-metric-val">+<?= number_format($total_hourly_rate, 1) ?> ml</div>
-        <div class="sidejob-metric-lbl">Produksi/Jam</div>
-      </div>
-    </div>
-
-    <!-- Ready to Harvest Alert if available -->
-    <?php if ($total_unharvested_honey >= 0.1): ?>
-      <div style="background:#fffbeb;border:2px solid rgba(255,255,255,0.95);border-radius:18px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:#78350f;box-shadow:0 10px 22px rgba(120,53,15,0.1), inset 2px 2px 4px #ffffff, inset -2px -2px 4px rgba(217,119,6,0.12);">
-        <span style="font-size:11px;font-weight:900;"><i class="ph-fill ph-drop" style="color:#d97706;"></i> Madu Siap Dipanen:</span>
-        <span style="font-size:12px;font-weight:900;color:#b45309;"><?= number_format($total_unharvested_honey, 1) ?> ml</span>
-      </div>
-    <?php endif; ?>
-
-    <!-- CTA Button directly to Farm -->
-    <a href="/farm" class="btn-open-3d-farm">
-      <i class="ph-fill ph-binoculars" style="font-size:18px;"></i>
-      <span>Buka Kebun Lebah & Panen</span>
+    <!-- CTA Button directly to Minigame -->
+    <a href="/minigame" class="btn-open-3d-farm">
+      <i class="ph-fill ph-game-controller" style="font-size:18px;"></i>
+      <span>Mainkan Minigame Sekarang</span>
       <i class="ph-bold ph-arrow-right"></i>
     </a>
 
-    <!-- Sub links for Shop & Stall -->
+    <!-- Sub links for Missions & Threads -->
     <div class="sidejob-sub-links">
-      <a href="/farm/shop" class="sidejob-sub-link"><i class="ph-bold ph-storefront"></i> Toko Bibit & Kandang</a>
-      <a href="/farm/stall" class="sidejob-sub-link"><i class="ph-bold ph-coins"></i> Lapak Jual Madu</a>
+      <a href="/missions" class="sidejob-sub-link"><i class="ph-bold ph-target"></i> Misi Tantangan</a>
+      <a href="/threads" class="sidejob-sub-link"><i class="ph-bold ph-threads-logo"></i> Event Promo Rp 75K</a>
     </div>
   </div>
 
-  <!-- ── TIPS MASCOT BUZZY ── -->
+  <!-- ── TIPS CUAN PLATFORM ── -->
   <div class="amber-tips-box">
     <div class="amber-tips-icon"><i class="ph-fill ph-lightbulb" style="color:#d97706;font-size:22px;"></i></div>
     <div>
-      <div style="font-size:12px;font-weight:900;color:#78350f;margin-bottom:2px;">Tips Cuan dari Buzzy</div>
+      <div style="font-size:12px;font-weight:900;color:#78350f;margin-bottom:2px;">Tips Cuan Harian</div>
       <div style="font-size:10.5px;font-weight:700;color:#78350f;line-height:1.35;">
-        Tonton video sampai kuota harianmu penuh, lalu investasikan bonusnya untuk sewa sarang di <strong>Peternakan Lebah</strong> agar madu terus terisi saat kamu tidur!
+        Tonton video sampai kuota harianmu penuh, selesaikan misi berhadiah, dan undang teman untuk meraih komisi pasif tanpa batas!
       </div>
     </div>
   </div>
@@ -1999,7 +1924,7 @@ body {
 <?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════
-     MODAL POPUP 2: AJAKAN CHECK-IN HARIAN (SARANG MADU HEX)
+     MODAL POPUP 2: AJAKAN CHECK-IN HARIAN (KOTAK REWARD)
      Muncul setelah pop-up pertama ditutup, atau otomatis jika belum absen
      ══════════════════════════════════════════════════════════ -->
 <?php if (!$has_checked_in_today && !$is_guest): ?>
@@ -2009,15 +1934,15 @@ body {
       <i class="ph-bold ph-x"></i>
     </button>
     <div class="amber-modal-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;">
-      <i class="ph-fill ph-hexagon"></i>
+      <i class="ph-fill ph-calendar-check"></i>
     </div>
-    <h3 class="amber-modal-title">Sarang Madu Harian Menantimu!</h3>
+    <h3 class="amber-modal-title">Hadiah Check-in Harian Menantimu!</h3>
     <p class="amber-modal-body">
-      Sarang lebah hari ini sudah dipenuhi madu manis berhadiah uang tunai. Pilih salah satu hexagon sarang lebah untuk membuka <strong>saldo tarik tunai</strong> langsung hari ini!
+      Bonus login hari ini sudah siap diklaim! Buka check-in sekarang untuk mendapatkan <strong>saldo tarik tunai</strong> langsung hari ini!
     </p>
     <div style="display:flex;flex-direction:column;gap:8px;">
       <a href="/checkin" class="btn-modal-primary" style="background:linear-gradient(135deg,#10b981,#059669);border:2px solid rgba(255,255,255,0.4);box-shadow:0 10px 24px rgba(5,150,105,0.35), inset 2px 2px 4px rgba(255,255,255,0.5), inset -2px -2px 4px rgba(6,78,59,0.3);text-shadow:0 1px 2px rgba(6,78,59,0.5);">
-        <i class="ph-fill ph-sparkle"></i> Buka Sarang Madu Sekarang
+        <i class="ph-fill ph-sparkle"></i> Klaim Hadiah Check-in Sekarang
       </a>
       <button type="button" onclick="closeCheckinModal()" class="btn-modal-dismiss">Nanti Saja</button>
     </div>
@@ -2036,30 +1961,19 @@ body {
     <div class="amber-modal-badge" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;">
       <i class="ph-fill ph-compass"></i>
     </div>
-    <h3 class="amber-modal-title">Panduan Cuan LebahCuan 🧭</h3>
+    <h3 class="amber-modal-title">Panduan Cuan MancingCuan 🧭</h3>
     <p class="amber-modal-body">
-      Pelajari cara kerja menu dan fitur cuan dengan sorotan layar interaktif 1 menit. Mau mulai dari mana?
+      Pelajari cara kerja menu dan fitur cuan dengan panduan interaktif 1 menit:
     </p>
 
-    <!-- Pilihan 1: Tour Fitur Lebah -->
-    <button type="button" class="tour-select-option tour-select-option--bee" onclick="startInteractiveTour('lebah')">
-      <div class="tour-select-icon tour-select-icon--bee">
-        <i class="ph-fill ph-drop"></i>
-      </div>
-      <div>
-        <div class="tour-select-title">🐝 Tour Fitur Lebah (Ternak)</div>
-        <div class="tour-select-desc">Pelajari kandang lebah, produksi madu otomatis, lapak jual madu, & toko bibit.</div>
-      </div>
-    </button>
-
-    <!-- Pilihan 2: Tour Cuan Nonton -->
+    <!-- Pilihan: Tour Cuan Nonton -->
     <button type="button" class="tour-select-option tour-select-option--watch" onclick="startInteractiveTour('watch')">
       <div class="tour-select-icon tour-select-icon--watch">
         <i class="ph-fill ph-film-strip"></i>
       </div>
       <div>
-        <div class="tour-select-title">🎬 Tour Cuan Nonton Video</div>
-        <div class="tour-select-desc">Pelajari kuota harian, pemutar video cuan, buka sarang gratis, & tarik saldo tunai.</div>
+        <div class="tour-select-title">🎬 Panduan Cuan Nonton Video</div>
+        <div class="tour-select-desc">Pelajari kuota harian, pemutar video cuan, check-in gratis, & tarik saldo tunai.</div>
       </div>
     </button>
 
@@ -2080,7 +1994,7 @@ body {
       <i class="ph-bold ph-threads-logo" style="font-size:36px;"></i>
     </div>
     <div style="font-size:9.5px;font-weight:900;background:linear-gradient(135deg,#f59e0b,#d97706);color:#78350f;padding:2px 8px;border-radius:8px;display:inline-block;margin-bottom:6px;">
-      🔥 EVENT RESMI LEBAHCUAN
+      🔥 EVENT RESMI MANCINGCUAN
     </div>
     <h3 class="amber-modal-title" style="color:#fde68a;">Raih Cuan s/d Rp 75.000 &amp; Gaji Pasti di Threads!</h3>
     <div class="amber-modal-body" style="color:#e2e8f0;font-size:11px;text-align:left;line-height:1.45;margin-bottom:16px;">
@@ -2121,7 +2035,7 @@ body {
       🔥 PELUANG CUAN VIRAL
     </div>
     
-    <h3 class="amber-modal-title" style="margin-bottom:3px;font-size:16px;">Ajak &amp; Promosikan LebahCuan! 🚀</h3>
+    <h3 class="amber-modal-title" style="margin-bottom:3px;font-size:16px;">Ajak &amp; Promosikan MancingCuan! 🚀</h3>
     <p class="amber-modal-body" style="margin-bottom:12px;font-size:10.5px;">
       Pilih cara promosi dan panen saldo tarik tunai instan ke dompetmu:
     </p>
@@ -2158,7 +2072,7 @@ body {
       
       <!-- Template Caption Box -->
       <div class="phc-caption-box">
-        🐝 Mau saldo gratis tiap hari? Cobain LebahCuan! Nonton video dibayar uang tunai &amp; bisa ternak lebah otomatis. Cuan siap ditarik tiap hari!
+        🎯 Mau saldo gratis tiap hari? Cobain MancingCuan! Nonton video dibayar uang tunai &amp; selesaikan misi seru. Cuan siap ditarik tiap hari!
         <div style="margin-top:4px;font-weight:900;color:#92400e;">
           Kode Reff: <span style="font-family:monospace;letter-spacing:0.5px;"><?= htmlspecialchars($ref_code) ?></span>
         </div>
@@ -2229,8 +2143,8 @@ function shareRefLink(url, code) {
   }
   if (navigator.share) {
     navigator.share({
-      title: 'LebahCuan - Nonton Video Dapat Cuan!',
-      text: 'Yuk raih jutaan rupiah dari nonton video dan beternak lebah! Gunakan kode referralku: ' + code,
+      title: 'MancingCuan - Nonton Video Dapat Cuan!',
+      text: 'Yuk raih jutaan rupiah dari nonton video dan selesaikan misi! Gunakan kode referralku: ' + code,
       url: url
     }).catch(() => {});
   } else {
@@ -2283,7 +2197,7 @@ function copyPromoFullCaption(url, code) {
     showCuanToast('<i class="ph-bold ph-warning-circle"></i> Silakan masuk akun untuk menyalin teks promosi!');
     return;
   }
-  const caption = "🐝 Mau saldo gratis tiap hari sambil santai? Cobain LebahCuan! Nonton video berhadiah uang tunai & ternak lebah madu otomatis. Cuan siap ditarik ke DANA/Gopay/OVO/Bank setiap hari!\n\nDaftar sekarang lewat link ini:\n" + url + "\n(Gunakan Kode Referralku: " + code + ")";
+  const caption = "🎣 Mau saldo gratis tiap hari sambil santai? Cobain MancingCuan! Nonton video berhadiah uang tunai & selesaikan misi harian. Cuan siap ditarik ke DANA/Gopay/OVO/Bank setiap hari!\n\nDaftar sekarang lewat link ini:\n" + url + "\n(Gunakan Kode Referralku: " + code + ")";
   
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(caption).then(() => {
@@ -2327,7 +2241,7 @@ function dismissTourBanner() {
     setTimeout(() => { b.style.display = 'none'; }, 280);
   }
   try {
-    localStorage.setItem('lebahcuan_tour_banner_dismissed', '1');
+    localStorage.setItem('mancing_tour_banner_dismissed', '1');
   } catch (e) {}
 }
 
@@ -2337,15 +2251,14 @@ function startInteractiveTour(track) {
   if (typeof closeCheckinModal === 'function') closeCheckinModal();
 
   if (typeof window.startGlobalTour === 'function') {
-    window.startGlobalTour(track, 0);
+    window.startGlobalTour(track || 'watch', 0);
   }
 }
 
 /* ── LOGIKA POP-UP BERANTAI (CHAINED MODALS) ── */
 function openCustomPopup() {
-  // Jangan munculkan jika sedang dalam mode tour interaktif
   try {
-    const at = localStorage.getItem('lebahcuan_tour_active');
+    const at = localStorage.getItem('mancing_tour_active');
     if (at && JSON.parse(at).isRunning) return;
   } catch(e) {}
 
@@ -2369,10 +2282,9 @@ function closeCustomPopup() {
     setTimeout(() => { p.style.display = 'none'; }, 280);
   }
   try {
-    localStorage.setItem('lebah_popup_seen', JSON.stringify({ ts: Date.now() }));
+    localStorage.setItem('mancing_popup_seen', JSON.stringify({ ts: Date.now() }));
   } catch (e) {}
 
-  // Pemicu rantai: Munculkan popup promo hub atau check-in setelah popup pengumuman ditutup
   setTimeout(() => {
     const promoDismissed = sessionStorage.getItem('promo_hub_dismissed') === '1';
     if (!promoDismissed) {
@@ -2407,7 +2319,6 @@ function closeThreadsPromoModal() {
     sessionStorage.setItem('threads_promo_modal_closed', '1');
   } catch(e) {}
 
-  // Lanjutkan rantai ke popup check-in jika belum absen
   setTimeout(triggerCheckinPopupIfEligible, 350);
 }
 
@@ -2428,9 +2339,8 @@ function triggerCheckinPopupIfEligible() {
   if (window.__HAS_CHECKED_IN__ || window.__IS_GUEST__) return;
   if (sessionStorage.getItem('checkin_prompt_closed') === '1') return;
 
-  // Jangan munculkan jika sedang dalam mode tour interaktif
   try {
-    const at = localStorage.getItem('lebahcuan_tour_active');
+    const at = localStorage.getItem('mancing_tour_active');
     if (at && JSON.parse(at).isRunning) return;
   } catch(e) {}
 
@@ -2456,48 +2366,22 @@ function closeCheckinModal() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const doneBee = localStorage.getItem('lebahcuan_tour_done_lebah') === '1';
-  const doneWatch = localStorage.getItem('lebahcuan_tour_done_watch') === '1';
-  const allTourDone = doneBee && doneWatch;
+  const allTourDone = localStorage.getItem('mancing_tour_done') === '1';
 
-  // Cek apakah banner ajakan sudah pernah ditutup atau kedua tour sudah selesai
   try {
     const b = document.getElementById('tour-invite-card');
     if (b) {
-      if (allTourDone) {
+      if (allTourDone || localStorage.getItem('mancing_tour_banner_dismissed') === '1') {
         b.style.display = 'none';
       } else {
-        // Jika baru selesai 1 tour atau belum sama sekali, banner tetap muncul
         b.style.display = 'block';
       }
     }
   } catch (e) {}
 
-  // Update badge indikator pada pilihan tour jika salah satu sudah diselesaikan
-  try {
-    if (doneBee) {
-      document.querySelectorAll('.btn-tour-choice--bee').forEach(el => {
-        const sub = el.querySelector('.btn-tour-choice-sub');
-        if (sub) sub.innerHTML = '<span style="color:#059669;font-weight:900;">✓ Selesai</span> • Klik ulangi';
-      });
-      document.querySelectorAll('.tour-select-option--bee .tour-select-desc').forEach(el => {
-        el.innerHTML = '<strong style="color:#059669;">✓ Sudah kamu pelajari!</strong> Klik untuk memutar ulang panduan peternakan lebah.';
-      });
-    }
-    if (doneWatch) {
-      document.querySelectorAll('.btn-tour-choice--watch').forEach(el => {
-        const sub = el.querySelector('.btn-tour-choice-sub');
-        if (sub) sub.innerHTML = '<span style="color:#059669;font-weight:900;">✓ Selesai</span> • Klik ulangi';
-      });
-      document.querySelectorAll('.tour-select-option--watch .tour-select-desc').forEach(el => {
-        el.innerHTML = '<strong style="color:#059669;">✓ Sudah kamu pelajari!</strong> Klik untuk memutar ulang panduan cuan nonton video.';
-      });
-    }
-  } catch(e) {}
-
   let isTourRunningNow = false;
   try {
-    const rawTour = localStorage.getItem('lebahcuan_tour_active');
+    const rawTour = localStorage.getItem('mancing_tour_active');
     if (rawTour && JSON.parse(rawTour).isRunning) {
       isTourRunningNow = true;
     }
@@ -2509,7 +2393,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (showCustom && customPopupEl) {
     try {
-      const raw = localStorage.getItem('lebah_popup_seen');
+      const raw = localStorage.getItem('mancing_popup_seen');
       if (raw) {
         const data = JSON.parse(raw);
         if (resetMs > 0 && (Date.now() - data.ts) < resetMs) {
@@ -2519,7 +2403,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e){}
   }
 
-  // Jika tour sedang aktif, jangan munculkan popup iklan/checkin
   if (!isTourRunningNow) {
     if (showCustom && customPopupEl) {
       setTimeout(openCustomPopup, <?= $popup_delay ?>);
@@ -2531,18 +2414,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(triggerCheckinPopupIfEligible, 600);
       }
     }
-
-    // Auto-prompt modal tour jika belum selesai kedua tour-nya (atau baru selesai 1)
-    try {
-      if (!allTourDone) {
-        const modalDismissedSession = sessionStorage.getItem('tour_modal_dismissed_session') === '1';
-        if (!modalDismissedSession) {
-          setTimeout(() => {
-            openTourSelectModal();
-          }, showCustom ? 3200 : 1500);
-        }
-      }
-    } catch (e) {}
   }
 });
 </script>

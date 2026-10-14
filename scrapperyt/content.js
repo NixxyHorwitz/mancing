@@ -1,4 +1,4 @@
-// content.js - LebahCuan YouTube Video Scraper Content Script
+// content.js - MancingCuan YouTube Video Scraper Content Script
 
 let knownVideoIds = new Set();
 let isScrapingActive = true;
@@ -10,7 +10,7 @@ function log(msg, type = "info") {
     success: "color: #10b981; font-weight: bold; background: #0f172a; padding: 2px 6px; border-radius: 4px;",
     warning: "color: #ef4444; font-weight: bold; background: #0f172a; padding: 2px 6px; border-radius: 4px;"
   };
-  console.log(`%c[LebahCuan Scrapper] ${msg}`, styles[type] || styles.info);
+  console.log(`%c[MancingCuan Scrapper] ${msg}`, styles[type] || styles.info);
 }
 
 function parseDurationText(str) {
@@ -29,7 +29,7 @@ function parseDurationText(str) {
 }
 
 function initializeScraper() {
-  log("Ekstensi LebahCuan YT Scrapper aktif.", "info");
+  log("Ekstensi MancingCuan YT Scrapper aktif.", "info");
   
   chrome.storage.local.get(["scrapedVideos", "isScrapingActive"], (result) => {
     if (result.scrapedVideos) {

@@ -18,12 +18,6 @@ try {
     $totalEarned   = (float)$pdo->query("SELECT COALESCE(SUM(total_earned),0) FROM users")->fetchColumn();
     $totalRevenue  = (float)$pdo->query("SELECT COALESCE(SUM(amount),0) FROM deposits WHERE status='confirmed'")->fetchColumn();
 
-    // Bee Farm Stats
-    $totalBeeHives   = (int)$pdo->query("SELECT COUNT(*) FROM user_bee_hives WHERE is_active=1 AND (expires_at IS NULL OR expires_at > NOW())")->fetchColumn();
-    $totalActiveBees = (int)$pdo->query("SELECT COUNT(*) FROM user_bees WHERE is_active=1 AND (expires_at IS NULL OR expires_at > NOW())")->fetchColumn();
-    $totalHoneyStock = (float)$pdo->query("SELECT COALESCE(SUM(honey_stock), 0) FROM users")->fetchColumn();
-    $totalHoneySales = (float)$pdo->query("SELECT COALESCE(SUM(total_revenue), 0) FROM bee_sales_logs")->fetchColumn();
-
     // Chart: watches last 7 days
     $chartData = $pdo->query(
         "SELECT DATE(watched_at) as d, COUNT(*) as cnt FROM watch_history
@@ -48,8 +42,7 @@ try {
     $topEarners = $pdo->query("SELECT id, username, total_earned FROM users ORDER BY total_earned DESC LIMIT 5")->fetchAll();
 } catch(\Throwable $e) {
     $totalUsers=$totalVideos=$watchesToday=$pendingWd=$pendingDep=$pendingUpg=0;
-    $totalBalance=$totalEarned=$totalRevenue=$totalHoneyStock=$totalHoneySales=0.0;
-    $totalBeeHives=$totalActiveBees=0;
+    $totalBalance=$totalEarned=$totalRevenue=0.0;
     $chartData=$revChartData=$recentUsers=$topVideos=$topEarners=[];
 }
 
@@ -63,8 +56,8 @@ require __DIR__ . '/partials/header.php';
   <?php
   $stats = [
     ['val'=>$totalUsers,   'lbl'=>'Total Pengguna',    'color'=>'#4E9BFF', 'bg'=>'rgba(78,155,255,.12)', 'icon'=>'👥'],
-    ['val'=>$totalBeeHives,'lbl'=>'Kandang Lebah Aktif','color'=>'#f59e0b', 'bg'=>'rgba(245,158,11,.15)', 'icon'=>'🏡'],
-    ['val'=>$totalActiveBees,'lbl'=>'Lebah Bekerja',   'color'=>'#38bdf8', 'bg'=>'rgba(56,189,248,.15)', 'icon'=>'🐝'],
+    ['val'=>$totalVideos,  'lbl'=>'Video Aktif',       'color'=>'#f59e0b', 'bg'=>'rgba(245,158,11,.15)', 'icon'=>'🎬'],
+    ['val'=>$watchesToday, 'lbl'=>'Tonton Hari Ini',   'color'=>'#38bdf8', 'bg'=>'rgba(56,189,248,.15)', 'icon'=>'▶️'],
     ['val'=>($pendingWd+$pendingDep+$pendingUpg), 'lbl'=>'Pending Proses', 'color'=>'#ef4444','bg'=>'rgba(239,68,68,.12)','icon'=>'⏳'],
   ];
   foreach ($stats as $s): ?>
@@ -78,44 +71,6 @@ require __DIR__ . '/partials/header.php';
     </div>
   </div>
   <?php endforeach; ?>
-</div>
-
-<!-- Bee Farm Overview Card -->
-<div class="row g-3 mb-4">
-  <div class="col-12">
-    <div class="c-card" style="background:linear-gradient(135deg, rgba(245,158,11,0.08), rgba(20,24,40,0.9));border-color:rgba(245,158,11,0.25)">
-      <div class="c-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <span class="c-card-title text-warning d-flex align-items-center gap-2">
-          <span>🐝</span> Overview Peternakan Lebah Cuan
-        </span>
-        <div class="d-flex gap-2">
-          <a href="/console/bee_farm.php" class="btn btn-warning btn-sm fw-bold">Kelola Ternak</a>
-          <a href="/console/bee_logs.php" class="btn btn-outline-warning btn-sm">Log Panen &amp; Jual</a>
-          <a href="/farm" target="_blank" class="btn btn-dark btn-sm text-secondary border-secondary">Lihat Farm ↗</a>
-        </div>
-      </div>
-      <div class="c-card-body">
-        <div class="row g-3">
-          <div class="col-6 col-md-3">
-            <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase">Kandang Dimiliki User</div>
-            <div style="font-size:20px;font-weight:800;color:#f8fafc;margin-top:2px"><?= number_format($totalBeeHives) ?> <span style="font-size:12px;font-weight:600;color:#f59e0b">Unit</span></div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase">Lebah Menghasilkan Madu</div>
-            <div style="font-size:20px;font-weight:800;color:#38bdf8;margin-top:2px"><?= number_format($totalActiveBees) ?> <span style="font-size:12px;font-weight:600;color:#94a3b8">Ekor</span></div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase">Stok Madu User</div>
-            <div style="font-size:20px;font-weight:800;color:#fbbf24;margin-top:2px"><?= number_format($totalHoneyStock, 1) ?> <span style="font-size:12px;font-weight:600;color:#94a3b8">ml</span></div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase">Total Pencairan Madu</div>
-            <div style="font-size:20px;font-weight:800;color:#4ade80;margin-top:2px">Rp <?= number_format($totalHoneySales, 0, ',', '.') ?></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- Balance stats -->
@@ -139,12 +94,6 @@ require __DIR__ . '/partials/header.php';
     <div class="c-card">
       <div class="c-card-header"><span class="c-card-title">⚡ Aksi Cepat</span></div>
       <div class="c-card-body d-flex flex-wrap gap-2">
-        <a href="/console/bee_farm.php" class="btn btn-sm" style="background:rgba(245,158,11,.15);color:#f59e0b;border:none">
-          🐝 Kelola Peternakan
-        </a>
-        <a href="/console/bee_logs.php" class="btn btn-sm" style="background:rgba(245,158,11,.15);color:#f59e0b;border:none">
-          🍯 Log Panen/Jual
-        </a>
         <a href="/console/withdrawals.php" class="btn btn-sm" style="background:rgba(255,107,53,.15);color:#FF6B35;border:none">
           Withdraw Pending <?php if($pendingWd>0): ?><span class="badge bg-danger ms-1"><?= $pendingWd ?></span><?php endif; ?>
         </a>

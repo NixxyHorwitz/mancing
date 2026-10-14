@@ -1,13 +1,13 @@
 <?php
 /** partials/header.php — requires: $pageTitle, $activePage, $user */
-$_site_name   = setting($pdo, 'site_name', 'LebahCuan');
-$_seo_title   = setting($pdo, 'seo_title', 'LebahCuan');
-$_seo_desc    = setting($pdo, 'seo_description', 'LebahCuan adalah platform penghasil saldo nyata terpercaya di Indonesia. Mainkan game ternak lebah madu 3D, tonton video harian, dan cairkan saldo cuan instan.');
-$_seo_kw      = setting($pdo, 'seo_keywords', 'lebahcuan, lebah cuan, game ternak lebah 3d, nonton video dapat uang, panen madu cuan, aplikasi penghasil saldo dana');
+$_site_name   = setting($pdo, 'site_name', 'MancingCuan');
+$_seo_title   = setting($pdo, 'seo_title', 'MancingCuan');
+$_seo_desc    = setting($pdo, 'seo_description', 'MancingCuan adalah platform penghasil saldo nyata terpercaya di Indonesia. Tonton video harian, selesaikan misi, dan cairkan saldo cuan instan.');
+$_seo_kw      = setting($pdo, 'seo_keywords', 'mancingcuan, mancing cuan, nonton video dapat uang, aplikasi penghasil saldo dana');
 $_seo_robots  = setting($pdo, 'seo_robots', 'index,follow');
 $_seo_og      = setting($pdo, 'seo_og_image', '/assets/seobanner.jpg');
 $_seo_twcard  = setting($pdo, 'seo_twitter_card', 'summary_large_image');
-$_seo_author  = setting($pdo, 'seo_author', 'LebahCuan Official');
+$_seo_author  = setting($pdo, 'seo_author', 'MancingCuan Official');
 $_seo_og_title = setting($pdo, 'seo_og_title', '');
 $_seo_og_desc  = setting($pdo, 'seo_og_description', '');
 $_seo_og_type  = setting($pdo, 'seo_og_type', 'website');
@@ -58,8 +58,8 @@ $final_og_desc = $_seo_og_desc ?: $_seo_desc;
 <meta property="og:image:alt" content="<?= htmlspecialchars($_site_name) ?>">
 <?php endif; ?>
 <meta name="twitter:card" content="<?= htmlspecialchars($_seo_twcard) ?>">
-<meta name="twitter:site" content="@LebahCuan">
-<meta name="twitter:creator" content="@LebahCuan">
+<meta name="twitter:site" content="@MancingCuan">
+<meta name="twitter:creator" content="@MancingCuan">
 <meta name="twitter:title" content="<?= htmlspecialchars($final_og_title) ?>">
 <?php if ($final_og_desc): ?><meta name="twitter:description" content="<?= htmlspecialchars($final_og_desc) ?>"><?php endif; ?>
 <?php if ($absolute_og): ?>
@@ -181,9 +181,9 @@ i[class^="ph-"] {
 .tb-mascot-img {
   width: 23px; height: 23px;
   object-fit: contain;
-  animation: tbBeeFloat 2.6s ease-in-out infinite;
+  animation: tbLogoFloat 2.6s ease-in-out infinite;
 }
-@keyframes tbBeeFloat {
+@keyframes tbLogoFloat {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-2px) rotate(4deg); }
 }
@@ -560,8 +560,8 @@ i[class^="ph-"] {
           <img src="<?= htmlspecialchars($_site_logo) ?>" alt="<?= htmlspecialchars($_site_name) ?>" class="tb-mascot-img">
         </div>
         <div class="tb-brand-info">
-          <div class="tb-brand-name">Lebah<em>Cuan</em></div>
-          <div class="tb-brand-tag"><i class="ph-fill ph-sparkle"></i> Watch & Farm</div>
+          <div class="tb-brand-name">Mancing<em>Cuan</em></div>
+          <div class="tb-brand-tag"><i class="ph-fill ph-sparkle"></i> Watch & Earn</div>
         </div>
       </a>
 
@@ -617,7 +617,7 @@ i[class^="ph-"] {
     <div class="tb-wallet-popover" id="tb-wallet-popover">
       <div class="twp-header">
         <div class="twp-title">
-          <i class="ph-bold ph-wallet"></i> Dompet LebahCuan
+          <i class="ph-bold ph-wallet"></i> Dompet MancingCuan
         </div>
         <button type="button" class="twp-close" onclick="toggleWalletPopover(false)">&times;</button>
       </div>
@@ -645,23 +645,6 @@ i[class^="ph-"] {
           </div>
           <a href="/deposit" class="twp-card-btn dep">+ Isi Saldo</a>
         </div>
-
-        <!-- Card 3: Stok Madu -->
-        <div class="twp-card">
-          <div class="twp-card-left">
-            <div class="twp-card-icon honey"><i class="ph-bold ph-drop"></i></div>
-            <div class="twp-card-info">
-              <span class="twp-card-lbl">Stok Madu Sidejob</span>
-              <span class="twp-card-val"><?= number_format((float)($user['honey_stock'] ?? 0), 1) ?> ml</span>
-            </div>
-          </div>
-          <a href="/farm" class="twp-card-btn honey">Sidejob 🐝</a>
-        </div>
-      </div>
-      <div class="twp-footer">
-        <a href="/farm" class="twp-farm-link">
-          🌻 Buka Peternakan Lebah untuk panen madu! →
-        </a>
       </div>
     </div>
 

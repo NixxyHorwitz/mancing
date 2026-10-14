@@ -323,11 +323,6 @@ require dirname(__DIR__) . '/partials/header.php';
   position: relative;
   overflow: hidden;
 }
-.wd-balance-card::before {
-  content: ''; position: absolute; right: -15px; bottom: -15px;
-  width: 90px; height: 90px; opacity: 0.1; pointer-events: none;
-  background: url('/assets/game/bee_golden.png') no-repeat center center / contain;
-}
 .wd-bal-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 8px;
@@ -591,11 +586,11 @@ require dirname(__DIR__) . '/partials/header.php';
       </div>
     <?php else: ?>
       <div class="wd-notice-box">
-        <div class="wd-notice-avatar">
-          <img src="/assets/game/bee_worker.png" alt="Buzzy Lebah">
+        <div class="wd-notice-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;border-radius:12px;color:#fff;font-size:20px;">
+          <i class="ph-fill ph-wallet"></i>
         </div>
         <div class="wd-notice-text">
-          Pilih nominal lalu cairkan saldo hasil nonton video & panen madumu ke rekening atau e-wallet!
+          Pilih nominal lalu cairkan saldo hasil nonton video &amp; aktivitas cuanmu ke rekening atau e-wallet!
         </div>
       </div>
     <?php endif; ?>

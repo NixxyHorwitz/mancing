@@ -223,7 +223,7 @@ $profit_logs = $pdo->prepare("
 $profit_logs->execute([$user['id']]);
 $profit_logs = $profit_logs->fetchAll();
 
-$pageTitle = 'Toko Bibit & Kandang Lebah';
+$pageTitle = 'Paket Investasi & Pasif Cuan';
 $activePage = 'invest';
 require dirname(__DIR__) . '/partials/header.php';
 ?>
@@ -451,8 +451,8 @@ require dirname(__DIR__) . '/partials/header.php';
 <!-- Page Header Title -->
 <div class="page-title-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
   <div>
-    <h1 style="margin:0;color:var(--ink);">🐝 Toko Bibit & Kandang Lebah</h1>
-    <p style="margin:2px 0 0 0;color:var(--ink-muted);">Percepat produksi madu di Peternakan Lebah dengan bibit lebah unggulan!</p>
+    <h1 style="margin:0;color:var(--ink);">💼 Paket Investasi Cuan</h1>
+    <p style="margin:2px 0 0 0;color:var(--ink-muted);">Dapatkan dividen harian pasif dan lipatgandakan saldo cuan Anda!</p>
   </div>
   <button type="button" onclick="openGuideModal()" class="btn btn--sm" style="background:var(--lavender); color:var(--ink); border:2.5px solid var(--ink); box-shadow:2px 2px 0 var(--ink); font-weight:800; font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; height:fit-content; white-space:nowrap;">
     📖 Panduan
@@ -678,7 +678,7 @@ require dirname(__DIR__) . '/partials/header.php';
     </div>
     <div class="guide-modal__body">
       <div style="font-size:12px; font-weight:700; color:#444; line-height:1.5; text-align:center; margin-bottom:4px;">
-        Selamat datang di **Portal Investasi LebahCuan**! Pelajari 4 langkah mudah untuk mulai melipatgandakan saldo Anda:
+        Selamat datang di **Portal Investasi MancingCuan**! Pelajari 4 langkah mudah untuk mulai melipatgandakan saldo Anda:
       </div>
       
       <!-- Step 1 -->

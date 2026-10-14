@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check
     } elseif ($already && $flash !== 'checkin_ok') {
         if ($is_ajax) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Kamu sudah membuka sarang madu hari ini. Kembali besok!']);
+            echo json_encode(['success' => false, 'message' => 'Kamu sudah membuka kotak hadiah hari ini. Kembali besok!']);
             exit;
         }
         $flash = 'Kamu sudah check-in hari ini. Kembali besok!';
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check
     }
 }
 
-$pageTitle  = 'Sarang Madu Harian';
+$pageTitle  = 'Hadiah Check-in Harian';
 $activePage = 'checkin';
 require dirname(__DIR__) . '/partials/header.php';
 
@@ -131,8 +131,7 @@ if ($streak == 0 && $already) $completed_days = 1;
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   SARANG MADU HARIAN (CHECK-IN) — AMBER ORGANIC HONEYCOMB
-   No Card Wrapper: Organic Interlocking Hexagon Beehive
+   HADIAH CHECK-IN HARIAN — MANCINGCUAN REWARD SYSTEM
    ══════════════════════════════════════════════════════════ */
 body {
   background: #fef8ee !important;
@@ -297,7 +296,7 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════
-   ORGANIC HONEYCOMB BEEHIVE CLUSTER (NO CARD BOX WRAPPER)
+   ORGANIC HEXAGON REWARD CLUSTER (NO CARD BOX WRAPPER)
    ══════════════════════════════════════════════════════════ */
 .honeycomb-section-header {
   text-align: center;
@@ -653,10 +652,10 @@ body {
 <!-- TOP BANNER -->
 <div class="ci-top-banner">
   <div class="ci-top-title">
-    <i class="ph-fill ph-hexagon" style="color:#fde047;"></i>
-    <span>Sarang Madu Harian</span>
+    <i class="ph-fill ph-gift" style="color:#fde047;"></i>
+    <span>Hadiah Check-in Harian</span>
   </div>
-  <div class="ci-top-sub">Pilih Hexagon & Dapatkan Saldo Tarik Tunai</div>
+  <div class="ci-top-sub">Buka Kotak Keberuntungan & Dapatkan Saldo Tarik Tunai</div>
 </div>
 
 <div class="ci-page-wrap">
@@ -717,15 +716,15 @@ body {
   <div class="honeycomb-section-header">
     <div class="honeycomb-heading">
       <i class="ph-fill ph-sparkle" style="color:#f59e0b;"></i>
-      <span><?= $already ? 'Sarang Madu Terbuka' : 'Pilih Kotak Hexagon Madumu' ?></span>
+      <span><?= $already ? 'Kotak Hadiah Terbuka' : 'Pilih Kotak Keberuntunganmu' ?></span>
     </div>
     <div class="honeycomb-subtext">
-      <?= $already ? 'Kamu telah memanen madu hari ini. Kembali besok untuk panen baru!' : 'Ketuk salah satu hexagon untuk memecahkan madu dan ambil uang tunai!' ?>
+      <?= $already ? 'Kamu telah membuka hadiah hari ini. Kembali besok untuk hadiah baru!' : 'Ketuk salah satu kotak untuk membuka hadiah dan ambil uang tunai!' ?>
     </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════════════
-       THE ORGANIC HONEYCOMB BEEHIVE CLUSTER (NO CARD BOX WRAPPER)
+       THE ORGANIC HEXAGON REWARD CLUSTER (NO CARD BOX WRAPPER)
        Row 1: 2 Hexagons
        Row 2: 3 Hexagons (Interlocking)
        Row 3: 2 Hexagons (Interlocking)
@@ -814,19 +813,19 @@ body {
   <div class="ci-status-box">
     <?php if (!$already): ?>
       <div class="ci-status-badge ci-status-badge--ready">
-        <i class="ph-fill ph-drop"></i> Sarang Madu Siap Dipanen
+        <i class="ph-fill ph-gift"></i> Kotak Hadiah Siap Dibuka
       </div>
-      <div class="ci-status-title">Pilih Salah Satu Hexagon di Atas</div>
+      <div class="ci-status-title">Pilih Salah Satu Kotak di Atas</div>
       <div class="ci-status-desc">
-        Setiap hexagon menyimpan hadiah uang tunai acak berkisar <strong><?= format_rp($checkin_min) ?></strong> hingga <strong><?= format_rp($checkin_max) ?></strong> yang langsung masuk ke <strong>Saldo Tarik</strong>.
+        Setiap kotak menyimpan hadiah uang tunai acak berkisar <strong><?= format_rp($checkin_min) ?></strong> hingga <strong><?= format_rp($checkin_max) ?></strong> yang langsung masuk ke <strong>Saldo Tarik</strong>.
       </div>
     <?php else: ?>
       <div class="ci-status-badge ci-status-badge--done">
         <i class="ph-bold ph-check-circle"></i> Sudah Klaim Hari Ini
       </div>
-      <div class="ci-status-title">Panen Berhasil Disimpan</div>
+      <div class="ci-status-title">Hadiah Berhasil Disimpan</div>
       <div class="ci-status-desc">
-        Madu lebah sedang diproduksi kembali. Sarang baru akan siap dibuka besok pagi pukul 00:00 WIB!
+        Hadiah keberuntungan sedang disiapkan kembali. Kotak baru akan siap dibuka besok pagi pukul 00:00 WIB!
       </div>
     <?php endif; ?>
 
@@ -835,8 +834,8 @@ body {
       <a href="/withdraw" class="ci-btn-action ci-btn-action--wd">
         <i class="ph-bold ph-arrow-up-right"></i> Tarik Saldo
       </a>
-      <a href="/farm" class="ci-btn-action ci-btn-action--farm">
-        <i class="ph-fill ph-binoculars"></i> Buka Peternakan
+      <a href="/minigame" class="ci-btn-action ci-btn-action--farm">
+        <i class="ph-fill ph-game-controller"></i> Buka Minigame
       </a>
     </div>
   </div>
@@ -858,8 +857,8 @@ body {
     <div class="ci-win-icon">
       <i class="ph-fill ph-coins"></i>
     </div>
-    <div class="ci-win-title">Panen Madu Berhasil!</div>
-    <div class="ci-win-sub">Hadiah uang tunai dari sarang lebah:</div>
+    <div class="ci-win-title">Klaim Hadiah Berhasil!</div>
+    <div class="ci-win-sub">Hadiah uang tunai keberuntungan harian:</div>
     <div class="ci-win-reward" id="win-modal-amt">+Rp 0</div>
     <div class="ci-win-dest">
       <i class="ph-bold ph-check"></i> Masuk Langsung ke Saldo Tarik

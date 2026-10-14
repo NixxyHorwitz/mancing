@@ -102,7 +102,7 @@ require dirname(__DIR__) . '/partials/header.php';
 
 <style>
 /* ══════════════════════════════════════════════
-   EDIT REKENING — LEBAHCUAN BEE CASUAL GAME THEME
+   EDIT REKENING — MANCINGCUAN CASUAL THEME
    ══════════════════════════════════════════════ */
 body {
   background: #fef8ee !important;
@@ -488,13 +488,13 @@ body {
       <div style="width:38px;"></div> <!-- spacer -->
     </div>
 
-    <!-- Bee Mascot Dialogue -->
+    <!-- Notice Dialogue -->
     <div class="rek-notice-box">
-      <div class="rek-notice-avatar">
-        <img src="/assets/game/bee_mascot_coin.png" alt="Lebah Cuan Mascot">
+      <div class="rek-notice-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;border-radius:12px;color:#fff;font-size:20px;">
+        <i class="ph-fill ph-bank"></i>
       </div>
       <div class="rek-notice-text">
-        Pastikan nomor rekening &amp; e-wallet sudah sesuai atas nama kamu agar penarikan saldo cuan madu berjalan lancar!
+        Pastikan nomor rekening &amp; e-wallet sudah sesuai atas nama kamu agar penarikan saldo cuan berjalan lancar tanpa kendala!
       </div>
     </div>
   </div>

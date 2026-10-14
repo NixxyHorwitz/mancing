@@ -5,4 +5,4 @@ Disallow: /auth/
 Disallow: /uploads/
 Disallow: /scratch/
 
-Sitemap: https://lebahcuan.com/sitemap.xml
+Sitemap: https://mancingcuan.com/sitemap.xml

@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stepText = $reqData['type'] === 'threads_campaign_step2' ? 'Langkah 2 (Promotor Khusus)' : 'Langkah 1';
                         if ($reqData['type'] === 'threads_campaign_step2') {
                             $notifTitle = "Selamat! Kamu Resmi Menjadi Promotor Khusus Threads! 👑";
-                            $notifMsg = "Klaim Langkah 2 kamu disetujui! Reward " . format_rp($reward) . " telah masuk ke Saldo Tarik. Kamu resmi berstatus PROMOTOR KHUSUS LebahCuan dengan akses langsung ke Admin.";
+                            $notifMsg = "Klaim Langkah 2 kamu disetujui! Reward " . format_rp($reward) . " telah masuk ke Saldo Tarik. Kamu resmi berstatus PROMOTOR KHUSUS MancingCuan dengan akses langsung ke Admin.";
                         } else {
                             $notifTitle = "Kampanye Threads {$stepText} Disetujui! ✅";
                             $notifMsg = "Selamat! Promosi Threads {$stepText} kamu disetujui. Cuan tambahan sebesar " . format_rp($reward) . " telah ditambahkan ke Saldo Tarik kamu.";

@@ -191,7 +191,7 @@ require dirname(__DIR__) . '/partials/header.php';
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   PROMOTOR HUB — LEBAHCUAN AMBER & HONEY THEME
+   PROMOTOR HUB — MANCINGCUAN THEME
    ══════════════════════════════════════════════════════════ */
 body {
   background: #fef8ee !important;
@@ -312,9 +312,7 @@ body {
   bottom: -10px;
   width: 90px;
   height: 90px;
-  background: url('/assets/game/bee_golden.png') no-repeat center center / contain;
-  opacity: 0.08;
-  pointer-events: none;
+  background: transparent;
 }
 .p-income-head {
   display: flex;
@@ -426,9 +424,7 @@ body {
   bottom: -10px;
   width: 85px;
   height: 85px;
-  background: url('/assets/game/bee_golden.png') no-repeat center center / contain;
-  opacity: 0.1;
-  pointer-events: none;
+  background: transparent;
 }
 .p-pending-head {
   display: flex;
@@ -958,7 +954,7 @@ body {
   </div>
   <div class="p-hero-title">
     <i class="ph-fill ph-megaphone-simple" style="color:#fef08a;"></i>
-    <span>Promotor Hub LebahCuan</span>
+    <span>Promotor Hub MancingCuan</span>
   </div>
   <div class="p-hero-sub">
     Analisis traffic, target harian & manajemen bukti pencairan komisi.

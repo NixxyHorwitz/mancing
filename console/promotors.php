@@ -946,7 +946,7 @@ require __DIR__ . '/partials/header.php';
     <div class="c-card p-3 h-100" style="background:#131522;border:1px solid #282c4b;border-radius:12px;">
       <div style="font-size:11px;color:#a5b4fc;font-weight:700;text-transform:uppercase;margin-bottom:4px;">👥 Total Promotor Aktif</div>
       <div style="font-size:22px;font-weight:800;color:#fff;"><?= count($promotors) ?> <span style="font-size:13px;color:#888;">Akun</span></div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Mitra promotor resmi LebahCuan</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Mitra promotor resmi MancingCuan</div>
     </div>
   </div>
   <div class="col-xl-3 col-md-6">

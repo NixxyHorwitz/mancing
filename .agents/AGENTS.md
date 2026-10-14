@@ -9,5 +9,5 @@ git push origin main
 ```
 
 ## Repository
-- Remote: https://github.com/NixxyHorwitz/lebahcuan.git
+- Remote: https://github.com/NixxyHorwitz/mancing.git
 - Branch: main

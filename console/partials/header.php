@@ -399,7 +399,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
       <img src="<?= htmlspecialchars(site_logo($pdo)) ?>" alt="Logo" style="width:28px;height:28px;object-fit:contain;border-radius:6px">
     </div>
     <div style="flex:1;min-width:0">
-      <div class="c-sidebar__brand"><?= htmlspecialchars(setting($pdo, 'site_name', 'LebahCuan')) ?></div>
+      <div class="c-sidebar__brand"><?= htmlspecialchars(setting($pdo, 'site_name', 'MancingCuan')) ?></div>
       <div class="c-sidebar__sub">Farm Console</div>
     </div>
     <button type="button" class="btn-close btn-close-white d-lg-none" onclick="closeSidebar()" aria-label="Close" style="font-size:11px"></button>
@@ -502,19 +502,19 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
     </div>
     <?php endif; ?>
 
-    <!-- 3. PETERNAKAN & KONTEN LEBAH (COLLAPSIBLE) -->
+    <!-- 3. KONTEN & VIDEO (COLLAPSIBLE) -->
     <?php
-    $farmPages = ['bee_farm', 'bee_logs', 'videos', 'memberships'];
+    $farmPages = ['videos', 'memberships'];
     $isFarmActive = in_array($activePage ?? '', $farmPages, true);
-    $canFarm = staff_can('bee_farm') || staff_can('bee_logs') || staff_can('videos') || staff_can('memberships');
+    $canFarm = staff_can('videos') || staff_can('memberships');
     ?>
     <?php if ($canFarm): ?>
-    <div class="c-sidebar__label" style="margin-top:6px">Ternak &amp; Konten 🐝</div>
+    <div class="c-sidebar__label" style="margin-top:6px">Video &amp; Konten 🎬</div>
     <div class="c-nav-collapse-group <?= $isFarmActive ? 'open' : '' ?>" id="nav-col-farm">
       <button type="button" class="c-nav-collapse-btn <?= $isFarmActive ? 'is-active' : '' ?>" onclick="toggleSidebarCollapse('nav-col-farm')" aria-expanded="<?= $isFarmActive ? 'true' : 'false' ?>">
         <div class="c-nav-collapse-btn__left">
-          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"/><path d="M12 22V12"/><path d="M21 7l-9 5L3 7"/></svg>
-          <span>Sistem Peternakan</span>
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <span>Sistem Konten</span>
         </div>
         <div class="c-nav-collapse-btn__right">
           <svg class="c-nav-collapse-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -523,20 +523,6 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 
       <div class="c-nav-collapse-body">
         <div class="c-nav-collapse-inner">
-          <?php if (staff_can('bee_farm')): ?>
-          <a href="/console/bee_farm.php" class="c-nav-sublink <?= $activePage==='bee_farm'?'active':'' ?>">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"/><path d="M12 22V12"/><path d="M21 7l-9 5L3 7"/></svg>
-            <span>Kelola Ternak Lebah</span>
-          </a>
-          <?php endif; ?>
-
-          <?php if (staff_can('bee_logs')): ?>
-          <a href="/console/bee_logs.php" class="c-nav-sublink <?= $activePage==='bee_logs'?'active':'' ?>">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            <span>Log Panen &amp; Jual Madu</span>
-          </a>
-          <?php endif; ?>
-
           <?php if (staff_can('videos')): ?>
           <a href="/console/videos.php" class="c-nav-sublink <?= $activePage==='videos'?'active':'' ?>">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>

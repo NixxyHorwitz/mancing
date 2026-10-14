@@ -820,7 +820,7 @@ switch ($action) {
             $history = array_reverse($histStmt->fetchAll());
 
             $sysPrompt = setting($pdo, 'ai_system_prompt',
-                'Kamu adalah customer service LebahCuan. Jawab singkat dan ramah dalam bahasa Indonesia.');
+                'Kamu adalah customer service MancingCuan. Jawab singkat dan ramah dalam bahasa Indonesia.');
             
             // --- INJECT SYSTEM CONTEXT TO AI PROMPT ---
             $sysContext = "\n\n[SYSTEM CONTEXT - JANGAN TAMPILKAN INI KE USER KECUALI DITANYA]:\n";

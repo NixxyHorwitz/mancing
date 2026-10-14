@@ -1,6 +1,6 @@
-# 🐝 LebahCuan YT Scrapper — Browser Extension
+# 🎣 MancingCuan YT Scrapper — Browser Extension
 
-Ekstensi browser Chrome / Edge untuk mengekstrak ID, Judul, dan Durasi video YouTube secara otomatis cukup dengan melakukan scrolling di halaman YouTube, lalu mengekspornya langsung dalam format **JSON** yang siap di-copas ke **LebahCuan Console (Manajemen Video)**.
+Ekstensi browser Chrome / Edge untuk mengekstrak ID, Judul, dan Durasi video YouTube secara otomatis cukup dengan melakukan scrolling di halaman YouTube, lalu mengekspornya langsung dalam format **JSON** yang siap di-copas ke **MancingCuan Console (Manajemen Video)**.
 
 ---
 
@@ -13,9 +13,8 @@ Ekstensi browser Chrome / Edge untuk mengekstrak ID, Judul, dan Durasi video You
 3. Aktifkan **"Developer mode"** (Mode Pengembang) di pojok kanan/kiri atas.
 4. Klik tombol **"Load unpacked"** (Muat yang belum dibongkar).
 5. Pilih folder:
-   `c:\laragon\www\lebahcuan\scrapperyt`
-   *(atau `C:\laragon\www\ytscrapper`)*
-6. Ekstensi **LebahCuan YT Scrapper** berhasil terpasang! Pin ekstensi di toolbar browser Anda.
+   `c:\laragon\www\mancing\scrapperyt`
+6. Ekstensi **MancingCuan YT Scrapper** berhasil terpasang! Pin ekstensi di toolbar browser Anda.
 
 ---
 
@@ -24,12 +23,12 @@ Ekstensi browser Chrome / Edge untuk mengekstrak ID, Judul, dan Durasi video You
 1. Buka [YouTube.com](https://www.youtube.com/) atau channel / hasil pencarian video apa saja.
 2. Cukup **scroll halaman ke bawah secara wajar**.
    - Setiap video yang muncul di layar akan otomatis di-scrape dan tersimpan di memori ekstensi.
-3. Klik ikon ekstensi **LebahCuan YT Scrapper**:
+3. Klik ikon ekstensi **MancingCuan YT Scrapper**:
    - Anda akan melihat counter jumlah video yang ter-scrape.
    - Anda bisa mengatur rentang estimasi **Reward (Min - Max)** dan **Durasi (Min - Max)** di panel pengaturan.
-4. Klik tombol **"📋 Salin JSON (LebahCuan)"**.
-5. Buka dashboard admin LebahCuan:
-   👉 `http://lebahcuan.test/console/videos.php`
+4. Klik tombol **"📋 Salin JSON (MancingCuan)"**.
+5. Buka dashboard admin MancingCuan:
+   👉 `http://mancing.test/console/videos.php`
 6. Klik tombol **"📥 Impor JSON"**:
    - Paste JSON yang telah Anda salin ke dalam kotak textarea.
    - Sesuaikan pengaturan variabel (Reward Acak / Tetap, Durasi, Skip Duplikasi).

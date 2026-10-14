@@ -2,14 +2,14 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/auth/guard.php';
 
-$pageTitle  = 'Panduan Resmi — LebahCuan';
+$pageTitle  = 'Panduan Resmi — MancingCuan';
 $activePage = 'panduan';
 
 $free_limit  = (int)   setting($pdo, 'free_watch_limit', '7');
 $min_wd      = (float) setting($pdo, 'min_withdraw', '50000');
 $ref_bonus   = (float) setting($pdo, 'referral_bonus', '1000');
 
-$panduan_intro    = setting($pdo, 'panduan_intro', 'Panduan lengkap mendulang uang rupiah dari peternakan lebah madu 3D, misi video harian, dan bonus referral di LebahCuan.');
+$panduan_intro    = setting($pdo, 'panduan_intro', 'Panduan lengkap mendulang uang rupiah dari nonton video, tantangan minigame harian, dan bonus referral di MancingCuan.');
 $panduan_faq      = setting($pdo, 'panduan_faq_custom', '');
 $panduan_cta_text = setting($pdo, 'panduan_cta_text', 'Mulai Nonton Video Cuan');
 $panduan_cta_url  = setting($pdo, 'panduan_cta_url', '/videos');
@@ -23,7 +23,7 @@ require dirname(__DIR__) . '/partials/header.php';
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   PANDUAN RESMI LEBAHCUAN — MODERN AMBER HONEY THEME
+   PANDUAN RESMI MANCINGCUAN
    ══════════════════════════════════════════════════════════ */
 body {
   background: #fef8ee !important;
@@ -623,8 +623,8 @@ body {
 
     <div class="pan-hero-body">
       <div class="pan-hero-title">
-        <span>Pusat Edukasi LebahCuan</span>
-        <img src="/assets/game/bee_worker.png" alt="Buzzy" style="width:26px;height:26px;object-fit:contain;">
+        <span>Pusat Edukasi MancingCuan</span>
+        <i class="ph-fill ph-book-open-text" style="font-size:24px;color:#d97706;"></i>
       </div>
       <div class="pan-hero-sub"><?= htmlspecialchars($panduan_intro) ?></div>
     </div>
@@ -641,47 +641,36 @@ body {
           <i class="ph-fill ph-compass"></i>
           <span>PRAKTIK INTERAKTIF</span>
         </div>
-        <div class="pan-tour-status-pill" id="tour-overall-status">2 Pilihan Tour</div>
+        <div class="pan-tour-status-pill" id="tour-overall-status">Panduan Interaktif</div>
       </div>
 
-      <div class="pan-tour-title">Belajar Lebih Cepat dengan Tour Spotlight! 🚀</div>
+      <div class="pan-tour-title">Belajar Lebih Cepat dengan Panduan Interaktif! 🚀</div>
       <div class="pan-tour-desc">
-        Pilih salah satu panduan interaktif di bawah ini untuk melihat demonstrasi langkah demi langkah di aplikasi secara langsung:
+        Ikuti tur langsung di aplikasi untuk memahami alur nonton video reward, klaim bonus harian, dan pencairan saldo:
       </div>
 
       <div class="pan-tour-cards">
-        <!-- Tour Fitur Lebah -->
-        <button type="button" class="pan-tour-btn pan-tour-btn--bee" onclick="startPanduanTour('lebah')">
-          <div class="pan-tour-btn-top">
-            <div class="pan-tour-icon"><i class="ph-fill ph-drop"></i></div>
-            <span class="pan-tour-badge new" id="badge-tour-bee">Mulai Tour</span>
-          </div>
-          <div class="pan-tour-btn-title">Tour Peternakan Lebah</div>
-          <div class="pan-tour-btn-desc">Pelajari kandang sarang 3D, cara panen madu, dan penjualan di lapak.</div>
-          <div class="pan-tour-btn-cta">Mulai Panduan <i class="ph-bold ph-arrow-right"></i></div>
-        </button>
-
         <!-- Tour Cuan Nonton -->
-        <button type="button" class="pan-tour-btn pan-tour-btn--watch" onclick="startPanduanTour('watch')">
+        <button type="button" class="pan-tour-btn pan-tour-btn--watch" onclick="startPanduanTour('watch')" style="grid-column: 1 / -1;">
           <div class="pan-tour-btn-top">
             <div class="pan-tour-icon"><i class="ph-fill ph-film-strip"></i></div>
             <span class="pan-tour-badge new" id="badge-tour-watch">Mulai Tour</span>
           </div>
-          <div class="pan-tour-btn-title">Tour Cuan Nonton Video</div>
-          <div class="pan-tour-btn-desc">Pelajari misi video berbayar, buka hexagon harian, dan tarik saldo.</div>
+          <div class="pan-tour-btn-title">Tour Cuan Nonton Video &amp; Aktivitas</div>
+          <div class="pan-tour-btn-desc">Pelajari misi video berbayar, hadiah check-in harian, minigame, dan cara penarikan saldo.</div>
           <div class="pan-tour-btn-cta">Mulai Panduan <i class="ph-bold ph-arrow-right"></i></div>
         </button>
       </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
-         1. 6 PILAR UTAMA MENGHASILKAN RUPIAH
+         1. 5 PILAR UTAMA MENGHASILKAN RUPIAH
          ══════════════════════════════════════════════════════════ -->
     <div class="pan-card">
       <div class="pan-card-head pan-card-head--amber">
         <div class="pan-card-icon"><i class="ph-fill ph-sparkle"></i></div>
         <div>
-          <div class="pan-card-title">6 Pilar Menghasilkan Uang di LebahCuan</div>
+          <div class="pan-card-title">5 Pilar Menghasilkan Uang di MancingCuan</div>
           <div style="font-size:10px;font-weight:700;opacity:0.85;">Pahami seluruh cara mendulang rupiah di aplikasi</div>
         </div>
       </div>
@@ -699,37 +688,29 @@ body {
           <div class="pan-step-item">
             <div class="pan-step-num">2</div>
             <div class="pan-step-content">
-              <div class="pan-step-title">Sidejob Peternakan Lebah 3D (Passive Income)</div>
-              <div class="pan-step-desc">Sewa kotak sarang kayu dan miliki lebah pekerja. Lebah akan mengumpulkan tetesan madu murni secara otomatis setiap jam bahkan saat aplikasi ditutup.</div>
+              <div class="pan-step-title">Tantangan Minigame Cuan Harian</div>
+              <div class="pan-step-desc">Mainkan game seru dan tantangan harian untuk mengumpulkan reward instan yang langsung dapat ditarik ke rekening.</div>
             </div>
           </div>
 
           <div class="pan-step-item">
             <div class="pan-step-num">3</div>
             <div class="pan-step-content">
-              <div class="pan-step-title">Lapak Penjualan Madu</div>
-              <div class="pan-step-desc">Madu hasil panenmu langsung dijual di Lapak Madu dengan harga pasar resmi dan seketika dikonversikan menjadi uang tunai siap tarik.</div>
+              <div class="pan-step-title">Hadiah Check-in Harian</div>
+              <div class="pan-step-desc">Klaim bonus uang tunai gratis setiap hari dengan membuka kotak keberuntungan. Pertahankan streak berturut-turut untuk hadiah ekstra!</div>
             </div>
           </div>
 
           <div class="pan-step-item">
             <div class="pan-step-num">4</div>
             <div class="pan-step-content">
-              <div class="pan-step-title">Buka Hexagon Sarang Madu Harian (Check-in)</div>
-              <div class="pan-step-desc">Klaim bonus uang tunai gratis setiap hari dengan membuka sel hexagon sarang madu. Pertahankan streak berturut-turut untuk hadiah ekstra!</div>
+              <div class="pan-step-title">Misi &amp; Kampanye Promosi Threads</div>
+              <div class="pan-step-desc">Selesaikan target misi harian dan promosikan MancingCuan di Threads untuk mengklaim tambahan reward bonus saldo hingga jutaan rupiah.</div>
             </div>
           </div>
 
           <div class="pan-step-item">
             <div class="pan-step-num">5</div>
-            <div class="pan-step-content">
-              <div class="pan-step-title">Misi & Tantangan Harian</div>
-              <div class="pan-step-desc">Selesaikan target misi harian dan mingguan untuk mengklaim tambahan reward bonus saldo hingga jutaan rupiah.</div>
-            </div>
-          </div>
-
-          <div class="pan-step-item">
-            <div class="pan-step-num">6</div>
             <div class="pan-step-content">
               <div class="pan-step-title">Komisi Undang Teman (Referral 3 Tingkat)</div>
               <div class="pan-step-desc">Bagikan kode referralmu. Dapatkan reward langsung sebesar <strong><?= format_rp($ref_bonus) ?></strong> per teman ditambah komisi berjenjang 3 level dari transaksi mereka!</div>
@@ -740,46 +721,46 @@ body {
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
-         2. PANDUAN PETERNAKAN LEBAH 3D & LAPAK MADU
+         2. PANDUAN MINIGAME & TANTANGAN HARIAN
          ══════════════════════════════════════════════════════════ -->
     <div class="pan-card">
       <div class="pan-card-head pan-card-head--green">
-        <div class="pan-card-icon"><i class="ph-fill ph-drop"></i></div>
+        <div class="pan-card-icon"><i class="ph-fill ph-game-controller"></i></div>
         <div>
-          <div class="pan-card-title">Mekanisme Peternakan Lebah & Lapak</div>
-          <div style="font-size:10px;font-weight:700;opacity:0.85;">Cara mengelola sarang & panen madu maksimal</div>
+          <div class="pan-card-title">Mekanisme Minigame &amp; Tantangan</div>
+          <div style="font-size:10px;font-weight:700;opacity:0.85;">Cara bermain dan klaim hadiah instan</div>
         </div>
       </div>
 
       <div class="pan-card-body">
         <div class="pan-feature-grid">
           <div class="pan-feature-box">
-            <i class="ph-fill ph-archive"></i>
-            <div class="pan-feature-title">Kotak Sarang Kayu</div>
-            <div class="pan-feature-desc">Tempat lebah bernaung. Memiliki slot maksimal lebah dan kapasitas tampung madu.</div>
+            <i class="ph-fill ph-play-circle"></i>
+            <div class="pan-feature-title">Mainkan Kapan Saja</div>
+            <div class="pan-feature-desc">Akses minigame langsung dari menu utama tanpa perlu download aplikasi tambahan.</div>
           </div>
 
           <div class="pan-feature-box">
-            <i class="ph-fill ph-timer"></i>
-            <div class="pan-feature-title">Produksi ml / Jam</div>
-            <div class="pan-feature-desc">Setiap jenis lebah menghasilkan debit madu berbeda setiap jamnya secara otomatis.</div>
+            <i class="ph-fill ph-trophy"></i>
+            <div class="pan-feature-title">Raih Skor Tertinggi</div>
+            <div class="pan-feature-desc">Capai target skor harian untuk membuka bonus ekstra dan multiplier reward.</div>
           </div>
 
           <div class="pan-feature-box">
             <i class="ph-fill ph-hand-heart"></i>
-            <div class="pan-feature-title">Panen Rutin</div>
-            <div class="pan-feature-desc">Klik 'Panen Semua' begitu sarang terisi agar kapasitas tidak penuh dan lebah terus bekerja.</div>
+            <div class="pan-feature-title">Klaim Instan</div>
+            <div class="pan-feature-desc">Uang tunai yang dimenangkan langsung ditambahkan otomatis ke Saldo Tarik kamu.</div>
           </div>
 
           <div class="pan-feature-box">
-            <i class="ph-fill ph-storefront"></i>
-            <div class="pan-feature-title">Lapak Jual Madu</div>
-            <div class="pan-feature-desc">Jual madumu di lapak. Upgrade tier lapak di Toko untuk kuota penjualan harian lebih besar.</div>
+            <i class="ph-fill ph-sparkle"></i>
+            <div class="pan-feature-title">Tantangan Harian</div>
+            <div class="pan-feature-desc">Tantangan baru diperbarui setiap pagi pukul 00:00 WIB untuk kesempatan cuan tiada henti.</div>
           </div>
         </div>
 
-        <a href="/farm" style="display:flex;align-items:center;justify-content:center;gap:6px;background:#f0fdf4;border:2px solid #059669;border-radius:12px;padding:9px;color:#065f46;font-size:11.5px;font-weight:900;text-decoration:none;margin-top:12px;">
-          <i class="ph-fill ph-binoculars"></i> Buka Kebun Sarang Lebah Sekarang
+        <a href="/minigame" style="display:flex;align-items:center;justify-content:center;gap:6px;background:#f0fdf4;border:2px solid #059669;border-radius:12px;padding:9px;color:#065f46;font-size:11.5px;font-weight:900;text-decoration:none;margin-top:12px;">
+          <i class="ph-fill ph-game-controller"></i> Buka Minigame Cuan Sekarang
         </a>
       </div>
     </div>
@@ -801,7 +782,7 @@ body {
           <div class="pan-saldo-icon"><i class="ph-fill ph-hand-coins"></i></div>
           <div>
             <div class="pan-saldo-title">Saldo Tarik (WD Cash)</div>
-            <div class="pan-saldo-desc">Diperoleh dari hasil menonton video, penjualan madu, misi, check-in harian, dan bonus referral. Saldo ini <strong>dapat dicairkan ke rekening Bank atau E-Wallet 24 jam</strong>.</div>
+            <div class="pan-saldo-desc">Diperoleh dari hasil menonton video, minigame, misi tantangan, check-in harian, dan bonus referral. Saldo ini <strong>dapat dicairkan ke rekening Bank atau E-Wallet 24 jam</strong>.</div>
           </div>
         </div>
 
@@ -809,7 +790,7 @@ body {
           <div class="pan-saldo-icon"><i class="ph-fill ph-credit-card"></i></div>
           <div>
             <div class="pan-saldo-title">Saldo Beli (Deposit Investasi)</div>
-            <div class="pan-saldo-desc">Diisi melalui menu Top Up / Deposit. Khusus digunakan untuk <strong>sewa sarang lebah baru, bibit lebah unggulan di Toko, atau upgrade paket membership</strong>.</div>
+            <div class="pan-saldo-desc">Diisi melalui menu Top Up / Deposit. Khusus digunakan untuk <strong>upgrade paket membership VIP atau paket investasi cuan</strong>.</div>
           </div>
         </div>
 
@@ -873,7 +854,7 @@ body {
       <div class="pan-card-head pan-card-head--amber">
         <div class="pan-card-icon"><i class="ph-fill ph-question"></i></div>
         <div>
-          <div class="pan-card-title">Tanya Jawab Seputar LebahCuan</div>
+          <div class="pan-card-title">Tanya Jawab Seputar MancingCuan</div>
           <div style="font-size:10px;font-weight:700;opacity:0.85;">Pertanyaan yang sering ditanyakan pengguna</div>
         </div>
       </div>
@@ -891,21 +872,21 @@ body {
 
         <div class="pan-faq-item">
           <div class="pan-faq-question">
-            <span>Apakah peternakan lebah tetap jalan saat offline?</span>
+            <span>Kapan saja saya bisa menonton video dan menarik uang?</span>
             <i class="ph-bold ph-caret-down"></i>
           </div>
           <div class="pan-faq-answer">
-            Ya! Peternakan lebah berjalan 100% secara idle di server. Lebah pekerjamu tetap memproduksi madu ml/jam bahkan saat handphone kamu dimatikan atau sedang tidur.
+            Misi video dan penarikan saldo dapat diakses 24 jam setiap harinya tanpa hari libur.
           </div>
         </div>
 
         <div class="pan-faq-item">
           <div class="pan-faq-question">
-            <span>Bagaimana cara menjual madu hasil panen?</span>
+            <span>Apakah saldo hasil nonton dan minigame langsung bisa ditarik?</span>
             <i class="ph-bold ph-caret-down"></i>
           </div>
           <div class="pan-faq-answer">
-            Setelah menekan 'Panen Semua' di kebun, buka menu <strong>Lapak Madu</strong> (/farm/stall). Masukkan jumlah ml madu yang ingin dijual dan tekan tombol Jual. Uang cash rupiah langsung masuk ke Saldo Siap Tarik.
+            Ya! Setiap reward otomatis masuk ke Saldo Siap Tarik (WD) dan dapat ditarik langsung ke rekening bank atau e-wallet begitu mencapai batas minimum penarikan.
           </div>
         </div>
 
@@ -947,8 +928,8 @@ body {
          QUICK ACTION BUTTONS
          ══════════════════════════════════════════════════════════ -->
     <div class="pan-action-row">
-      <a href="/farm" class="btn-pan-action btn-pan-action--farm">
-        <i class="ph-fill ph-drop"></i> Buka Kebun Lebah
+      <a href="/minigame" class="btn-pan-action btn-pan-action--farm">
+        <i class="ph-fill ph-game-controller"></i> Buka Minigame
       </a>
       <a href="<?= htmlspecialchars($panduan_cta_url) ?>" class="btn-pan-action btn-pan-action--video">
         <i class="ph-fill ph-play-circle"></i> <?= htmlspecialchars($panduan_cta_text) ?>
@@ -971,22 +952,9 @@ document.querySelectorAll('.pan-faq-question').forEach(header => {
 
 // Update Tour Badges on Guide Page
 function updatePanduanTourStatus() {
-  const doneBee = localStorage.getItem('lebahcuan_tour_done_lebah') === '1';
-  const doneWatch = localStorage.getItem('lebahcuan_tour_done_watch') === '1';
-
-  const badgeBee = document.getElementById('badge-tour-bee');
+  const doneWatch = localStorage.getItem('mancing_tour_done_watch') === '1';
   const badgeWatch = document.getElementById('badge-tour-watch');
   const statusOverall = document.getElementById('tour-overall-status');
-
-  if (badgeBee) {
-    if (doneBee) {
-      badgeBee.className = 'pan-tour-badge done';
-      badgeBee.innerHTML = '✓ Selesai';
-    } else {
-      badgeBee.className = 'pan-tour-badge new';
-      badgeBee.innerHTML = 'Mulai Tour';
-    }
-  }
 
   if (badgeWatch) {
     if (doneWatch) {
@@ -999,25 +967,18 @@ function updatePanduanTourStatus() {
   }
 
   if (statusOverall) {
-    if (doneBee && doneWatch) {
-      statusOverall.textContent = '2/2 Selesai 🎉';
-    } else if (doneBee || doneWatch) {
-      statusOverall.textContent = '1/2 Selesai (Lanjutkan)';
-    } else {
-      statusOverall.textContent = '2 Pilihan Tour';
-    }
+    statusOverall.textContent = doneWatch ? '1/1 Selesai 🎉' : 'Panduan Interaktif';
   }
 }
 
 // Function to start tour from panduan
 function startPanduanTour(track) {
   if (typeof window.startGlobalTour === 'function') {
-    window.startGlobalTour(track, 0);
+    window.startGlobalTour('watch', 0);
   } else {
-    // If navigating to home first
     try {
-      localStorage.setItem('lebahcuan_tour_active', JSON.stringify({
-        track: track,
+      localStorage.setItem('mancing_tour_active', JSON.stringify({
+        track: 'watch',
         step: 0,
         isRunning: true,
         updatedAt: Date.now()

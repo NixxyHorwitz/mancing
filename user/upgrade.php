@@ -307,13 +307,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare("UPDATE users SET membership_id=?, membership_expires_at=? WHERE id=?")
                         ->execute([$mid, $new_expires, $user['id']]);
                     
-                    // Otomatis sinkronkan Lapak Penjualan Madu setingkat level membership
-                    $pdo->prepare("UPDATE user_bee_stalls SET is_active = 0 WHERE user_id = ?")->execute([$user['id']]);
-                    $pdo->prepare("
-                        INSERT INTO user_bee_stalls (user_id, stall_master_id, daily_sold_today, last_sold_date, created_at, expires_at, is_active)
-                        VALUES (?, ?, 0, CURDATE(), NOW(), ?, 1)
-                    ")->execute([$user['id'], $mid, $new_expires]);
-                    
                     $pdo->commit();
                     
                     $us = $pdo->prepare("SELECT * FROM users WHERE id=?"); $us->execute([$user['id']]); $user = $us->fetch();
@@ -360,7 +353,7 @@ foreach ($paid_ids as $idx => $m) {
 // Reload after rename
 $memberships = $pdo->query("SELECT * FROM memberships WHERE is_active=1 ORDER BY sort_order ASC")->fetchAll();
 
-$pageTitle  = 'Belantara Lebah Cuan — Tingkat Amber';
+$pageTitle  = 'Keanggotaan VIP — MancingCuan';
 $activePage = 'upgrade';
 require dirname(__DIR__) . '/partials/header.php';
 ?>
@@ -887,20 +880,22 @@ body {
         <i class="ph-bold ph-caret-left"></i>
       </a>
       <div class="up-hero-badge">
-        <i class="ph-fill ph-tree"></i> Belantara Lebah Cuan
+        <i class="ph-fill ph-crown"></i> Keanggotaan VIP MancingCuan
       </div>
       <div style="width:36px;"></div>
     </div>
 
-    <!-- MASCOT BUZZY ROW -->
+    <!-- MASCOT VIP ROW -->
     <div class="up-mascot-row">
-      <img src="/assets/game/bee_golden.png" class="up-mascot-img" alt="Buzzy Forest Bee">
+      <div style="width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,#f59e0b,#b45309);display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;box-shadow:0 8px 20px rgba(245,158,11,0.4);border:2px solid #fff;flex-shrink:0;">
+        <i class="ph-fill ph-crown-simple"></i>
+      </div>
       <div class="up-mascot-bubble">
         <div class="up-mascot-bubble-title">
-          <i class="ph-fill ph-sparkle"></i> Panen Madu Belantara!
+          <i class="ph-fill ph-sparkle"></i> Upgrade Level VIP Cuan!
         </div>
         <div class="up-mascot-bubble-sub">
-          Pilih kasta kolonimu, panen madu hutan liar &amp; nikmati prioritas pencairan cuan 24 jam!
+          Pilih level keanggotaanmu, nikmati batas penarikan lebih tinggi &amp; prioritas pencairan 24 jam!
         </div>
       </div>
     </div>
@@ -967,12 +962,11 @@ body {
     </div>
 
     <!-- SALDO BELI TILE -->
-    <div class="sh-honey"><div class="sh-honey__title"><i class="ph-fill ph-wallet"></i> Saldo Beli Khusus Kasta</div></div>
+    <div class="sh-honey"><div class="sh-honey__title"><i class="ph-fill ph-wallet"></i> Saldo Deposit Aktif</div></div>
     <div class="saldo-card">
-      <img src="/assets/game/honey_jar.png" class="saldo-card-bg" alt="deco">
       <div class="saldo-lbl"><i class="ph-bold ph-coins"></i> Saldo Beli Tersedia</div>
       <div class="saldo-val"><?= format_rp((float)$user['balance_dep']) ?></div>
-      <div class="saldo-sub">Saldo ini khusus digunakan untuk aktivasi kasta &amp; bibit lebah rimba.</div>
+      <div class="saldo-sub">Saldo ini digunakan untuk aktivasi paket keanggotaan VIP.</div>
     </div>
 
     <!-- QUICK BUTTONS -->
@@ -985,8 +979,8 @@ body {
       </a>
     </div>
 
-    <!-- PILIH KASTA KOLONI LEBAH -->
-    <div class="sh-honey"><div class="sh-honey__title"><i class="ph-fill ph-crown"></i> Pilih Kasta Rimba</div></div>
+    <!-- PILIH PAKET MEMBERSHIP VIP -->
+    <div class="sh-honey"><div class="sh-honey__title"><i class="ph-fill ph-crown"></i> Pilih Paket VIP</div></div>
 
     <div style="background:#fffbeb;border:1.5px dashed #f59e0b;border-radius:14px;padding:9px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
       <i class="ph-fill ph-calculator" style="color:#d97706;font-size:18px;flex-shrink:0;"></i>

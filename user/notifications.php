@@ -564,7 +564,7 @@ body {
       </div>
       <div class="ntf-empty-title">Semua Pesan Sudah Dibaca!</div>
       <div class="ntf-empty-sub">
-        Tidak ada pesan baru yang tertunda. Kamu selalu ter-update dengan kabar terbaru LebahCuan.
+        Tidak ada pesan baru yang tertunda. Kamu selalu ter-update dengan kabar terbaru MancingCuan.
       </div>
       <button type="button" onclick="filterNotifs('all')" class="btn-back-home" style="cursor:pointer;">
         <i class="ph-bold ph-tray"></i>

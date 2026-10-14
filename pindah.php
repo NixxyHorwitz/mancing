@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // Static variable for the new server destination URL (tidak dicetak langsung di DOM)
-$new_server_url = 'https://lebahcuan-baru.com'; // Ganti dengan URL server tujuan migrasi Anda
+$new_server_url = 'https://mancingcuan-baru.com'; // Ganti dengan URL server tujuan migrasi Anda
 
 // Cek jika request adalah AJAX untuk mengambil URL
 if (isset($_GET['action']) && $_GET['action'] === 'get_url') {
@@ -19,7 +19,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_url') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pindah ke Server Baru  </title>22
+<title>Pindah ke Server Baru</title>
 <link rel="stylesheet" href="/assets/css/app.css?v=<?= @filemtime($_SERVER['DOCUMENT_ROOT'].'/assets/css/app.css') ?: time() ?>">
 <style>
   /* Neo-brutalist style variables fallback (jika app.css tidak termuat) */
@@ -224,7 +224,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_url') {
       <div class="mv-emoji-box">🌐</div>
       <div class="mv-title">Pindah ke Server Baru</div>
       <div class="mv-desc">
-        Untuk kenyamanan dan akses yang lebih ngebut, LebahCuan kini sudah berpindah ke rumah baru yang jauh lebih stabil dan kencang. Yuk gabung ke server baru sekarang!
+        Untuk kenyamanan dan akses yang lebih ngebut, MancingCuan kini sudah berpindah ke rumah baru yang jauh lebih stabil dan kencang. Yuk gabung ke server baru sekarang!
       </div>
 
       <div class="mv-actions">

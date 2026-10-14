@@ -37,8 +37,8 @@ if (!function_exists('format_activity_path')) {
         if ($clean === '/home' || $clean === '') {
             return ['label' => 'Dashboard User', 'badge' => 'rgba(56,189,248,0.15)', 'color' => '#38bdf8', 'icon' => '🏠'];
         }
-        if (strpos($clean, '/farm') !== false) {
-            return ['label' => 'Ternak Lebah', 'badge' => 'rgba(16,185,129,0.15)', 'color' => '#10b981', 'icon' => '🐝'];
+        if (strpos($clean, '/minigame') !== false) {
+            return ['label' => 'Minigame Cuan', 'badge' => 'rgba(16,185,129,0.15)', 'color' => '#10b981', 'icon' => '🎮'];
         }
         if (strpos($clean, '/withdraw') !== false) {
             return ['label' => 'Halaman WD', 'badge' => 'rgba(239,68,68,0.15)', 'color' => '#f87171', 'icon' => '💸'];

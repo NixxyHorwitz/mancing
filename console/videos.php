@@ -526,10 +526,10 @@ function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
         <div class="modal-header border-0 pb-0 d-flex justify-content-between align-items-center">
           <div>
             <h5 class="modal-title fw-bold text-warning d-flex align-items-center gap-2">
-              <span>📥</span> Impor Video via JSON (LebahCuan Scrapper)
+              <span>📥</span> Impor Video via JSON (MancingCuan Scrapper)
             </h5>
             <div style="font-size:12px;color:#94a3b8;margin-top:2px">
-              Salin data JSON dari ekstensi <strong>LebahCuan YT Scrapper</strong> di browser, lalu tempelkan langsung di bawah ini.
+              Salin data JSON dari ekstensi <strong>MancingCuan YT Scrapper</strong> di browser, lalu tempelkan langsung di bawah ini.
             </div>
           </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>

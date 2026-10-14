@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
 // Handle Export CSV
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename=laporan_survei_lebahcuan_' . date('Ymd_His') . '.csv');
+    header('Content-Disposition: attachment; filename=laporan_survei_mancingcuan_' . date('Ymd_His') . '.csv');
     $output = fopen('php://output', 'w');
     fputcsv($output, ['ID', 'Waktu Submit (WIB)', 'User ID', 'Username', 'Email', 'WhatsApp', 'Sumber Info', 'Rating Kepuasan (1-5)', 'Pengalaman Pengguna', 'Pesan / Keluhan', 'Hadiah Saldo (Rp)', 'Status Survei', 'Waktu Takeback', 'Alasan Takeback', 'IP Address']);
 
@@ -516,7 +516,7 @@ require_once __DIR__ . '/partials/header.php';
         <!-- Kolom Kiri: Sumber Informasi -->
         <div class="col-12 col-md-6">
           <div class="text-secondary small fw-bold mb-2 d-flex align-items-center justify-content-between">
-            <span><i class="ph-bold ph-share-network text-warning me-1"></i> Dari Mana Tahu LebahCuan?</span>
+            <span><i class="ph-bold ph-share-network text-warning me-1"></i> Dari Mana Tahu MancingCuan?</span>
             <span class="badge bg-dark border border-secondary text-secondary" style="font-size:10px;">Traffic Sources</span>
           </div>
           <div class="d-flex flex-column gap-2">

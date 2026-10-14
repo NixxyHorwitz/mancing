@@ -1,6 +1,6 @@
 # 📘 Blueprint Sistem Beli Paket, Model Profit & Strategi Deposit
 
-Dokumen ini membedah secara menyeluruh cara kerja sistem pembelian paket di [`user/upgrade.php`](file:///c:/laragon/www/lebahcuan/user/upgrade.php), bagaimana perputaran uang dan keuntungan pemilik platform (*owner*) terbentuk secara matematis, serta taktik psikologis untuk mendorong pengguna melakukan deposit.
+Dokumen ini membedah secara menyeluruh cara kerja sistem pembelian paket di [`user/upgrade.php`](file:///c:/laragon/www/mancing/user/upgrade.php), bagaimana perputaran uang dan keuntungan pemilik platform (*owner*) terbentuk secara matematis, serta taktik psikologis untuk mendorong pengguna melakukan deposit.
 
 ---
 
@@ -29,13 +29,13 @@ graph LR
 
     subgraph Pemakaian [Pemakaian Internal]
         SaldoBeli --> BeliPaket[Beli Paket Membership upgrade.php]
-        SaldoBeli --> BeliBibit[Beli Bibit dan Ternak Lebah farm]
+        SaldoBeli --> BeliInvest[Beli Paket Investasi Pasif]
         SaldoBeli -.->|Dilarang| GagalWD[TIDAK BISA DITARIK KE REKENING]
     end
 
     subgraph Penghasilan [Penghasilan Pengguna]
         Nonton[Nonton Video watch.php] --> SaldoTarik[balance_wd - Saldo Tarik]
-        Panen[Panen Madu farm] --> SaldoTarik
+        Invest[Dividen Investasi Pasif] --> SaldoTarik
         Referral[Komisi Referral 30 Persen] --> SaldoTarik
     end
 
@@ -48,8 +48,8 @@ graph LR
 
 | Tipe Saldo | Nama Database | Sumber Saldo | Sifat Pencairan | Kegunaan |
 | :--- | :--- | :--- | :--- | :--- |
-| **Saldo Beli** | `balance_dep` | Topup QRIS / Bank Transfer | **Non-Withdrawable** (Terkunci) | Beli paket membership, sewa bibit lebah |
-| **Saldo Tarik** | `balance_wd` | Misi video, panen madu, komisi referral | **Withdrawable** (Bersyarat) | Dicairkan ke rekening bank / e-wallet DANA |
+| **Saldo Beli** | `balance_dep` | Topup QRIS / Bank Transfer | **Non-Withdrawable** (Terkunci) | Beli paket membership, paket investasi |
+| **Saldo Tarik** | `balance_wd` | Misi video, dividen investasi, komisi referral | **Withdrawable** (Bersyarat) | Dicairkan ke rekening bank / e-wallet DANA |
 
 ---
 
@@ -152,22 +152,19 @@ flowchart TD
 3. **Uang Masuk Lebih Besar & Saldo Mengendap Selamanya (*Breakage Float*)**:
    * Total uang tunai asli yang masuk ke rekening admin menjadi **Rp 73.000** (Rp 48.000 + Rp 25.000), jauh melebihi harga awal Rp 48.000.
    * Setelah paket Pejuang dibeli seharga Rp 69.000, terdapat sisa saldo beli sebesar **Rp 4.000**.
-   * Karena saldo beli *non-withdrawable*, sisa uang ini menjadi modal mengendap selamanya di sistem, sekaligus memicu rasa sayang (*sunk cost fallacy*) yang mendorong pengguna untuk deposit lagi di kemudian hari guna membeli bibit lebah atau upgrade ke Jagoan.
+   * Karena saldo beli *non-withdrawable*, sisa uang ini menjadi modal mengendap selamanya di sistem, sekaligus memicu rasa sayang (*sunk cost fallacy*) yang mendorong pengguna untuk deposit lagi di kemudian hari guna membeli paket investasi atau upgrade ke VIP level berikutnya.
 
 
 ---
 
 ## 4. Tabel Perbandingan Level Membership
 
-Konfigurasi aktif di database `caracuan`:
+Konfigurasi aktif di database:
 
-| Parameter | Level 1: Raw Amber (Free) | Level 2: Golden Amber | Level 3: Royal Amber | Level 4: Imperial Amber |
+| Parameter | Level 1: Free Explorer | Level 2: VIP Starter | Level 3: VIP Pro | Level 4: VIP Imperial |
 | :--- | :--- | :--- | :--- | :--- |
 | **Harga Beli** | **Rp 0** | **Rp 48.000** *(Genjutsu: 69rb)* | **Rp 179.000** | **Rp 229.000** |
 | **Harga Coret** | - | Rp 99.000 | Rp 399.000 | Rp 599.000 |
-| **Lapak Madu Otomatis** | **Lapak Raw Amber** | **Lapak Golden Amber** | **Lapak Royal Amber** | **Lapak Imperial Amber** |
-| **Harga Jual Madu** | Rp 25 / ml | **Rp 35 / ml** (+40%) | **Rp 55 / ml** (+120%) | **Rp 85 / ml** (+240%) |
-| **Kuota Jual Madu/Hari** | 100 ml / hari | 600 ml / hari | 2.000 ml / hari | 6.000 ml / hari |
 | **Batas Video/Hari** | 7 Video | 30 Video | 60 Video | 120 Video |
 | **Masa Aktif** | 15 Hari | 30 Hari | 30 Hari | **60 Hari (2 Bulan)** |
 | **Min. Penarikan (WD)** | Rp 1.000 | Rp 50.000 | Rp 100.000 | Rp 100.000 |

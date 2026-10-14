@@ -8,7 +8,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../bootstrap.php';
 $user         = require_auth($pdo);
 $_favicon     = setting($pdo, 'favicon_path', '/assets/favicon.png');
-$_seo_title   = setting($pdo, 'seo_title', 'LebahCuan');
+$_seo_title   = setting($pdo, 'seo_title', 'MancingCuan');
 $_lc_enabled  = setting($pdo, 'livechat_enabled', '1') === '1';
 $_ai_enabled  = setting($pdo, 'chat_ai_enabled', '1') === '1';
 $_adm_enabled = setting($pdo, 'chat_admin_enabled', '1') === '1';
@@ -176,7 +176,7 @@ body { margin: 0; padding: 0; overflow: hidden; background: #fef8ee; font-family
 
 <style>
 /* ═══════════════════════════════════════
-   LIVECHAT — LEBAHCUAN HONEY THEME
+   LIVECHAT — MANCINGCUAN THEME
    ═══════════════════════════════════════ */
 .chat-page {
   display: flex;
