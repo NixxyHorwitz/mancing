@@ -62,14 +62,13 @@ $show_edit_rek_btn = $membership_allow_edit_bank || $is_promotor_prof;
 // Member since
 $member_since = date('d M Y', strtotime($user['created_at']));
 $days_member  = max(1, (int)((time() - strtotime($user['created_at'])) / 86400));
-$initial_tab  = ($active_section === 'password') ? 'security' : 'summary';
 
 // Contact buttons
 try {
     $_contact_btns = $pdo->query("SELECT * FROM contact_buttons WHERE is_active=1 ORDER BY sort_order ASC, id ASC")->fetchAll();
 } catch (\Throwable) { $_contact_btns = []; }
 
-$pageTitle  = 'Profil Peternak';
+$pageTitle  = 'Kabin Kapten';
 $activePage = 'profile';
 require dirname(__DIR__) . '/partials/header.php';
 
@@ -83,1329 +82,1038 @@ $_psvg = [
 ?>
 
 <style>
-/* ══════════════════════════════════════════════
-   MANCINGCUAN INNOVATIVE PROFILE
-   NO EMOJIS — CDN ICONS & VECTOR ART ONLY
-   ══════════════════════════════════════════════ */
-:root {
-  --honey-50:  #fffbeb;
-  --honey-100: #fef3c7;
-  --honey-200: #fde68a;
-  --honey-300: #fcd34d;
-  --honey-400: #fbbf24;
-  --honey-500: #f59e0b;
-  --honey-600: #d97706;
-  --honey-700: #b45309;
-  --honey-800: #92400e;
-  --honey-900: #78350f;
-  --honey-ink: #451a03;
-}
-
-body {
-  background-color: #fef8ee !important;
-  background-image: radial-gradient(rgba(217, 119, 6, 0.08) 1.5px, transparent 1.5px) !important;
-  background-size: 18px 18px !important;
-  color: var(--honey-900);
-}
-
-.prof-container {
-  max-width: 480px;
+/* ══════════════════════════════════════════════════════════
+   KABIN KAPTEN — profil di dalam kabin kapal
+   Dinding kayu hangat, jendela bulat (porthole) ke laut karang,
+   tetap memakai palet & clay 3D yang sama dengan Beranda.
+   ══════════════════════════════════════════════════════════ */
+.cabin-stage {
+  width: 100%;
+  max-width: 440px;
   margin: 0 auto;
-  padding: 14px 14px 110px;
-}
-
-/* ── 1. DIGITAL BEEKEEPER PASS CARD ── */
-.pass-card {
-  position: relative;
-  background: linear-gradient(140deg, #f59e0b 0%, #d97706 48%, #92400e 100%);
-  border: 2.5px solid var(--honey-900);
-  border-radius: 22px;
-  padding: 16px 16px 14px;
-  color: #fff;
-  box-shadow: 0 6px 0 var(--honey-900), 0 16px 28px -6px rgba(180, 83, 9, 0.35);
-  overflow: hidden;
-  margin-bottom: 14px;
-}
-
-.pass-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1.5px, transparent 1.5px);
-  background-size: 14px 14px;
-  pointer-events: none;
-}
-
-.pass-sheen {
-  position: absolute;
-  top: -40%;
-  right: -20%;
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, rgba(254, 243, 199, 0.35) 0%, rgba(245, 158, 11, 0) 70%);
-  transform: rotate(25deg);
-  pointer-events: none;
-}
-
-/* Header inside pass */
-.pass-header {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-.pass-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  color: #fef3c7;
-  text-transform: uppercase;
-}
-.pass-brand i {
-  font-size: 15px;
-  color: #fde68a;
-}
-.pass-tier {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(120, 53, 15, 0.85);
-  border: 1.5px solid #fde68a;
-  border-radius: 12px;
-  padding: 3px 10px;
-  font-size: 10px;
-  font-weight: 900;
-  color: #fde68a;
-  letter-spacing: 0.3px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-}
-.pass-tier.is-vip {
-  background: linear-gradient(135deg, #78350f, #451a03);
-  border-color: #fef08a;
-  color: #fef08a;
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
-}
-
-/* Body inside pass */
-.pass-body {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-.pass-avatar-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
-.pass-avatar {
-  width: 58px;
-  height: 58px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #fffbeb, #fde68a);
-  border: 2.5px solid var(--honey-900);
-  box-shadow: 0 3px 0 var(--honey-900), 0 4px 10px rgba(0,0,0,0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 900;
-  color: var(--honey-900);
-}
-.pass-status-dot {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #10b981;
-  border: 2.5px solid var(--honey-900);
-}
-.pass-user-info {
-  flex: 1;
-  min-width: 0;
-}
-.pass-username {
-  font-size: 17px;
-  font-weight: 900;
-  color: #ffffff;
-  line-height: 1.2;
-  text-shadow: 0 1.5px 0 var(--honey-900);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pass-email {
-  font-size: 11px;
-  font-weight: 700;
-  color: #fef3c7;
-  opacity: 0.9;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-bottom: 3px;
-}
-.pass-meta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9.5px;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.85);
-}
-.pass-meta i {
-  font-size: 12px;
-  color: #fde68a;
-}
-.pass-chip {
-  flex-shrink: 0;
-  width: 38px;
-  height: 28px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #fde68a 0%, #fbbf24 60%, #b45309 100%);
-  border: 1.5px solid var(--honey-900);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 1px 2px rgba(255,255,255,0.6), 0 2px 0 var(--honey-900);
-  color: var(--honey-900);
-}
-.pass-chip i {
-  font-size: 18px;
-}
-
-/* Footer inside pass */
-.pass-footer {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(69, 26, 3, 0.4);
-  border: 1.5px solid rgba(253, 230, 138, 0.35);
-  border-radius: 14px;
-  padding: 8px 12px;
-  backdrop-filter: blur(4px);
-}
-.pass-ref-box {
+  padding: 6px 12px 22px;
   display: flex;
   flex-direction: column;
-}
-.pass-ref-label {
-  font-size: 8px;
-  font-weight: 900;
-  color: #fef3c7;
-  letter-spacing: 0.8px;
-}
-.pass-ref-code {
-  font-size: 14px;
-  font-weight: 900;
-  color: #ffffff;
-  letter-spacing: 1px;
-}
-.pass-copy-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: #fde68a;
-  color: var(--honey-900);
-  border: 1.5px solid var(--honey-900);
-  border-radius: 10px;
-  padding: 5px 10px;
-  font-size: 10.5px;
-  font-weight: 900;
-  cursor: pointer;
-  box-shadow: 0 2.5px 0 var(--honey-900);
-  transition: transform 0.1s, box-shadow 0.1s;
-  font-family: inherit;
-}
-.pass-copy-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 0.5px 0 var(--honey-900);
-}
-
-/* ── 2. DUAL-FLOW VAULT CAPSULE (INOVASI FINANCIAL HUB) ── */
-.vault-capsule {
-  background: #ffffff;
-  border: 2.5px solid var(--honey-900);
-  border-radius: 20px;
-  padding: 14px;
-  box-shadow: 0 5px 0 var(--honey-900);
-  margin-bottom: 14px;
+  gap: 12px;
   position: relative;
-  overflow: hidden;
+  z-index: 1;
+}
+.cabin-clay {
+  border: 2px solid #ffffff;
+  border-radius: 20px;
+  background: var(--reef-card);
+  box-shadow: var(--reef-clay-shadow);
 }
 
-.vault-capsule::after {
-  content: '';
-  position: absolute;
-  right: -25px;
-  bottom: -25px;
-  width: 90px;
-  height: 90px;
-  background: rgba(245, 158, 11, 0.06);
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  pointer-events: none;
-}
-
-/* Zone 1: Rupiah Wallets */
-.vault-fiat-grid {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+/* Flash */
+.cabin-flash {
+  display: flex;
   align-items: center;
   gap: 8px;
-  padding-bottom: 12px;
-  border-bottom: 2px dashed #fde68a;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 11.5px;
+  font-weight: 800;
+  border: 2px solid #ffffff;
+  box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.8), 0 4px 10px rgba(0, 0, 0, 0.05);
 }
-.vault-fiat-item {
-  display: flex;
-  flex-direction: column;
-}
-.vf-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9px;
-  font-weight: 900;
-  text-transform: uppercase;
-  color: var(--honey-800);
-  margin-bottom: 3px;
-}
-.vf-badge i {
-  font-size: 13px;
-  color: var(--honey-600);
-}
-.vf-amount {
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--honey-ink);
-  line-height: 1.2;
-  margin-bottom: 6px;
-}
-.vf-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 5px 8px;
-  border-radius: 9px;
-  font-size: 10px;
-  font-weight: 900;
-  text-decoration: none;
-  border: 1.5px solid var(--honey-900);
-  box-shadow: 0 2px 0 var(--honey-900);
-  transition: transform 0.1s;
-}
-.vf-action-btn:active {
-  transform: translateY(1.5px);
-  box-shadow: 0 0.5px 0 var(--honey-900);
-}
-.vf-action-btn.wd {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: var(--honey-900);
-}
-.vf-action-btn.dep {
-  background: linear-gradient(135deg, #fef08a, #f59e0b);
-  color: var(--honey-900);
-}
-.vf-divider {
-  width: 2px;
-  height: 54px;
-  background: #fde68a;
-  border-radius: 2px;
-}
+.cabin-flash.success { background: #d1fae5; color: #065f46; }
+.cabin-flash.error   { background: #ffe4e6; color: #9f1239; }
 
-/* Zone 2: Honey Reservoir Tank */
-.vault-reserves {
-  display: block;
-  padding-top: 10px;
-}
-.silo-meter {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.silo-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.silo-lbl {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9.5px;
-  font-weight: 900;
-  color: var(--honey-800);
-  text-transform: uppercase;
-}
-.silo-lbl i {
-  color: #ea580c;
-  font-size: 12px;
-}
-.silo-val {
-  font-size: 11px;
-  font-weight: 900;
-  color: #ea580c;
-}
-.silo-bar-track {
-  width: 100%;
-  height: 12px;
-  background: #fffbeb;
-  border: 1.5px solid var(--honey-900);
-  border-radius: 10px;
-  overflow: hidden;
-  padding: 1.5px;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
-}
-.silo-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #f59e0b, #ea580c);
-  border-radius: 6px;
-  transition: width 0.4s ease;
+/* ── 1. HERO: DINDING KABIN KAYU + PORTHOLE ── */
+.cabin-hero {
   position: relative;
+  overflow: hidden;
+  border: 2px solid #ffffff;
+  border-radius: 24px;
+  padding: 14px 14px 12px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(254, 240, 138, 0.55) 0, transparent 42%),
+    repeating-linear-gradient(180deg, transparent 0 25px, rgba(180, 83, 9, 0.10) 25px 27px),
+    linear-gradient(170deg, #fff7ed 0%, #fde7c8 60%, #fbd5a5 100%);
+  box-shadow:
+    0 16px 34px rgba(180, 83, 9, 0.16),
+    0 6px 14px rgba(244, 63, 94, 0.08),
+    inset 3px 3px 7px rgba(255, 255, 255, 0.9),
+    inset -4px -5px 10px rgba(180, 83, 9, 0.16);
+}
+/* Lentera kabin menggantung */
+.cabin-lantern {
+  position: absolute;
+  top: 0; left: 50%;
+  width: 22px; height: 40px;
+  pointer-events: none;
+  transform-origin: 50% 0;
+  animation: lanternSwing 4s ease-in-out infinite;
+  z-index: 1;
+}
+@keyframes lanternSwing {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+.cabin-porthole {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 84px;
+  height: 84px;
+  pointer-events: none;
+  z-index: 1;
+  filter: drop-shadow(0 5px 8px rgba(120, 53, 15, 0.25));
+}
+.porthole-fish { animation: portFish 7s linear infinite; }
+.porthole-fish--b { animation-duration: 9s; animation-delay: -4s; }
+@keyframes portFish {
+  0% { transform: translateX(-30px); }
+  100% { transform: translateX(110px); }
+}
+.porthole-bubble { animation: portBubble 3.5s ease-in infinite; }
+.porthole-bubble:nth-of-type(2) { animation-delay: -1.2s; }
+.porthole-bubble:nth-of-type(3) { animation-delay: -2.4s; }
+@keyframes portBubble {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 0.9; }
+  100% { transform: translateY(-40px); opacity: 0; }
 }
 
-/* ── 3. SEGMENTED TAB SWITCHER ── */
-.prof-tabs {
+.cabin-id {
+  position: relative;
+  z-index: 2;
   display: flex;
-  background: #ffffff;
-  border: 2.5px solid var(--honey-900);
-  border-radius: 16px;
-  padding: 4px;
-  gap: 4px;
-  box-shadow: 0 4px 0 var(--honey-900);
-  margin-bottom: 14px;
+  align-items: center;
+  gap: 10px;
+  padding-right: 88px;
+  min-height: 84px;
 }
-.prof-tab-btn {
-  flex: 1;
-  display: inline-flex;
+.cabin-avatar {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 17px;
+  flex-shrink: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 9px 4px;
-  border-radius: 12px;
-  border: none;
-  background: transparent;
-  color: var(--honey-800);
-  font-size: 11px;
+  font-size: 22px;
   font-weight: 900;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
-}
-.prof-tab-btn i {
-  font-size: 15px;
-  color: var(--honey-600);
-}
-.prof-tab-btn.active {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #ffffff;
-  box-shadow: 0 2px 0 var(--honey-900);
+  border: 2px solid #ffffff;
+  background: linear-gradient(145deg, #fdba74 0%, #fb7185 50%, #f43f5e 100%);
+  box-shadow:
+    0 6px 14px rgba(244, 63, 94, 0.32),
+    inset 2.5px 2.5px 4px rgba(255, 255, 255, 0.6),
+    inset -2.5px -2.5px 5px rgba(190, 18, 60, 0.3);
 }
-.prof-tab-btn.active i {
-  color: #ffffff;
+.cabin-online {
+  position: absolute;
+  bottom: -2px; right: -2px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #ffffff;
 }
-
-/* TAB PANELS */
-.tab-content {
-  display: none;
-}
-.tab-content.active {
-  display: block;
-  animation: tabFadeIn 0.22s ease-out;
-}
-@keyframes tabFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ── 4. TAB 1: RINGKASAN & METRIK PETERNAKAN ── */
-/* Colony Ribbon */
-.colony-ribbon {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-  border: 2px solid var(--honey-900);
-  border-radius: 16px;
-  padding: 12px 14px;
-  margin-bottom: 12px;
-  box-shadow: 0 4px 0 var(--honey-900);
-}
-.cr-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.cr-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
+.cabin-who { min-width: 0; }
+.cabin-eyebrow {
+  font-size: 8.5px;
   font-weight: 900;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--honey-900);
-}
-.cr-title i {
-  font-size: 15px;
-  color: var(--honey-600);
-}
-.cr-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  font-weight: 900;
   color: #b45309;
-  text-decoration: none;
 }
-.cr-grid {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #ffffff;
-  border: 1.5px solid #fde68a;
-  border-radius: 12px;
-  padding: 8px 12px;
-}
-.cr-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  flex: 1;
-}
-.cr-item-val {
+.cabin-name {
   font-size: 16px;
   font-weight: 900;
-  color: var(--honey-ink);
+  color: var(--reef-ink);
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.cr-item-lbl {
-  font-size: 9px;
-  font-weight: 800;
-  color: var(--honey-800);
-  text-transform: uppercase;
+.cabin-email {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--reef-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+.cabin-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.cabin-pill {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.8);
 }
-.cr-sep {
-  width: 1.5px;
-  height: 28px;
-  background: #fde68a;
-}
+.cabin-pill--rank { background: #f3e8ff; color: #7e22ce; }
+.cabin-pill--rank.is-vip { background: linear-gradient(135deg, #fef08a, #fbbf24); color: #78350f; }
+.cabin-pill--days { background: #ffffff; color: #9a3412; }
 
-/* Activity & Milestone Stream */
-.stream-card {
+/* Tiket kru (kode referral) */
+.cabin-ticket {
+  position: relative;
+  z-index: 2;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 14px;
   background: #ffffff;
-  border: 2px solid var(--honey-900);
-  border-radius: 16px;
-  padding: 6px 12px;
-  box-shadow: 0 4px 0 var(--honey-900);
-  margin-bottom: 12px;
+  box-shadow: 0 4px 10px rgba(180, 83, 9, 0.10), inset -2px -2px 5px rgba(251, 146, 60, 0.12);
 }
-.stream-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1.5px dashed #fde68a;
+.cabin-ticket::before,
+.cabin-ticket::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fbd9ae;
+  transform: translateY(-50%);
 }
-.stream-row:last-child {
-  border-bottom: none;
-}
-.stream-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-  border: 1.5px solid var(--honey-900);
-}
-.si-gold   { background: #fef3c7; color: #b45309; }
-.si-green  { background: #dcfce7; color: #15803d; border-color: #15803d; }
-.si-blue   { background: #e0f2fe; color: #0369a1; border-color: #0369a1; }
-.si-purple { background: #f3e8ff; color: #7e22ce; border-color: #7e22ce; }
-.si-amber  { background: #fed7aa; color: #c2410c; border-color: #c2410c; }
-
-.stream-info {
-  flex: 1;
-  min-width: 0;
-}
-.stream-title {
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--honey-900);
-  line-height: 1.2;
-}
-.stream-desc {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #92400e;
-  opacity: 0.8;
-}
-.stream-value {
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--honey-ink);
-  text-align: right;
+.cabin-ticket::before { left: -6px; }
+.cabin-ticket::after  { right: -6px; }
+.ticket-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ticket-ico {
+  width: 28px; height: 28px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(145deg, #c084fc, #8b5cf6);
+  color: #fff;
+  font-size: 15px;
+  box-shadow: inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5), 0 3px 6px rgba(139, 92, 246, 0.3);
   flex-shrink: 0;
 }
-
-/* ── 5. TAB 2: FITUR & LAYANAN (LIST TILE MODERN) ── */
-.service-group {
-  margin-bottom: 14px;
+.ticket-lbl { font-size: 8.5px; font-weight: 900; color: var(--reef-muted); letter-spacing: 0.8px; }
+.ticket-code {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  letter-spacing: 1.5px;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
-.service-group-title {
+.ticket-copy {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 11px;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #fb7185, #f43f5e);
+  color: #ffffff;
+  font-family: inherit;
   font-size: 10.5px;
   font-weight: 900;
-  color: var(--honey-800);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5), inset -2px -2px 4px rgba(190, 18, 60, 0.3);
+}
+.ticket-copy:active { transform: scale(0.95); }
+
+/* ── 2. RAK KARGO: kartu saldo & aktivitas geser horizontal ── */
+.cabin-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  margin-bottom: -4px;
+}
+.csh-title {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 12.5px;
+  font-weight: 900;
+  color: var(--reef-ink);
 }
-.service-group-title::after {
-  content: '';
-  flex: 1;
-  height: 2px;
-  background: #fde68a;
-  border-radius: 2px;
+.csh-title i { color: #b45309; font-size: 15px; }
+.csh-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--reef-muted);
 }
-.service-card {
-  background: #ffffff;
-  border: 2px solid var(--honey-900);
-  border-radius: 16px;
+.cargo-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 74%;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  margin: 0 -12px;
+  padding: 4px 12px 12px;
+  scroll-padding-left: 12px;
+  scrollbar-width: none;
+}
+.cargo-rail::-webkit-scrollbar { display: none; }
+.cargo-card {
+  scroll-snap-align: start;
+  position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 0 var(--honey-900);
+  min-height: 124px;
+  padding: 12px;
+  border: 2px solid #ffffff;
+  border-radius: 20px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow:
+    0 10px 22px var(--cc-sh),
+    inset 2px 2px 5px rgba(255, 255, 255, 0.4),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.14);
 }
-.service-tile {
+.cargo-card::after {
+  content: '';
+  position: absolute;
+  right: -22px;
+  bottom: -22px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+.cargo--wd   { background: linear-gradient(140deg, #fda4af, #f43f5e 60%, #e11d48); --cc-sh: rgba(244, 63, 94, 0.30); --cc-ink: #e11d48; }
+.cargo--dep  { background: linear-gradient(140deg, #6ee7b7, #10b981 55%, #047857); --cc-sh: rgba(5, 150, 105, 0.30); --cc-ink: #047857; }
+.cargo--earn { background: linear-gradient(140deg, #fde68a, #f59e0b 55%, #d97706); --cc-sh: rgba(245, 158, 11, 0.32); --cc-ink: #b45309; }
+.cargo--log  { background: linear-gradient(140deg, #c084fc, #8b5cf6 55%, #6d28d9); --cc-sh: rgba(139, 92, 246, 0.32); --cc-ink: #6d28d9; }
+.cargo-top {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 12px;
+  justify-content: space-between;
+}
+.cargo-lbl {
+  font-size: 9.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  opacity: 0.95;
+}
+.cargo-ico {
+  width: 28px; height: 28px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  background: rgba(255, 255, 255, 0.24);
+  box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.45);
+}
+.cargo-val {
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  margin: 6px 0 2px;
+}
+.cargo-meta { font-size: 9.5px; font-weight: 800; opacity: 0.95; }
+.cargo-foot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+}
+.cargo-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--cc-ink);
+  font-size: 10.5px;
+  font-weight: 900;
   text-decoration: none;
-  color: inherit;
-  border-bottom: 1.5px solid #fef3c7;
-  transition: background 0.15s;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), inset -1px -1px 2px rgba(0, 0, 0, 0.06);
 }
-.service-tile:last-child {
-  border-bottom: none;
+.cargo-act:active { transform: scale(0.95); }
+.cargo-mini {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
 }
-.service-tile:active {
-  background: #fffbeb;
+.cargo-mini div {
+  padding: 5px 4px;
+  border-radius: 10px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.35);
 }
-.st-icon-box {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
+.cargo-mini b { display: block; font-size: 14px; font-weight: 900; line-height: 1.1; }
+.cargo-mini span { font-size: 8.5px; font-weight: 800; opacity: 0.95; }
+
+/* ── 3. JENDELA MENU: tombol porthole bulat berbingkai kuningan ── */
+.porthole-menu {
+  border: 2px solid #ffffff;
+  border-radius: 22px;
+  padding: 14px 6px 10px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 25px, rgba(180, 83, 9, 0.07) 25px 27px),
+    linear-gradient(170deg, #fffaf3 0%, #fdebd3 100%);
+  box-shadow: var(--reef-clay-shadow);
+}
+.pm-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: 14px;
+}
+.pm-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.pm-ring {
+  width: 50px;
+  height: 50px;
+  padding: 4px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #fef3c7 0%, #fbbf24 50%, #b45309 100%);
+  box-shadow: 0 5px 10px rgba(180, 83, 9, 0.25), inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pm-item:active .pm-ring { transform: scale(0.9); }
+.pm-glass {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 19px;
-  flex-shrink: 0;
-  border: 1.5px solid var(--honey-900);
-  box-shadow: 0 2px 0 var(--honey-900);
+  color: #ffffff;
+  background: var(--pm);
+  box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.45), inset -2px -2px 5px rgba(0, 0, 0, 0.2);
 }
-.st-text {
-  flex: 1;
-  min-width: 0;
+.pm-glass::before {
+  content: '';
+  position: absolute;
+  top: 5px; left: 8px;
+  width: 12px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  transform: rotate(-30deg);
 }
-.st-name {
-  font-size: 12px;
-  font-weight: 900;
-  color: var(--honey-900);
-  line-height: 1.2;
-}
-.st-desc {
+.pm--coral  { --pm: linear-gradient(145deg, #fda4af, #f43f5e); }
+.pm--green  { --pm: linear-gradient(145deg, #6ee7b7, #059669); }
+.pm--violet { --pm: linear-gradient(145deg, #c084fc, #7c3aed); }
+.pm--gold   { --pm: linear-gradient(145deg, #fde68a, #d97706); }
+.pm--lagoon { --pm: linear-gradient(145deg, #67e8f9, #0891b2); }
+.pm-lbl {
   font-size: 9.5px;
-  font-weight: 700;
-  color: #92400e;
-  opacity: 0.85;
-}
-.st-arrow {
-  font-size: 14px;
-  color: #d97706;
-  flex-shrink: 0;
+  font-weight: 900;
+  color: #44403c;
+  text-align: center;
+  line-height: 1.15;
 }
 
-/* ── 6. TAB 3: AKUN, KEAMANAN & HELP ── */
-.spec-card {
-  background: #ffffff;
-  border: 2px solid var(--honey-900);
-  border-radius: 16px;
-  padding: 6px 12px;
-  box-shadow: 0 4px 0 var(--honey-900);
-  margin-bottom: 12px;
+/* ── 4. LACI KABIN: tombol pembuka bottom sheet ── */
+.drawer-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
-.spec-row {
+.drawer-btn {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 0;
-  border-bottom: 1.5px dashed #fde68a;
-  font-size: 11px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid #ffffff;
+  border-radius: 16px;
+  background: var(--reef-card);
+  box-shadow: var(--reef-clay-shadow);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.spec-row:last-child {
-  border-bottom: none;
+.drawer-btn:active { transform: scale(0.96); }
+.drawer-btn strong { display: block; font-size: 11.5px; font-weight: 900; color: var(--reef-ink); }
+.drawer-btn small { display: block; font-size: 9px; font-weight: 700; color: var(--reef-muted); line-height: 1.25; }
+.dr-ico {
+  width: 30px; height: 30px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  color: #ffffff;
+  box-shadow: inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5), inset -1.5px -1.5px 3px rgba(0, 0, 0, 0.14);
 }
-.spec-key {
+.dr-ico--doc  { background: linear-gradient(145deg, #67e8f9, #0891b2); }
+.dr-ico--lock { background: linear-gradient(145deg, #6ee7b7, #059669); }
+.dr-ico--help { background: linear-gradient(145deg, #c084fc, #7c3aed); }
+
+.cabin-exit {
+  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 800;
-  color: var(--honey-800);
-}
-.spec-key i {
-  font-size: 14px;
-  color: var(--honey-600);
-}
-.spec-val {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #fff1f2;
+  color: #e11d48;
+  font-size: 11.5px;
   font-weight: 900;
-  color: var(--honey-ink);
-  text-align: right;
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-decoration: none;
+  box-shadow: inset 2px 2px 4px #ffffff, inset -2px -2px 4px rgba(244, 63, 94, 0.14);
 }
+.cabin-exit:active { transform: scale(0.97); }
 
-/* Expandable form cards */
-.accordion-card {
-  background: #ffffff;
-  border: 2px solid var(--honey-900);
-  border-radius: 16px;
-  margin-bottom: 10px;
-  box-shadow: 0 4px 0 var(--honey-900);
-  overflow: hidden;
+/* ── BOTTOM SHEET ── */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(30, 27, 46, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
 }
-.acc-header {
+.sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+.cabin-sheet {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 10001;
+  width: 100%;
+  max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 8px 16px calc(18px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: var(--reef-card);
+  box-shadow: 0 -10px 30px rgba(30, 27, 46, 0.18), inset 0 2px 4px #ffffff;
+  transform: translate(-50%, 105%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  visibility: hidden;
+}
+.cabin-sheet.open { transform: translate(-50%, 0); visibility: visible; }
+.sheet-grab {
+  width: 40px; height: 5px;
+  margin: 0 auto 10px;
+  border-radius: 999px;
+  background: #fed7aa;
+}
+.sheet-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  background: #fffbeb;
-  cursor: pointer;
-  user-select: none;
-  font-size: 11.5px;
-  font-weight: 900;
-  color: var(--honey-900);
-  transition: background 0.15s;
+  margin-bottom: 12px;
 }
-.acc-header:hover {
-  background: #fef3c7;
-}
-.acc-header-left {
-  display: inline-flex;
+.sheet-title {
+  display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--reef-ink);
 }
-.acc-header-left i {
-  font-size: 16px;
-  color: var(--honey-600);
-}
-.acc-chevron {
-  font-size: 13px;
-  color: var(--honey-600);
-  transition: transform 0.25s ease;
-}
-.acc-header.open .acc-chevron {
-  transform: rotate(180deg);
-}
-.acc-body {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
-  padding: 0 14px;
-}
-.acc-body.open {
-  max-height: 380px;
-  padding: 12px 14px 14px;
-  border-top: 1.5px solid #fde68a;
+.sheet-close {
+  width: 30px; height: 30px;
+  border: none;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: #ffffff;
+  color: var(--reef-muted);
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), inset -1px -1px 2px rgba(251, 146, 60, 0.15);
 }
 
-/* Inputs & Submit Button */
+/* Isi sheet: dokumen kru */
+.doc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.doc-cell {
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: inset 2px 2px 4px #ffffff, inset -2px -2px 4px rgba(251, 146, 60, 0.12);
+}
+.doc-cell--wide { grid-column: span 2; }
+.doc-k {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  font-weight: 900;
+  color: var(--reef-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.doc-k i { color: #b45309; font-size: 11px; }
+.doc-v {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Isi sheet: form kata sandi */
 .input-lbl {
+  display: block;
+  margin: 4px 0 4px 2px;
   font-size: 10px;
   font-weight: 900;
-  color: var(--honey-900);
-  margin-bottom: 4px;
-  display: block;
+  color: var(--reef-muted);
 }
 .prof-input-ctrl {
   width: 100%;
-  background: #ffffff;
-  border: 2px solid #fde68a;
-  border-radius: 10px;
-  padding: 9px 12px;
+  height: 42px;
+  padding: 0 12px;
+  margin-bottom: 8px;
+  border: 2px solid #ffffff;
+  border-radius: 12px;
+  background: #fff7ed;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 800;
-  color: var(--honey-ink);
-  margin-bottom: 10px;
+  color: var(--reef-ink);
   outline: none;
-  box-sizing: border-box;
-  font-family: inherit;
-  transition: border-color 0.2s;
+  box-shadow: inset 2px 2px 5px rgba(251, 146, 60, 0.18), inset -2px -2px 4px #ffffff;
 }
-.prof-input-ctrl:focus {
-  border-color: var(--honey-600);
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
-}
+.prof-input-ctrl:focus { box-shadow: inset 2px 2px 5px rgba(251, 146, 60, 0.18), 0 0 0 3px rgba(251, 113, 133, 0.25); }
 .prof-submit-btn {
   width: 100%;
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  border: 2px solid var(--honey-900);
-  border-radius: 10px;
-  padding: 10px;
-  font-size: 11.5px;
-  font-weight: 900;
-  color: #ffffff;
-  box-shadow: 0 3px 0 var(--honey-900);
-  cursor: pointer;
-  font-family: inherit;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: transform 0.1s;
-}
-.prof-submit-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--honey-900);
-}
-
-/* Contact Strip */
-.contact-hub {
-  background: #ffffff;
-  border: 2px solid var(--honey-900);
-  border-radius: 16px;
-  padding: 12px;
-  box-shadow: 0 4px 0 var(--honey-900);
-  margin-bottom: 14px;
-}
-.ch-title {
-  font-size: 10px;
-  font-weight: 900;
-  color: var(--honey-800);
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.ch-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.ch-btn {
-  width: 42px;
   height: 42px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--honey-900);
-  box-shadow: 0 3px 0 var(--honey-900);
-  transition: transform 0.1s;
-  text-decoration: none;
-  color: #ffffff;
-}
-.ch-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--honey-900);
-}
-
-/* Logout action */
-.logout-btn {
+  margin-top: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: #fee2e2;
-  border: 2.5px solid #dc2626;
-  border-radius: 14px;
-  padding: 12px;
-  font-size: 12.5px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #34d399, #059669);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 900;
-  color: #dc2626;
-  text-decoration: none;
-  box-shadow: 0 4px 0 #dc2626;
-  transition: transform 0.1s;
+  cursor: pointer;
+  box-shadow: 0 5px 12px rgba(5, 150, 105, 0.3), inset 2px 2px 3px rgba(255, 255, 255, 0.45), inset -2px -2px 4px rgba(6, 95, 70, 0.3);
 }
-.logout-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #dc2626;
-}
+.prof-submit-btn:active { transform: scale(0.98); }
+.cabin-sheet .cabin-flash { margin-bottom: 10px; }
 
-/* Flash notification banner */
-.prof-banner-flash {
+/* Isi sheet: bantuan */
+.help-list { display: flex; flex-direction: column; gap: 8px; }
+.help-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: #ffffff;
+  text-decoration: none;
+  box-shadow: inset 2px 2px 4px #ffffff, inset -2px -2px 4px rgba(251, 146, 60, 0.12);
+}
+.help-row:active { transform: scale(0.98); }
+.ch-btn {
+  width: 36px; height: 36px;
+  flex-shrink: 0;
   border-radius: 12px;
-  font-size: 11.5px;
-  font-weight: 900;
-  margin-bottom: 12px;
-  border: 2px solid;
+  display: flex; align-items: center; justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.45), inset -2px -2px 4px rgba(0, 0, 0, 0.15);
 }
-.prof-banner-flash.success {
-  background: #ecfdf5;
-  border-color: #10b981;
-  color: #065f46;
+.ch-btn--wa   { background: linear-gradient(145deg, #4ade80, #16a34a); }
+.ch-btn--tele { background: linear-gradient(145deg, #67e8f9, #0891b2); }
+.ch-btn--ig   { background: linear-gradient(145deg, #fb7185, #c026d3); }
+.ch-btn--fb   { background: linear-gradient(145deg, #93c5fd, #2563eb); }
+.ch-btn--cs   { background: linear-gradient(145deg, #c084fc, #8b5cf6); }
+.help-name { flex: 1; font-size: 12px; font-weight: 900; color: var(--reef-ink); }
+.help-row > i { color: var(--reef-muted); }
+.ch-empty { font-size: 11px; font-weight: 700; color: var(--reef-muted); text-align: center; padding: 10px 0; }
+
+@media (max-width: 360px) {
+  .cabin-porthole { width: 70px; height: 70px; }
+  .cabin-id { padding-right: 72px; }
+  .cabin-name { font-size: 14.5px; }
+  .cargo-rail { grid-auto-columns: 82%; }
+  .pm-ring { width: 44px; height: 44px; }
+  .pm-glass { font-size: 17px; }
 }
-.prof-banner-flash.error {
-  background: #fef2f2;
-  border-color: #ef4444;
-  color: #b91c1c;
+@media (prefers-reduced-motion: reduce) {
+  .cabin-lantern, .porthole-fish, .porthole-bubble { animation: none !important; }
+  .cabin-sheet, .sheet-backdrop { transition: none; }
 }
 </style>
 
-<div class="prof-container">
-  <?php if ($flash): ?>
-  <div class="prof-banner-flash <?= $flashType === 'error' ? 'error' : 'success' ?>">
-    <i class="ph-bold ph-<?= $flashType === 'error' ? 'warning-circle' : 'check-circle' ?>" style="font-size:16px;"></i>
-    <?= htmlspecialchars($flash) ?>
-  </div>
-  <?php endif; ?>
+<div class="cabin-stage">
+  <!-- ── 1. DINDING KABIN: IDENTITAS KAPTEN + JENDELA LAUT ── -->
+  <div class="cabin-hero">
+    <!-- Lentera gantung -->
+    <svg class="cabin-lantern" viewBox="0 0 22 40" fill="none" aria-hidden="true">
+      <line x1="11" y1="0" x2="11" y2="12" stroke="#92400e" stroke-width="1.5"/>
+      <circle cx="11" cy="27" r="11" fill="#fef08a" opacity="0.45"/>
+      <rect x="6" y="12" width="10" height="3" rx="1.5" fill="#b45309"/>
+      <rect x="5" y="15" width="12" height="15" rx="4" fill="#fde68a" stroke="#b45309" stroke-width="1.5"/>
+      <rect x="8.5" y="19" width="5" height="7" rx="2.5" fill="#f59e0b"/>
+      <rect x="6" y="30" width="10" height="3" rx="1.5" fill="#b45309"/>
+    </svg>
 
-  <!-- 1. DIGITAL MEMBER PASS CARD -->
-  <div class="pass-card">
-    <div class="pass-sheen"></div>
+    <!-- Porthole: jendela bulat ke laut karang -->
+    <svg class="cabin-porthole" viewBox="0 0 90 90" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="phBrass" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fef3c7"/>
+          <stop offset="45%" stop-color="#fbbf24"/>
+          <stop offset="100%" stop-color="#b45309"/>
+        </linearGradient>
+        <linearGradient id="phSea" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#a5f3fc"/>
+          <stop offset="60%" stop-color="#22d3ee"/>
+          <stop offset="100%" stop-color="#0891b2"/>
+        </linearGradient>
+        <clipPath id="phGlass"><circle cx="45" cy="45" r="31"/></clipPath>
+      </defs>
+      <circle cx="45" cy="45" r="43" fill="url(#phBrass)"/>
+      <circle cx="45" cy="45" r="35" fill="#92400e" opacity="0.35"/>
+      <g fill="#92400e" opacity="0.55">
+        <circle cx="45" cy="6" r="2"/><circle cx="45" cy="84" r="2"/><circle cx="6" cy="45" r="2"/><circle cx="84" cy="45" r="2"/>
+        <circle cx="17.5" cy="17.5" r="2"/><circle cx="72.5" cy="17.5" r="2"/><circle cx="17.5" cy="72.5" r="2"/><circle cx="72.5" cy="72.5" r="2"/>
+      </g>
+      <g clip-path="url(#phGlass)">
+        <rect x="0" y="0" width="90" height="90" fill="url(#phSea)"/>
+        <path d="M28 10 L36 10 L24 80 L16 80 Z" fill="#ffffff" opacity="0.2"/>
+        <!-- dasar karang -->
+        <path d="M10 72 C25 64, 45 70, 60 66 C70 63, 80 66, 85 68 V90 H10 Z" fill="#fdba74"/>
+        <g stroke="#f43f5e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M58 72 V60 L52 52 M58 63 L64 54"/>
+        </g>
+        <g fill="#fda4af"><circle cx="52" cy="52" r="2"/><circle cx="64" cy="54" r="2"/></g>
+        <g stroke="#c084fc" stroke-width="2.4" stroke-linecap="round">
+          <path d="M30 70 C29 64, 26 61, 25 57"/><path d="M33 70 C33 63, 33 60, 34 56"/><path d="M36 70 C38 64, 40 62, 42 58"/>
+        </g>
+        <path d="M74 72 C70 64, 77 60, 72 52" stroke="#10b981" stroke-width="2.6" stroke-linecap="round"/>
+        <!-- ikan lewat -->
+        <g class="porthole-fish">
+          <g transform="translate(0 34)">
+            <path d="M-9 0 L-14 -4 L-14 4 Z" fill="#ea580c"/>
+            <ellipse cx="0" cy="0" rx="9" ry="5.5" fill="#fb923c"/>
+            <path d="M-3 -5.2 C-2 -2, -2 2, -3 5.2 L-0.5 5.4 C0 2, 0 -2, -0.5 -5.4 Z" fill="#ffffff"/>
+            <path d="M3.5 -4.6 C4.4 -2, 4.4 2, 3.5 4.6 L5.4 4 C6 2, 6 -2, 5.4 -4 Z" fill="#ffffff"/>
+            <circle cx="6.6" cy="-1.2" r="1.3" fill="#ffffff"/><circle cx="7" cy="-1.2" r="0.7" fill="#1e1b2e"/>
+          </g>
+        </g>
+        <g class="porthole-fish porthole-fish--b">
+          <g transform="translate(0 52) scale(0.75)">
+            <path d="M-8 0 L-13 -4 L-13 4 Z" fill="#eab308"/>
+            <ellipse cx="0" cy="0" rx="8" ry="6.5" fill="#fde047"/>
+            <circle cx="4.6" cy="-1.4" r="1.3" fill="#ffffff"/><circle cx="5" cy="-1.4" r="0.7" fill="#1e1b2e"/>
+          </g>
+        </g>
+        <g fill="#ffffff" opacity="0.85">
+          <circle class="porthole-bubble" cx="40" cy="60" r="1.8"/>
+          <circle class="porthole-bubble" cx="46" cy="64" r="1.2"/>
+          <circle class="porthole-bubble" cx="66" cy="58" r="1.5"/>
+        </g>
+      </g>
+      <circle cx="45" cy="45" r="31" stroke="#fef3c7" stroke-width="2.5"/>
+      <path d="M26 30 A24 24 0 0 1 44 20" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+    </svg>
 
-    <div class="pass-header">
-      <div class="pass-brand">
-        <i class="ph-fill ph-shield-check"></i>
-        <span>MancingCuan Citizen</span>
+    <div class="cabin-id">
+      <div class="cabin-avatar">
+        <span><?= strtoupper(substr($user['username'], 0, 1)) ?></span>
+        <span class="cabin-online"></span>
       </div>
-      <div class="pass-tier <?= $is_premium ? 'is-vip' : '' ?>">
-        <i class="ph-fill ph-crown"></i>
-        <span><?= htmlspecialchars($membership_name) ?></span>
+      <div class="cabin-who">
+        <div class="cabin-eyebrow">Kabin Kapten</div>
+        <div class="cabin-name"><?= htmlspecialchars($user['username']) ?></div>
+        <div class="cabin-email"><?= htmlspecialchars($user['email']) ?></div>
+        <div class="cabin-pills">
+          <span class="cabin-pill cabin-pill--rank <?= $is_premium ? 'is-vip' : '' ?>">
+            <i class="ph-fill ph-crown-simple"></i> <?= htmlspecialchars($membership_name) ?>
+          </span>
+          <span class="cabin-pill cabin-pill--days" title="Bergabung <?= $member_since ?>">
+            <i class="ph-fill ph-anchor"></i> <?= number_format($days_member) ?> hari berlayar
+          </span>
+        </div>
       </div>
     </div>
 
-    <div class="pass-body">
-      <div class="pass-avatar-wrap">
-        <div class="pass-avatar">
-          <span><?= strtoupper(substr($user['username'], 0, 1)) ?></span>
-        </div>
-        <div class="pass-status-dot"></div>
-      </div>
-      <div class="pass-user-info">
-        <div class="pass-username"><?= htmlspecialchars($user['username']) ?></div>
-        <div class="pass-email"><?= htmlspecialchars($user['email']) ?></div>
-        <div class="pass-meta">
-          <i class="ph-bold ph-calendar-blank"></i>
-          <span>Bergabung <?= $member_since ?> (<?= number_format($days_member) ?> Hari)</span>
+    <!-- Tiket kru: kode referral -->
+    <div class="cabin-ticket">
+      <div class="ticket-left">
+        <span class="ticket-ico"><i class="ph-fill ph-ticket"></i></span>
+        <div>
+          <div class="ticket-lbl">TIKET KRU · KODE REFERRAL</div>
+          <div class="ticket-code" id="ref-code"><?= htmlspecialchars($user['referral_code']) ?></div>
         </div>
       </div>
-      <div class="pass-chip" title="Verified Member Chip">
-        <i class="ph-bold ph-cpu"></i>
-      </div>
-    </div>
-
-    <div class="pass-footer">
-      <div class="pass-ref-box">
-        <span class="pass-ref-label">KODE REFERRAL</span>
-        <span class="pass-ref-code" id="ref-code"><?= htmlspecialchars($user['referral_code']) ?></span>
-      </div>
-      <button class="pass-copy-btn" onclick="copyRef()" type="button">
-        <i class="ph-bold ph-copy"></i>
-        <span>Salin Kode</span>
+      <button class="ticket-copy" onclick="copyRef()" type="button">
+        <i class="ph-bold ph-copy"></i> Salin
       </button>
     </div>
   </div>
 
-  <!-- 2. DUAL-FLOW VAULT CAPSULE -->
-  <div class="vault-capsule">
-    <!-- Zone 1: Rupiah Balances -->
-    <div class="vault-fiat-grid">
-      <div class="vault-fiat-item">
-        <div class="vf-badge">
-          <i class="ph-fill ph-wallet"></i> Saldo Tarik
+  <!-- ── 2. RAK KARGO: saldo & aktivitas (geser) ── -->
+  <div class="cabin-section-head">
+    <div class="csh-title"><i class="ph-fill ph-package"></i> Rak Kargo</div>
+    <span class="csh-hint">Geser <i class="ph-bold ph-arrows-left-right"></i></span>
+  </div>
+  <div class="cargo-rail">
+    <div class="cargo-card cargo--wd">
+      <div>
+        <div class="cargo-top">
+          <span class="cargo-lbl">Saldo Tarik</span>
+          <span class="cargo-ico"><i class="ph-fill ph-coins"></i></span>
         </div>
-        <div class="vf-amount"><?= format_rp((float)$user['balance_wd']) ?></div>
-        <a href="/withdraw" class="vf-action-btn wd">
-          <span>Tarik Dana</span>
-          <i class="ph-bold ph-arrow-up-right"></i>
-        </a>
+        <div class="cargo-val"><?= format_rp((float)$user['balance_wd']) ?></div>
+        <div class="cargo-meta"><?= number_format($total_withdrawals) ?>x penarikan berhasil</div>
       </div>
-
-      <div class="vf-divider"></div>
-
-      <div class="vault-fiat-item">
-        <div class="vf-badge">
-          <i class="ph-fill ph-coins"></i> Saldo Beli
-        </div>
-        <div class="vf-amount"><?= format_rp((float)$user['balance_dep']) ?></div>
-        <a href="/deposit" class="vf-action-btn dep">
-          <span>Top Up</span>
-          <i class="ph-bold ph-plus-circle"></i>
-        </a>
+      <div class="cargo-foot">
+        <a href="/withdraw" class="cargo-act">Tarik <i class="ph-bold ph-arrow-up-right"></i></a>
       </div>
     </div>
 
-    <!-- Zone 2: Total Video Ditonton -->
-    <div class="vault-reserves">
-      <div class="silo-meter">
-        <div class="silo-info">
-          <span class="silo-lbl">
-            <i class="ph-fill ph-film-strip"></i> Total Video Ditonton
-          </span>
-          <span class="silo-val"><?= number_format($total_watches) ?> video</span>
+    <div class="cargo-card cargo--dep">
+      <div>
+        <div class="cargo-top">
+          <span class="cargo-lbl">Saldo Beli</span>
+          <span class="cargo-ico"><i class="ph-fill ph-wallet"></i></span>
         </div>
-        <div class="silo-bar-track">
-          <?php
-            $watch_pct = min(100, max(12, ($total_watches / 50) * 100));
-          ?>
-          <div class="silo-bar-fill" style="width: <?= $watch_pct ?>%;"></div>
+        <div class="cargo-val"><?= format_rp((float)$user['balance_dep']) ?></div>
+        <div class="cargo-meta"><?= number_format($total_deposits) ?>x top up disetujui</div>
+      </div>
+      <div class="cargo-foot">
+        <a href="/deposit" class="cargo-act">Top Up <i class="ph-bold ph-plus"></i></a>
+      </div>
+    </div>
+
+    <div class="cargo-card cargo--earn">
+      <div>
+        <div class="cargo-top">
+          <span class="cargo-lbl">Total Pendapatan</span>
+          <span class="cargo-ico"><i class="ph-fill ph-trophy"></i></span>
         </div>
+        <div class="cargo-val"><?= format_rp((float)$user['total_earned']) ?></div>
+        <div class="cargo-meta">Hasil panen &amp; komisi sejak <?= $member_since ?></div>
+      </div>
+      <div class="cargo-foot">
+        <a href="/history" class="cargo-act">Riwayat <i class="ph-bold ph-receipt"></i></a>
+      </div>
+    </div>
+
+    <div class="cargo-card cargo--log">
+      <div class="cargo-top">
+        <span class="cargo-lbl">Catatan Pelayaran</span>
+        <span class="cargo-ico"><i class="ph-fill ph-book-bookmark"></i></span>
+      </div>
+      <div class="cargo-mini">
+        <div><b><?= number_format($total_watches) ?></b><span>Video</span></div>
+        <div><b><?= number_format($refs) ?></b><span>Kru</span></div>
+        <div><b><?= number_format($active_investments) ?></b><span>Invest</span></div>
       </div>
     </div>
   </div>
 
-  <!-- 3. SEGMENTED TAB SWITCHER -->
-  <div class="prof-tabs">
-    <button class="prof-tab-btn <?= $initial_tab === 'summary' ? 'active' : '' ?>" id="btn-tab-summary" onclick="switchProfTab('summary')">
-      <i class="ph-bold ph-chart-polar"></i>
-      <span>Ringkasan</span>
+  <!-- ── 3. JENDELA MENU (porthole bulat) ── -->
+  <div class="cabin-section-head">
+    <div class="csh-title"><i class="ph-fill ph-steering-wheel"></i> Ruang Kemudi</div>
+  </div>
+  <div class="porthole-menu">
+    <div class="pm-grid">
+      <a href="/videos" class="pm-item">
+        <span class="pm-ring"><span class="pm-glass pm--violet"><i class="ph-fill ph-film-strip"></i></span></span>
+        <span class="pm-lbl">Tonton<br>Video</span>
+      </a>
+      <a href="/minigame" class="pm-item">
+        <span class="pm-ring"><span class="pm-glass pm--coral"><i class="ph-fill ph-fish-simple"></i></span></span>
+        <span class="pm-lbl">Mancing<br>Cuan</span>
+      </a>
+      <a href="/missions" class="pm-item">
+        <span class="pm-ring"><span class="pm-glass pm--green"><i class="ph-fill ph-target"></i></span></span>
+        <span class="pm-lbl">Pusat<br>Misi</span>
+      </a>
+      <a href="/upgrade" class="pm-item">
+        <span class="pm-ring"><span class="pm-glass pm--gold"><i class="ph-fill ph-crown-simple"></i></span></span>
+        <span class="pm-lbl">Upgrade<br>Member</span>
+      </a>
+      <a href="/invest" class="pm-item">
+        <span class="pm-ring"><span class="pm-glass pm--lagoon"><i class="ph-fill ph-chart-line-up"></i></span></span>
+        <span class="pm-lbl">Paket<br>Investasi</span>
+      </a>
+      <a href="/edit-rekening" class="pm-item">
+        <span class="pm-ring"><span class="pm-glass pm--green"><i class="ph-fill ph-credit-card"></i></span></span>
+        <span class="pm-lbl">Rekening<br>Bank</span>
+      </a>
+      <a href="/referral" class="pm-item">
+        <span class="pm-ring"><span class="pm-glass pm--coral"><i class="ph-fill ph-users-three"></i></span></span>
+        <span class="pm-lbl">Ajak<br>Kru</span>
+      </a>
+      <a href="/panduan" class="pm-item">
+        <span class="pm-ring"><span class="pm-glass pm--violet"><i class="ph-fill ph-book-open"></i></span></span>
+        <span class="pm-lbl">Buku<br>Panduan</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── 4. LACI KABIN (pengaturan via bottom sheet) ── -->
+  <div class="cabin-section-head">
+    <div class="csh-title"><i class="ph-fill ph-archive-box"></i> Laci Kabin</div>
+  </div>
+  <div class="drawer-row">
+    <button type="button" class="drawer-btn" onclick="openCabinSheet('doc')">
+      <span class="dr-ico dr-ico--doc"><i class="ph-fill ph-identification-card"></i></span>
+      <span><strong>Dokumen Kru</strong><small>Data akun &amp; bank</small></span>
     </button>
-    <button class="prof-tab-btn" id="btn-tab-services" onclick="switchProfTab('services')">
-      <i class="ph-bold ph-squares-four"></i>
-      <span>Fitur & Menu</span>
+    <button type="button" class="drawer-btn" onclick="openCabinSheet('pass')">
+      <span class="dr-ico dr-ico--lock"><i class="ph-fill ph-lock-key"></i></span>
+      <span><strong>Kunci Kabin</strong><small>Ganti kata sandi</small></span>
     </button>
-    <button class="prof-tab-btn <?= $initial_tab === 'security' ? 'active' : '' ?>" id="btn-tab-security" onclick="switchProfTab('security')">
-      <i class="ph-bold ph-shield-check"></i>
-      <span>Akun & Sandi</span>
+    <button type="button" class="drawer-btn" onclick="openCabinSheet('help')">
+      <span class="dr-ico dr-ico--help"><i class="ph-fill ph-lifebuoy"></i></span>
+      <span><strong>Bantuan</strong><small>Kontak &amp; komunitas</small></span>
     </button>
   </div>
 
-  <!-- ════════ TAB 1: RINGKASAN & AKTIVITAS ════════ -->
-  <div class="tab-content <?= $initial_tab === 'summary' ? 'active' : '' ?>" id="pane-summary">
-    <!-- Portfolio Ribbon -->
-    <div class="colony-ribbon">
-      <div class="cr-header">
-        <div class="cr-title">
-          <i class="ph-fill ph-chart-polar"></i>
-          <span>Ringkasan Portofolio</span>
-        </div>
-        <a href="/history" class="cr-link">
-          <span>Riwayat</span>
-          <i class="ph-bold ph-caret-right"></i>
-        </a>
-      </div>
-      <div class="cr-grid">
-        <div class="cr-item">
-          <span class="cr-item-val"><?= number_format($total_watches) ?></span>
-          <span class="cr-item-lbl"><i class="ph-bold ph-film-strip"></i> Tonton</span>
-        </div>
-        <div class="cr-sep"></div>
-        <div class="cr-item">
-          <span class="cr-item-val"><?= number_format($refs) ?></span>
-          <span class="cr-item-lbl"><i class="ph-bold ph-users"></i> Referral</span>
-        </div>
-        <div class="cr-sep"></div>
-        <div class="cr-item">
-          <span class="cr-item-val"><?= number_format($active_investments) ?></span>
-          <span class="cr-item-lbl"><i class="ph-bold ph-chart-line-up"></i> Invest</span>
-        </div>
-      </div>
+  <a href="/logout" class="cabin-exit">
+    <i class="ph-bold ph-sign-out"></i> Turun dari Kapal
+  </a>
+</div>
+
+<!-- ══════════ BOTTOM SHEETS ══════════ -->
+<div class="sheet-backdrop" id="cabin-sheet-backdrop" onclick="closeCabinSheet()"></div>
+
+<!-- Sheet: Dokumen Kru -->
+<div class="cabin-sheet" id="sheet-doc" role="dialog" aria-modal="true" aria-labelledby="sheet-doc-title">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head">
+    <div class="sheet-title" id="sheet-doc-title"><span class="dr-ico dr-ico--doc"><i class="ph-fill ph-identification-card"></i></span> Dokumen Kru</div>
+    <button type="button" class="sheet-close" onclick="closeCabinSheet()" aria-label="Tutup"><i class="ph-bold ph-x"></i></button>
+  </div>
+  <div class="doc-grid">
+    <div class="doc-cell">
+      <div class="doc-k"><i class="ph-bold ph-user"></i> Username</div>
+      <div class="doc-v"><?= htmlspecialchars($user['username']) ?></div>
     </div>
-
-    <!-- Milestones & Activity List -->
-    <div class="stream-card">
-      <div class="stream-row">
-        <div class="stream-icon si-gold">
-          <i class="ph-fill ph-trophy"></i>
-        </div>
-        <div class="stream-info">
-          <div class="stream-title">Total Pendapatan</div>
-          <div class="stream-desc">Akumulasi hasil panen & komisi</div>
-        </div>
-        <div class="stream-value"><?= format_rp((float)$user['total_earned']) ?></div>
-      </div>
-
-      <div class="stream-row">
-        <div class="stream-icon si-green">
-          <i class="ph-bold ph-arrow-down-left"></i>
-        </div>
-        <div class="stream-info">
-          <div class="stream-title">Deposit Disetujui</div>
-          <div class="stream-desc">Riwayat top up saldo sukses</div>
-        </div>
-        <div class="stream-value"><?= number_format($total_deposits) ?> transaksi</div>
-      </div>
-
-      <div class="stream-row">
-        <div class="stream-icon si-amber">
-          <i class="ph-bold ph-arrow-up-right"></i>
-        </div>
-        <div class="stream-info">
-          <div class="stream-title">Penarikan Dana</div>
-          <div class="stream-desc">Pencairan saldo ke rekening</div>
-        </div>
-        <div class="stream-value"><?= number_format($total_withdrawals) ?> transaksi</div>
-      </div>
-
-      <div class="stream-row">
-        <div class="stream-icon si-blue">
-          <i class="ph-fill ph-play-circle"></i>
-        </div>
-        <div class="stream-info">
-          <div class="stream-title">Video Ditonton</div>
-          <div class="stream-desc">Tayangan iklan tugas harian</div>
-        </div>
-        <div class="stream-value"><?= number_format($total_watches) ?> video</div>
-      </div>
-
-      <div class="stream-row">
-        <div class="stream-icon si-purple">
-          <i class="ph-fill ph-users-three"></i>
-        </div>
-        <div class="stream-info">
-          <div class="stream-title">Undang Teman (Referral)</div>
-          <div class="stream-desc">Teman bergabung lewat kodemu</div>
-        </div>
-        <div class="stream-value"><?= number_format($refs) ?> mitra</div>
-      </div>
+    <div class="doc-cell">
+      <div class="doc-k"><i class="ph-bold ph-phone"></i> WhatsApp</div>
+      <div class="doc-v"><?= htmlspecialchars(mask_account($user['whatsapp'] ?? '')) ?: '-' ?></div>
+    </div>
+    <div class="doc-cell doc-cell--wide">
+      <div class="doc-k"><i class="ph-bold ph-envelope"></i> Email</div>
+      <div class="doc-v"><?= htmlspecialchars($user['email']) ?></div>
+    </div>
+    <div class="doc-cell doc-cell--wide">
+      <div class="doc-k"><i class="ph-bold ph-bank"></i> Bank Tujuan</div>
+      <div class="doc-v"><?= $user['bank_name'] ? htmlspecialchars($user['bank_name'] . ' - ' . mask_account($user['account_number'] ?? '')) : 'Belum Didaftarkan' ?></div>
+    </div>
+    <div class="doc-cell">
+      <div class="doc-k"><i class="ph-bold ph-crown"></i> Membership</div>
+      <div class="doc-v"><?= htmlspecialchars($membership_name) ?></div>
+    </div>
+    <div class="doc-cell">
+      <div class="doc-k"><i class="ph-bold ph-calendar-blank"></i> Bergabung</div>
+      <div class="doc-v"><?= $member_since ?></div>
     </div>
   </div>
+</div>
 
-  <!-- ════════ TAB 2: FITUR & LAYANAN ════════ -->
-  <div class="tab-content" id="pane-services">
-    <!-- Group: Game & Hiburan -->
-    <div class="service-group">
-      <div class="service-group-title">
-        <i class="ph-bold ph-game-controller"></i>
-        <span>Aktivitas &amp; Hiburan</span>
-      </div>
-      <div class="service-card">
-        <a href="/minigame" class="service-tile">
-          <div class="st-icon-box" style="background: #dcfce7; color: #166534; border-color: #166534;">
-            <i class="ph-fill ph-game-controller"></i>
-          </div>
-          <div class="st-text">
-            <div class="st-name">Minigame Cuan</div>
-            <div class="st-desc">Tantangan harian &amp; klaim bonus instan</div>
-          </div>
-          <i class="ph-bold ph-caret-right st-arrow"></i>
-        </a>
-
-        <a href="/videos" class="service-tile">
-          <div class="st-icon-box" style="background: #e0e7ff; color: #3730a3; border-color: #3730a3;">
-            <i class="ph-fill ph-film-strip"></i>
-          </div>
-          <div class="st-text">
-            <div class="st-name">Tonton Video Cuan</div>
-            <div class="st-desc">Selesaikan durasi video untuk komisi harian</div>
-          </div>
-          <i class="ph-bold ph-caret-right st-arrow"></i>
-        </a>
-
-        <a href="/missions" class="service-tile">
-          <div class="st-icon-box" style="background: #fce7f3; color: #9d174d; border-color: #9d174d;">
-            <i class="ph-fill ph-target"></i>
-          </div>
-          <div class="st-text">
-            <div class="st-name">Pusat Misi & Tantangan</div>
-            <div class="st-desc">Klaim bonus saldo & reward tugas harian</div>
-          </div>
-          <i class="ph-bold ph-caret-right st-arrow"></i>
-        </a>
-      </div>
-    </div>
-
-    <!-- Group: Finansial & Bisnis -->
-    <div class="service-group">
-      <div class="service-group-title">
-        <i class="ph-bold ph-bank"></i>
-        <span>Finansial & Bisnis</span>
-      </div>
-      <div class="service-card">
-        <a href="/upgrade" class="service-tile">
-          <div class="st-icon-box" style="background: #fef3c7; color: #b45309; border-color: #b45309;">
-            <i class="ph-fill ph-rocket-launch"></i>
-          </div>
-          <div class="st-text">
-            <div class="st-name">Upgrade Paket Member</div>
-            <div class="st-desc">Tingkatkan limit withdraw & penghasilan harian</div>
-          </div>
-          <i class="ph-bold ph-caret-right st-arrow"></i>
-        </a>
-
-        <a href="/invest" class="service-tile">
-          <div class="st-icon-box" style="background: #fef08a; color: #854d0e; border-color: #854d0e;">
-            <i class="ph-fill ph-chart-line-up"></i>
-          </div>
-          <div class="st-text">
-            <div class="st-name">Paket Investasi Cuan</div>
-            <div class="st-desc">Kembangkan aset dengan return stabil</div>
-          </div>
-          <i class="ph-bold ph-caret-right st-arrow"></i>
-        </a>
-
-        <a href="/edit-rekening" class="service-tile">
-          <div class="st-icon-box" style="background: #ccfbf1; color: #0f766e; border-color: #0f766e;">
-            <i class="ph-fill ph-credit-card"></i>
-          </div>
-          <div class="st-text">
-            <div class="st-name">Pengaturan Rekening Bank</div>
-            <div class="st-desc">Daftarkan atau perbarui rekening penarikan</div>
-          </div>
-          <i class="ph-bold ph-caret-right st-arrow"></i>
-        </a>
-
-        <a href="/history" class="service-tile">
-          <div class="st-icon-box" style="background: #fed7aa; color: #9a3412; border-color: #9a3412;">
-            <i class="ph-fill ph-receipt"></i>
-          </div>
-          <div class="st-text">
-            <div class="st-name">Riwayat Transaksi & Mutasi</div>
-            <div class="st-desc">Laporan keluar masuk saldo secara rinci</div>
-          </div>
-          <i class="ph-bold ph-caret-right st-arrow"></i>
-        </a>
-
-        <a href="/panduan" class="service-tile">
-          <div class="st-icon-box" style="background: #f3f4f6; color: #374151; border-color: #374151;">
-            <i class="ph-fill ph-book-open"></i>
-          </div>
-          <div class="st-text">
-            <div class="st-name">Buku Panduan & Aturan</div>
-            <div class="st-desc">Pelajari panduan upgrade & tips profit optimal</div>
-          </div>
-          <i class="ph-bold ph-caret-right st-arrow"></i>
-        </a>
-      </div>
-    </div>
+<!-- Sheet: Kunci Kabin (ganti kata sandi) -->
+<div class="cabin-sheet" id="sheet-pass" role="dialog" aria-modal="true" aria-labelledby="sheet-pass-title">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head">
+    <div class="sheet-title" id="sheet-pass-title"><span class="dr-ico dr-ico--lock"><i class="ph-fill ph-lock-key"></i></span> Kunci Kabin</div>
+    <button type="button" class="sheet-close" onclick="closeCabinSheet()" aria-label="Tutup"><i class="ph-bold ph-x"></i></button>
   </div>
+  <?php if ($flash): ?>
+  <div class="cabin-flash <?= $flashType === 'error' ? 'error' : 'success' ?>">
+    <i class="ph-bold ph-<?= $flashType === 'error' ? 'warning-circle' : 'check-circle' ?>" style="font-size:16px;"></i>
+    <?= htmlspecialchars($flash) ?>
+  </div>
+  <?php endif; ?>
+  <form method="POST">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="change_password">
+    <label class="input-lbl">Password Lama</label>
+    <input class="prof-input-ctrl" type="password" name="old_password" placeholder="Masukkan password saat ini" required minlength="6">
+    <label class="input-lbl">Password Baru (Minimal 6 Karakter)</label>
+    <input class="prof-input-ctrl" type="password" name="new_password" placeholder="Masukkan password baru" required minlength="6">
+    <button class="prof-submit-btn" type="submit">
+      <i class="ph-bold ph-key"></i>
+      <span>Perbarui Password</span>
+    </button>
+  </form>
+</div>
 
-  <!-- ════════ TAB 3: AKUN, KEAMANAN & HELP ════════ -->
-  <div class="tab-content <?= $initial_tab === 'security' ? 'active' : '' ?>" id="pane-security">
-    <!-- Account Specs -->
-    <div class="spec-card">
-      <div class="spec-row">
-        <span class="spec-key"><i class="ph-bold ph-user"></i> Username</span>
-        <span class="spec-val"><?= htmlspecialchars($user['username']) ?></span>
-      </div>
-      <div class="spec-row">
-        <span class="spec-key"><i class="ph-bold ph-envelope"></i> Email</span>
-        <span class="spec-val"><?= htmlspecialchars($user['email']) ?></span>
-      </div>
-      <div class="spec-row">
-        <span class="spec-key"><i class="ph-bold ph-phone"></i> WhatsApp</span>
-        <span class="spec-val"><?= htmlspecialchars(mask_account($user['whatsapp'] ?? '')) ?></span>
-      </div>
-      <div class="spec-row">
-        <span class="spec-key"><i class="ph-bold ph-bank"></i> Bank Tujuan</span>
-        <span class="spec-val"><?= $user['bank_name'] ? htmlspecialchars($user['bank_name'] . ' - ' . mask_account($user['account_number'] ?? '')) : 'Belum Didaftarkan' ?></span>
-      </div>
-      <div class="spec-row">
-        <span class="spec-key"><i class="ph-bold ph-crown"></i> Membership</span>
-        <span class="spec-val"><?= htmlspecialchars($membership_name) ?></span>
-      </div>
-    </div>
-
-
-    <!-- Accordion: Change Password -->
-    <div class="accordion-card">
-      <div class="acc-header <?= $active_section === 'password' ? 'open' : '' ?>" onclick="toggleAccordion('pass')" id="hdr-pass">
-        <div class="acc-header-left">
-          <i class="ph-bold ph-lock-key"></i>
-          <span>Ganti Kata Sandi</span>
-        </div>
-        <i class="ph-bold ph-caret-down acc-chevron"></i>
-      </div>
-      <div class="acc-body <?= $active_section === 'password' ? 'open' : '' ?>" id="body-pass">
-        <form method="POST">
-          <?= csrf_field() ?>
-          <input type="hidden" name="action" value="change_password">
-          <label class="input-lbl">Password Lama</label>
-          <input class="prof-input-ctrl" type="password" name="old_password" placeholder="Masukkan password saat ini" required minlength="6">
-          <label class="input-lbl">Password Baru (Minimal 6 Karakter)</label>
-          <input class="prof-input-ctrl" type="password" name="new_password" placeholder="Masukkan password baru" required minlength="6">
-          <button class="prof-submit-btn" type="submit">
-            <i class="ph-bold ph-key"></i>
-            <span>Perbarui Password</span>
-          </button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Contact & Community Hub -->
-    <div class="contact-hub">
-      <div class="ch-title">
-        <i class="ph-bold ph-headset"></i>
-        <span>Pusat Bantuan & Komunitas</span>
-      </div>
-      <div class="ch-buttons">
-        <?php foreach ($_contact_btns as $cb): ?>
-          <?php
-            $t = strtolower($cb['icon_value']);
-            $svg = $_psvg[$t] ?? $_psvg['cs'];
-            $c = match($t) {
-                'wa' => 'background:linear-gradient(135deg, #22c55e, #15803d);border-color:#14532d;box-shadow:0 3px 0 #14532d;',
-                'tele' => 'background:linear-gradient(135deg, #38bdf8, #0284c7);border-color:#0369a1;box-shadow:0 3px 0 #0369a1;',
-                'ig' => 'background:linear-gradient(135deg, #f43f5e, #be123c);border-color:#881337;box-shadow:0 3px 0 #881337;',
-                'fb' => 'background:linear-gradient(135deg, #3b82f6, #1d4ed8);border-color:#1e3a8a;box-shadow:0 3px 0 #1e3a8a;',
-                default => 'background:linear-gradient(135deg, #94a3b8, #475569);border-color:#1e293b;box-shadow:0 3px 0 #1e293b;'
-            };
-          ?>
-          <a href="<?= htmlspecialchars($cb['url']) ?>" class="ch-btn" target="_blank" style="<?= $c ?>" title="<?= htmlspecialchars($cb['title'] ?? 'Hubungi') ?>">
-            <?= $svg ?>
-          </a>
-        <?php endforeach; ?>
-      </div>
-    </div>
-
-    <!-- Logout Action -->
-    <a href="/logout" class="logout-btn">
-      <i class="ph-bold ph-sign-out"></i>
-      <span>Keluar dari Akun</span>
-    </a>
+<!-- Sheet: Bantuan -->
+<div class="cabin-sheet" id="sheet-help" role="dialog" aria-modal="true" aria-labelledby="sheet-help-title">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head">
+    <div class="sheet-title" id="sheet-help-title"><span class="dr-ico dr-ico--help"><i class="ph-fill ph-lifebuoy"></i></span> Pusat Bantuan</div>
+    <button type="button" class="sheet-close" onclick="closeCabinSheet()" aria-label="Tutup"><i class="ph-bold ph-x"></i></button>
+  </div>
+  <div class="help-list">
+    <?php if (empty($_contact_btns)): ?>
+      <div class="ch-empty">Belum ada kontak bantuan.</div>
+    <?php endif; ?>
+    <?php foreach ($_contact_btns as $cb): ?>
+      <?php
+        $t = strtolower((string)$cb['icon_value']);
+        $svg = $_psvg[$t] ?? $_psvg['cs'];
+        $cls = isset($_psvg[$t]) ? $t : 'cs';
+      ?>
+      <a href="<?= htmlspecialchars($cb['url']) ?>" class="help-row" target="_blank" rel="noopener">
+        <span class="ch-btn ch-btn--<?= $cls ?>"><?= $svg ?></span>
+        <span class="help-name"><?= htmlspecialchars($cb['label'] ?? 'Hubungi Kami') ?></span>
+        <i class="ph-bold ph-arrow-up-right"></i>
+      </a>
+    <?php endforeach; ?>
   </div>
 </div>
 
 <script>
-function switchProfTab(tabName) {
-  // Update buttons
-  document.querySelectorAll('.prof-tab-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('btn-tab-' + tabName);
-  if (btn) btn.classList.add('active');
-
-  // Update panels
-  document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
-  const pane = document.getElementById('pane-' + tabName);
-  if (pane) pane.classList.add('active');
+let __cabinSheetOpen = null;
+function openCabinSheet(name) {
+  const sheet = document.getElementById('sheet-' + name);
+  const backdrop = document.getElementById('cabin-sheet-backdrop');
+  if (!sheet || !backdrop) return;
+  if (__cabinSheetOpen) __cabinSheetOpen.classList.remove('open');
+  sheet.classList.add('open');
+  backdrop.classList.add('open');
+  __cabinSheetOpen = sheet;
 }
 
-function toggleAccordion(id) {
-  const b = document.getElementById('body-' + id);
-  const h = document.getElementById('hdr-' + id);
-  if (!b || !h) return;
-  const isOpen = b.classList.contains('open');
-
-  document.querySelectorAll('.acc-body').forEach(el => el.classList.remove('open'));
-  document.querySelectorAll('.acc-header').forEach(el => el.classList.remove('open'));
-
-  if (!isOpen) {
-    b.classList.add('open');
-    h.classList.add('open');
-  }
+function closeCabinSheet() {
+  const backdrop = document.getElementById('cabin-sheet-backdrop');
+  if (__cabinSheetOpen) __cabinSheetOpen.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+  __cabinSheetOpen = null;
 }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeCabinSheet();
+});
+
+<?php if ($flash || $active_section === 'password'): ?>
+document.addEventListener('DOMContentLoaded', () => openCabinSheet('pass'));
+<?php endif; ?>
 
 function copyRef() {
   const codeEl = document.getElementById('ref-code');

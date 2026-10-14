@@ -1,172 +1,175 @@
   </main>
 
-    <style>
+  <style>
   /* ══════════════════════════════════════════════════════
-     MINIMALIST FLOATING HORIZON DOCK
+     REEF TAB BAR — menempel di bawah (tidak floating),
+     tombol besar "Nonton" di pojok kiri + 4 menu di kanan
      ══════════════════════════════════════════════════════ */
   .bottom-nav {
     position: fixed !important;
-    bottom: 10px !important;
+    bottom: 0 !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    width: calc(100% - 20px) !important;
-    max-width: 420px !important;
-    background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 100%) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border: 2px solid #bae6fd !important;
-    border-radius: 22px !important;
-    box-shadow: 
-      0 12px 28px rgba(2, 132, 199, 0.14),
-      0 2px 6px rgba(0, 0, 0, 0.02),
-      inset 2px 2px 4px #ffffff,
-      inset -2px -2px 4px rgba(2, 132, 199, 0.06) !important;
-    display: grid !important;
-    grid-template-columns: 1fr 1fr 1.2fr 1fr 1fr !important;
-    align-items: center !important;
-    height: 54px !important;
-    padding: 0 6px !important;
-    z-index: 9999 !important;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-  }
-
-  body { padding-bottom: 80px !important; }
-
-  /* DOCK NAV ITEMS */
-  .nav-item {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-decoration: none !important;
-    color: #64748b !important;
-    font-size: 9.5px !important;
-    font-weight: 800 !important;
-    font-family: 'Nunito', sans-serif !important;
-    gap: 2px !important;
-    height: 42px !important;
-    border-radius: 14px !important;
-    transition: color 0.15s, transform 0.12s !important;
-    position: relative;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-  .nav-item:active {
-    transform: scale(0.92) !important;
-  }
-  .nav-item i {
-    font-size: 19px !important;
-    color: #64748b !important;
-    transition: color 0.15s, transform 0.15s !important;
-  }
-
-  /* ACTIVE STATE */
-  .nav-item.active {
-    color: #0284c7 !important;
-    font-weight: 900 !important;
-  }
-  .nav-item.active i {
-    color: #0284c7 !important;
-    transform: scale(1.08) !important;
-  }
-  .nav-item.active::after {
-    content: '';
-    position: absolute;
-    bottom: 2px;
-    width: 14px;
-    height: 3px;
-    background: #0284c7;
-    border-radius: 999px;
-  }
-
-  /* CENTER PLAY BUTTON */
-  .nav-item--play {
-    position: relative !important;
-    overflow: visible !important;
+    width: 100% !important;
+    max-width: 440px !important;
     height: auto !important;
-    background: transparent !important;
     border: none !important;
-    box-shadow: none !important;
-    transform: none !important;
+    border-radius: 22px 22px 0 0 !important;
+    background: #ffffff !important;
+    box-shadow:
+      0 -6px 20px rgba(30, 27, 46, 0.08),
+      inset 0 2px 4px #ffffff,
+      inset 0 -3px 8px rgba(251, 146, 60, 0.08) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 9px 12px calc(9px + env(safe-area-inset-bottom)) !important;
+    z-index: 9999 !important;
   }
-  .nav-play-wrap {
+
+  body { padding-bottom: 86px !important; }
+
+  /* Tombol besar kiri: Nonton */
+  .nav-play-main {
+    flex-shrink: 0;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    position: relative;
-    margin-top: -16px;
+    gap: 8px;
+    height: 52px;
+    padding: 0 12px 0 5px;
+    border-radius: 18px;
+    text-decoration: none;
+    background: linear-gradient(145deg, #fff1f2 0%, #ffe4e6 100%);
+    box-shadow: inset 2px 2px 4px #ffffff, inset -2px -2px 5px rgba(244, 63, 94, 0.14);
+    transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
+  .nav-play-main:active { transform: scale(0.95); }
   .nav-play-btn {
-    width: 44px; height: 44px;
-    background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
-    border-radius: 16px !important;
-    border: 2px solid #ffffff !important;
+    width: 42px; height: 42px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #fdba74 0%, #fb7185 45%, #f43f5e 100%);
     display: flex; align-items: center; justify-content: center;
     position: relative;
-    z-index: 5;
-    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.35) !important;
-    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s !important;
+    box-shadow:
+      0 5px 12px rgba(244, 63, 94, 0.38),
+      inset 2.5px 2.5px 4px rgba(255, 255, 255, 0.6),
+      inset -2.5px -2.5px 5px rgba(190, 18, 60, 0.35);
   }
-  .nav-item--play:active .nav-play-btn {
-    transform: scale(0.92) !important;
-  }
-  .nav-item--play.active .nav-play-btn {
-    background: linear-gradient(135deg, #38bdf8, #0284c7) !important;
-    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.45) !important;
+  .nav-play-btn::before {
+    content: '';
+    position: absolute;
+    top: 4px; left: 6px;
+    width: 12px; height: 5px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: rotate(-20deg);
   }
   .nav-play-btn i {
     font-size: 20px !important;
     color: #ffffff !important;
     margin-left: 2px;
   }
-
-  .nav-play-label {
-    font-size: 9px;
-    font-weight: 800;
-    color: #0369a1;
+  .nav-play-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
     font-family: 'Nunito', sans-serif;
-    margin-top: 2px;
-    letter-spacing: -0.2px;
   }
-  .nav-item--play.active .nav-play-label {
-    color: #0284c7;
-    font-weight: 900;
+  .nav-play-text strong { font-size: 12.5px; font-weight: 900; color: #e11d48; letter-spacing: -0.2px; }
+  .nav-play-text small { font-size: 9px; font-weight: 800; color: #fb7185; }
+  .nav-play-main.active { background: linear-gradient(145deg, #ffe4e6, #fecdd3); }
+  .nav-play-main.active .nav-play-btn {
+    background: linear-gradient(145deg, #fde68a 0%, #fbbf24 40%, #f43f5e 100%);
+  }
+
+  /* 4 menu kanan */
+  .nav-tabs {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    min-width: 0;
+  }
+  .nav-item {
+    --dock-c: #f43f5e;
+    --dock-bg: #ffe4e6;
+    flex: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+    text-decoration: none !important;
+    color: #8a8296 !important;
+    font-size: 9.5px !important;
+    font-weight: 800 !important;
+    font-family: 'Nunito', sans-serif !important;
+    background: transparent !important;
+    text-shadow: none !important;
+    transition: color 0.15s, background 0.15s, transform 0.12s !important;
+  }
+  .nav-item--home    { --dock-c: #e11d48; --dock-bg: #fff1f2; }
+  .nav-item--upgrade { --dock-c: #9333ea; --dock-bg: #f3e8ff; }
+  .nav-item--crew    { --dock-c: #059669; --dock-bg: #d1fae5; }
+  .nav-item--cabin   { --dock-c: #d97706; --dock-bg: #fef3c7; }
+  .nav-item:active { transform: scale(0.92) !important; }
+  .nav-item i {
+    font-size: 19px !important;
+    color: #a8a2b3 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: color 0.15s !important;
+  }
+  .nav-item.active {
+    color: var(--dock-c) !important;
+    font-weight: 900 !important;
+    background: var(--dock-bg) !important;
+    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, 0.9), inset -2px -2px 4px rgba(0, 0, 0, 0.05) !important;
+  }
+  .nav-item.active i { color: var(--dock-c) !important; }
+
+  @media (max-width: 360px) {
+    .bottom-nav { gap: 6px !important; padding-left: 8px !important; padding-right: 8px !important; }
+    .nav-play-main { padding-right: 9px; }
+    .nav-play-text small { display: none; }
+    .nav-item { font-size: 8.5px !important; }
   }
 
   .float-contact-wrap {
-    bottom: 74px !important;
+    bottom: 84px !important;
   }
   </style>
 
   <nav class="bottom-nav">
-    <a href="/home" class="nav-item <?= ($activePage??'')==='home'?'active':'' ?>">
-      <i class="<?= ($activePage??'')==='home'?'ph-fill':'ph-bold' ?> ph-house-simple"></i>
-      Dermaga
-    </a>
-    <a href="/upgrade" class="nav-item <?= ($activePage??'')==='upgrade'?'active':'' ?>">
-      <i class="<?= ($activePage??'')==='upgrade'?'ph-fill':'ph-bold' ?> ph-crown-simple"></i>
-      Pangkat
-    </a>
-
-    <!-- Center: NONTON SAMUDRA BUTTON -->
-    <a href="/videos" class="nav-item nav-item--play <?= ($activePage??'')==='videos'?'active':'' ?>">
-      <div class="nav-play-wrap">
-        <div class="nav-play-btn">
-          <i class="ph-fill ph-play"></i>
-        </div>
-        <span class="nav-play-label">Nonton</span>
-      </div>
+    <!-- Kiri: tombol besar NONTON -->
+    <a href="/videos" class="nav-play-main <?= ($activePage??'')==='videos'?'active':'' ?>">
+      <span class="nav-play-btn"><i class="ph-fill ph-play"></i></span>
+      <span class="nav-play-text">
+        <strong>Nonton</strong>
+        <small>Panen cuan</small>
+      </span>
     </a>
 
-    <a href="/referral" class="nav-item <?= ($activePage??'')==='referral'?'active':'' ?>">
-      <i class="<?= ($activePage??'')==='referral'?'ph-fill':'ph-bold' ?> ph-users-three"></i>
-      Kru Laut
-    </a>
-    <a href="/profile" class="nav-item <?= ($activePage??'')==='profile'?'active':'' ?>">
-      <i class="<?= ($activePage??'')==='profile'?'ph-fill':'ph-bold' ?> ph-user-circle"></i>
-      Kabin
-    </a>
+    <div class="nav-tabs">
+      <a href="/home" class="nav-item nav-item--home <?= ($activePage??'')==='home'?'active':'' ?>">
+        <i class="<?= ($activePage??'')==='home'?'ph-fill':'ph-bold' ?> ph-house-simple"></i>
+        Dermaga
+      </a>
+      <a href="/upgrade" class="nav-item nav-item--upgrade <?= ($activePage??'')==='upgrade'?'active':'' ?>">
+        <i class="<?= ($activePage??'')==='upgrade'?'ph-fill':'ph-bold' ?> ph-crown-simple"></i>
+        Pangkat
+      </a>
+      <a href="/referral" class="nav-item nav-item--crew <?= ($activePage??'')==='referral'?'active':'' ?>">
+        <i class="<?= ($activePage??'')==='referral'?'ph-fill':'ph-bold' ?> ph-users-three"></i>
+        Kru Laut
+      </a>
+      <a href="/profile" class="nav-item nav-item--cabin <?= ($activePage??'')==='profile'?'active':'' ?>">
+        <i class="<?= ($activePage??'')==='profile'?'ph-fill':'ph-bold' ?> ph-user-circle"></i>
+        Kabin
+      </a>
+    </div>
   </nav>
 </div>
 

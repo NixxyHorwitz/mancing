@@ -108,18 +108,73 @@ $final_og_desc = $_seo_og_desc ?: $_seo_desc;
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/app.css?v=<?= filemtime(dirname(__DIR__) . '/assets/css/app.css') ?>">
 <style>
-/* ══ MINIMALIST HORIZON BACKGROUND & RESET ══ */
+/* ══════════════════════════════════════════════════════════
+   VIBRANT LIVING CORAL REEF — GLOBAL TOKENS & BACKGROUND
+   ══════════════════════════════════════════════════════════ */
+:root {
+  /* Coral Pink & Anemone Rose */
+  --reef-coral-500: #f43f5e; --reef-coral-400: #fb7185; --reef-coral-200: #fda4af;
+  /* Tropical Sun Gold & Amber Pearl */
+  --reef-sun-500: #f59e0b; --reef-sun-400: #fbbf24; --reef-sun-200: #fef08a;
+  /* Seaweed & Emerald Lagoon */
+  --reef-kelp-500: #10b981; --reef-kelp-600: #059669; --reef-kelp-400: #34d399;
+  /* Deep Sea Violet & Coral Purple */
+  --reef-glow-500: #8b5cf6; --reef-glow-450: #a855f7; --reef-glow-300: #c084fc;
+  /* Warm Shell Sand & Soft Peach */
+  --reef-sand-50: #fff7ed; --reef-sand-100: #ffedd5;
+  --reef-lagoon-400: #22d3ee; --reef-lagoon-600: #0891b2;
+  --reef-ink: #1e1b2e;
+  --reef-muted: #6b6478;
+  /* Border polos putih (clay), warna cukup di isi elemen */
+  --reef-border: linear-gradient(#ffffff, #ffffff);
+  --reef-card: linear-gradient(160deg, #ffffff 0%, #fff7ed 58%, #ffedd5 100%);
+  /* Tactile cushion: soft double drop + glossy top sheen + warm inner bottom */
+  --reef-clay-shadow:
+    0 14px 30px rgba(244, 63, 94, 0.10),
+    0 6px 14px rgba(8, 145, 178, 0.10),
+    inset 3px 3px 6px rgba(255, 255, 255, 0.95),
+    inset -4px -4px 9px rgba(251, 146, 60, 0.16);
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; }
 body {
   font-family: 'Nunito', 'Inter', -apple-system, sans-serif !important;
-  background: #f8fafc !important;
-  background-image: radial-gradient(rgba(14, 165, 233, 0.08) 1px, transparent 1px) !important;
-  background-size: 20px 20px !important;
+  background-color: #ecfeff !important;
+  background-image:
+    radial-gradient(circle at 10% 6%, rgba(253, 164, 175, 0.22) 0, transparent 36%),
+    radial-gradient(circle at 94% 20%, rgba(192, 132, 252, 0.14) 0, transparent 38%),
+    radial-gradient(circle at 16% 74%, rgba(52, 211, 153, 0.12) 0, transparent 40%),
+    radial-gradient(circle at 88% 94%, rgba(251, 191, 36, 0.14) 0, transparent 38%),
+    linear-gradient(180deg, #ecfeff 0%, #f0f9ff 34%, #fff7ed 100%) !important;
+  background-size: auto !important;
+  background-attachment: fixed !important;
   background-position: 0 0 !important;
   padding-bottom: 84px !important;
   -webkit-font-smoothing: antialiased;
-  color: #0f172a;
+  color: var(--reef-ink);
+}
+/* Glowing plankton dust (GPU transform only, seamless 192px loop) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 -192px 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(251, 113, 133, 0.45) 1.3px, transparent 1.8px),
+    radial-gradient(rgba(34, 211, 238, 0.40) 1px, transparent 1.6px),
+    radial-gradient(rgba(192, 132, 252, 0.40) 1.5px, transparent 2px),
+    radial-gradient(rgba(251, 191, 36, 0.40) 1.1px, transparent 1.6px);
+  background-size: 48px 48px, 32px 32px, 64px 64px, 96px 96px;
+  background-position: 0 0, 13px 17px, 29px 7px, 51px 41px;
+  opacity: 0.55;
+  animation: planktonDrift 38s linear infinite;
+  will-change: transform;
+}
+@keyframes planktonDrift {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-192px); }
 }
 i[class^="ph-"] {
   display: inline-flex;
@@ -129,108 +184,85 @@ i[class^="ph-"] {
 }
 .app-shell { width: 100%; max-width: 440px; margin: 0 auto; position: relative; }
 
-/* ══ DUAL FLOATING HORIZON ISLANDS NAVBAR ══ */
+/* ══ TOP SHEET APP BAR — satu panel menempel di atas, sudut bawah membulat ══ */
 .topbar-wrap {
   position: sticky; top: 0; z-index: 1000;
   width: 100%;
-  padding: 8px 12px 4px;
-  pointer-events: none;
+  padding: 0;
 }
 .topbar-floating-row {
-  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
   gap: 8px;
+  height: 52px;
+  padding: 0 10px 0 12px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 0 0 20px 20px;
+  box-shadow:
+    0 6px 18px rgba(30, 27, 46, 0.07),
+    inset 0 -3px 6px rgba(251, 146, 60, 0.08);
 }
 
-/* Left Island: Brand Sculpted Pill */
+/* Brand */
 .island-brand-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 12px 0 8px;
-  background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 2px solid #bae6fd;
-  border-radius: 18px;
-  box-shadow: 
-    0 8px 20px rgba(2, 132, 199, 0.12),
-    inset 1.5px 1.5px 3px #ffffff,
-    inset -1.5px -1.5px 3px rgba(2, 132, 199, 0.06);
+  gap: 7px;
   text-decoration: none;
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.island-brand-pill:active {
-  transform: translateY(1.5px) scale(0.97);
-}
+.island-brand-pill:active { transform: scale(0.97); }
 .brand-fin-icon {
   width: 28px; height: 28px;
-  background: linear-gradient(135deg, #38bdf8, #0284c7);
-  border: 1.5px solid #ffffff;
-  border-radius: 10px;
+  background: linear-gradient(145deg, #fdba74 0%, #fb923c 45%, #f43f5e 100%);
+  border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
   color: #ffffff;
   font-size: 15px;
-  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.25), inset 1px 1px 2px rgba(255,255,255,0.7);
-  animation: finSway 3s ease-in-out infinite;
-}
-@keyframes finSway {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(6deg) scale(1.04); }
+  box-shadow:
+    0 3px 8px rgba(244, 63, 94, 0.28),
+    inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.7),
+    inset -2px -2px 3px rgba(190, 18, 60, 0.28);
 }
 .brand-text {
   font-size: 14px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--reef-ink);
   letter-spacing: -0.4px;
   display: flex;
   align-items: baseline;
 }
-.brand-dot {
-  color: #38bdf8;
-  font-weight: 900;
-}
-.brand-sub {
-  color: #0284c7;
-  font-weight: 900;
-}
+.brand-dot { color: var(--reef-sun-500); font-weight: 900; }
+.brand-sub { color: var(--reef-coral-500); font-weight: 900; }
 
-/* Right Island: Smart Balance & Alert Capsule */
+/* Kanan: chip saldo + tombol notifikasi bulat */
 .island-cluster-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 8px 0 10px;
-  background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 2px solid #bae6fd;
-  border-radius: 18px;
-  box-shadow: 
-    0 8px 20px rgba(2, 132, 199, 0.12),
-    inset 1.5px 1.5px 3px #ffffff,
-    inset -1.5px -1.5px 3px rgba(2, 132, 199, 0.06);
+  gap: 6px;
 }
 .cluster-balance-btn {
   display: flex;
   align-items: center;
   gap: 6px;
+  height: 32px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: #f0fdf4;
+  box-shadow: inset 1.5px 1.5px 3px #ffffff, inset -1.5px -1.5px 3px rgba(16, 185, 129, 0.12);
   cursor: pointer;
   user-select: none;
-  transition: opacity 0.12s;
+  transition: transform 0.12s;
 }
-.cluster-balance-btn:active {
-  opacity: 0.75;
-}
+.cluster-balance-btn:active { transform: scale(0.96); }
 .pulse-emerald-dot {
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--reef-kelp-500);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
   animation: pulseAura 2.2s infinite ease-in-out;
 }
@@ -239,45 +271,39 @@ i[class^="ph-"] {
   50% { box-shadow: 0 0 0 4.5px rgba(16, 185, 129, 0.12); }
 }
 .cluster-bal-txt {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 900;
-  color: #0369a1;
+  color: var(--reef-kelp-600);
   letter-spacing: -0.2px;
 }
 .cluster-user-avatar {
-  width: 22px; height: 22px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #c084fc, #8b5cf6);
   color: #ffffff;
   font-size: 10px;
   font-weight: 900;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
+  box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.5);
 }
-
-.cluster-divider {
-  width: 1px;
-  height: 18px;
-  background: #e2e8f0;
-}
-
+.cluster-divider { display: none; }
 .cluster-bell-btn {
-  width: 28px; height: 28px;
-  border-radius: 8px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  color: #64748b;
+  color: #f97316;
   font-size: 16px;
   text-decoration: none;
   position: relative;
-  transition: color 0.15s;
+  background: #fff7ed;
+  box-shadow: inset 1.5px 1.5px 3px #fff, inset -1.5px -1.5px 3px rgba(251, 146, 60, 0.18);
+  transition: transform 0.12s;
 }
-.cluster-bell-btn:active {
-  color: #0284c7;
-}
+.cluster-bell-btn:active { transform: scale(0.92); }
 .cluster-badge-count {
   position: absolute;
   top: -2px; right: -2px;
-  background: #f43f5e;
+  background: var(--reef-coral-500);
   color: #fff;
   font-size: 8px;
   font-weight: 900;
@@ -290,23 +316,22 @@ i[class^="ph-"] {
 }
 
 /* Guest buttons */
-.island-cluster-pill.guest {
-  padding: 0 6px;
-  gap: 4px;
-}
+.island-cluster-pill.guest { gap: 2px; }
 .island-guest-link {
-  color: #0284c7; font-size: 11px; font-weight: 900; text-decoration: none; padding: 4px 8px;
+  color: var(--reef-coral-500); font-size: 11px; font-weight: 900; text-decoration: none; padding: 4px 8px;
 }
 .island-guest-btn {
-  background: #0284c7; color: #fff; font-size: 11px; font-weight: 900; text-decoration: none;
-  padding: 5px 12px; border-radius: 12px; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+  background: linear-gradient(145deg, #fb7185, #f43f5e); color: #fff; font-size: 11px; font-weight: 900; text-decoration: none;
+  padding: 6px 12px; border-radius: 999px;
+  box-shadow: 0 3px 8px rgba(244, 63, 94, 0.28), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5);
 }
+
 
 /* ── WALLET POPOVER DRAWER ── */
 .tb-wallet-backdrop {
   display: none;
   position: fixed; inset: 0;
-  background: rgba(15, 23, 42, 0.35);
+  background: rgba(30, 27, 46, 0.35);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   z-index: 9998;
 }
@@ -315,13 +340,13 @@ i[class^="ph-"] {
 .tb-wallet-popover {
   display: none;
   position: fixed;
-  top: 60px; left: 50%;
+  top: 58px; left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 24px); max-width: 400px;
-  background: #ffffff;
-  border: 1.5px solid #e0f2fe;
-  border-radius: 24px;
-  box-shadow: 0 20px 48px rgba(2, 132, 199, 0.16), 0 4px 12px rgba(0, 0, 0, 0.04);
+  border: 2px solid #ffffff;
+  background: var(--reef-card);
+  border-radius: 20px;
+  box-shadow: 0 20px 48px rgba(244, 63, 94, 0.14), 0 6px 16px rgba(8, 145, 178, 0.10), inset 2px 2px 5px #fff;
   z-index: 9999;
   overflow: hidden;
   animation: islandPop .18s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -331,7 +356,6 @@ i[class^="ph-"] {
   from { transform: translateX(-50%) translateY(-6px) scale(0.98); opacity: 0; }
   to { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
 }
-
 .twp-header {
   padding: 14px 16px 10px;
   display: flex;
@@ -341,22 +365,21 @@ i[class^="ph-"] {
 .twp-title {
   font-size: 13.5px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--reef-ink);
   display: flex;
   align-items: center;
   gap: 6px;
 }
 .twp-close {
-  background: #f1f5f9;
-  color: #64748b;
+  background: #ffffff;
+  color: var(--reef-muted);
   border: none;
   border-radius: 50%;
-  width: 24px; height: 24px;
+  width: 26px; height: 26px;
   display: flex; align-items: center; justify-content: center;
   font-size: 14px;
   cursor: pointer;
 }
-
 .twp-body {
   padding: 0 14px 14px;
   display: flex;
@@ -364,50 +387,48 @@ i[class^="ph-"] {
   gap: 8px;
 }
 .twp-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 9px 12px;
+  background: #ffffff;
+  border: none;
+  border-radius: 14px;
+  padding: 8px 11px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: inset 2px 2px 4px #fff, inset -2px -2px 4px rgba(251, 146, 60, 0.08);
 }
-.twp-card-left {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
+.twp-card-left { display: flex; align-items: center; gap: 9px; }
 .twp-card-icon {
   width: 32px; height: 32px;
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   font-size: 16px;
 }
-.twp-card-icon.wd { background: #e0f2fe; color: #0284c7; }
-.twp-card-icon.dep { background: #ecfdf5; color: #059669; }
+.twp-card-icon.wd { background: #ffe4e6; color: #e11d48; }
+.twp-card-icon.dep { background: #d1fae5; color: #059669; }
 .twp-card-icon.baits { background: #fef3c7; color: #d97706; }
-
 .twp-card-lbl {
   font-size: 8px;
   font-weight: 800;
-  color: #64748b;
+  color: var(--reef-muted);
   text-transform: uppercase;
 }
-.twp-card-val {
-  font-size: 13px;
-  font-weight: 900;
-  color: #0f172a;
-}
+.twp-card-val { font-size: 13px; font-weight: 900; color: var(--reef-ink); }
 .twp-card-btn {
   padding: 5px 11px;
   border-radius: 999px;
   font-size: 10.5px;
   font-weight: 900;
   text-decoration: none;
+  color: #fff;
+  box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.5);
 }
-.twp-card-btn.wd { background: #0284c7; color: #fff; }
-.twp-card-btn.dep { background: #059669; color: #fff; }
-.twp-card-btn.baits { background: #d97706; color: #fff; }
+.twp-card-btn.wd { background: linear-gradient(145deg, #fb7185, #f43f5e); }
+.twp-card-btn.dep { background: linear-gradient(145deg, #34d399, #059669); }
+.twp-card-btn.baits { background: linear-gradient(145deg, #fbbf24, #d97706); }
+
+@media (prefers-reduced-motion: reduce) {
+  body::before, .pulse-emerald-dot { animation: none !important; }
+}
 </style>
 </head>
 <body>

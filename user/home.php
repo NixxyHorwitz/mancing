@@ -184,24 +184,27 @@ require dirname(__DIR__) . '/partials/header.php';
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   MANCINGCUAN — FANTASY OCEANIC CLAYMORPHISM 3D SYSTEM
-   Tactile Marine Cushions, Bioluminescent Biota & Aquatic Fantasy
+   MANCINGCUAN — VIBRANT LIVING CORAL REEF & FANTASY MARINE BIOTA
+   3D Claymorphism compact: border putih polos, glossy top sheen,
+   warm inner shadow. Token warna ada di partials/header.php (:root).
    ══════════════════════════════════════════════════════════ */
 
-/* Background Underwater Caustics & Bubbles */
 .fantasy-ocean-stage {
   position: relative;
   width: 100%;
   max-width: 440px;
   margin: 0 auto;
-  padding: 10px 14px 28px;
+  padding: 6px 12px 22px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  overflow: hidden;
+  gap: 12px;
+}
+.fantasy-ocean-stage > :not(.ambient-bubble-layer) {
+  position: relative;
+  z-index: 1;
 }
 
-/* Floating Ambient Water Bubbles */
+/* ── AMBIENT: gelembung ── */
 .ambient-bubble-layer {
   position: absolute;
   inset: 0;
@@ -212,17 +215,16 @@ require dirname(__DIR__) . '/partials/header.php';
 .sea-bubble {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.8) 0%, rgba(56, 189, 248, 0.35) 60%, rgba(2, 132, 199, 0.15) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: inset 1px 1px 2px #fff, 0 2px 6px rgba(2, 132, 199, 0.2);
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9) 0%, rgba(103, 232, 249, 0.35) 60%, rgba(192, 132, 252, 0.15) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset 1px 1px 2px #fff, 0 2px 6px rgba(8, 145, 178, 0.18);
   animation: bubbleAscend 9s infinite ease-in;
 }
-.b-1 { width: 14px; height: 14px; left: 8%; bottom: -20px; animation-duration: 8s; animation-delay: 0s; }
+.b-1 { width: 14px; height: 14px; left: 8%;  bottom: -20px; animation-duration: 8s; }
 .b-2 { width: 22px; height: 22px; left: 85%; bottom: -30px; animation-duration: 11s; animation-delay: 2.5s; }
-.b-3 { width: 10px; height: 10px; left: 45%; bottom: -15px; animation-duration: 7s; animation-delay: 4s; }
+.b-3 { width: 10px; height: 10px; left: 45%; bottom: -15px; animation-duration: 7s;  animation-delay: 4s; }
 .b-4 { width: 18px; height: 18px; left: 22%; bottom: -25px; animation-duration: 10s; animation-delay: 1.2s; }
-.b-5 { width: 12px; height: 12px; left: 68%; bottom: -20px; animation-duration: 9s; animation-delay: 5s; }
-
+.b-5 { width: 12px; height: 12px; left: 68%; bottom: -20px; animation-duration: 9s;  animation-delay: 5s; }
 @keyframes bubbleAscend {
   0% { transform: translateY(0) translateX(0) scale(0.85); opacity: 0; }
   15% { opacity: 0.85; }
@@ -230,241 +232,275 @@ require dirname(__DIR__) . '/partials/header.php';
   85% { opacity: 0.75; }
   100% { transform: translateY(-750px) translateX(-10px) scale(1.2); opacity: 0; }
 }
+.kelp-blade {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: kelpSway 5.5s ease-in-out infinite;
+}
+.kelp-blade:nth-child(2) { animation-duration: 6.8s; animation-delay: -1.5s; }
+.kelp-blade:nth-child(3) { animation-duration: 4.9s; animation-delay: -3s; }
+@keyframes kelpSway {
+  0%, 100% { transform: rotate(-3.5deg); }
+  50% { transform: rotate(4deg); }
+}
 
-/* ── 1. THE FANTASY HORIZON VAULT CARD (3D CLAY CAPTAIN DECK) ── */
+/* ── 1. VAULT SALDO — PANEL SUNSET REEF + TILE AKSI CLAY ── */
 .clay-vault-card {
+  border: 2px solid #ffffff;
+  border-radius: 24px;
+  padding: 6px;
+  background: var(--reef-card);
+  box-shadow:
+    0 16px 34px rgba(244, 63, 94, 0.14),
+    0 6px 14px rgba(124, 58, 237, 0.10),
+    inset 3px 3px 7px rgba(255, 255, 255, 0.95),
+    inset -4px -4px 10px rgba(251, 146, 60, 0.16);
+}
+
+/* Panel atas: gradasi senja karang (violet → magenta → coral → jingga) */
+.vault-hero {
   position: relative;
-  z-index: 1;
-  background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 65%, #e0f2fe 100%);
-  border: 2.5px solid #bae6fd;
-  border-radius: 28px;
-  padding: 22px 18px 18px;
-  box-shadow: 
-    0 16px 36px rgba(2, 132, 199, 0.16),
-    0 4px 10px rgba(0, 0, 0, 0.03),
-    inset 2.5px 2.5px 5px #ffffff,
-    inset -3px -3px 6px rgba(2, 132, 199, 0.08);
   overflow: hidden;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 19px;
+  padding: 12px 12px 12px 14px;
+  min-height: 148px;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 88% 110%, rgba(254, 240, 138, 0.50) 0, transparent 46%),
+    radial-gradient(circle at 0% 0%, rgba(192, 132, 252, 0.55) 0, transparent 50%),
+    linear-gradient(135deg, #7c3aed 0%, #c026d3 36%, #f43f5e 70%, #fb923c 100%);
+  box-shadow:
+    inset 2px 2px 6px rgba(255, 255, 255, 0.35),
+    inset -3px -4px 10px rgba(76, 5, 25, 0.25);
 }
-
-/* Decorative Swimming Clownfish in Vault */
-.vault-marine-mascot {
+.vault-hero::before {
+  content: '';
   position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 90px;
-  height: 58px;
+  top: 5px; left: 14px;
+  width: 40%; height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
   pointer-events: none;
-  z-index: 1;
-  animation: mascotSwimFloat 4.5s ease-in-out infinite;
 }
-@keyframes mascotSwimFloat {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-4px) rotate(2.5deg); }
-}
-
-/* Decorative Coral Flora Silhouette */
-.vault-coral-accent {
-  position: absolute;
-  bottom: -6px;
-  left: -6px;
-  width: 60px;
-  height: 60px;
-  opacity: 0.22;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Vault Header */
-.vault-profile-row {
+.vault-hero-top {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
+  justify-content: space-between;
+  gap: 8px;
   position: relative;
   z-index: 2;
 }
+.vault-greet {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
 .vault-clay-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #38bdf8 0%, #0284c7 100%);
-  border: 2.5px solid #ffffff;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.22);
   color: #ffffff;
-  font-size: 16px;
-  font-weight: 900;
+  font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 
-    0 6px 16px rgba(2, 132, 199, 0.32),
-    inset 2px 2px 4px rgba(255, 255, 255, 0.75),
-    inset -2px -2px 4px rgba(3, 105, 161, 0.35);
   flex-shrink: 0;
+  box-shadow: inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.45), inset -1.5px -1.5px 3px rgba(76, 5, 25, 0.2);
 }
-.vault-user-info {
-  display: flex;
-  flex-direction: column;
-}
+.vault-user-info { display: flex; flex-direction: column; min-width: 0; }
 .vault-username-txt {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 900;
-  color: #0f172a;
-  letter-spacing: -0.3px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  color: #ffffff;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .vault-rank-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: #f0fdf4;
-  border: 1.2px solid #86efac;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 999px;
-  padding: 1.5px 8px;
-  font-size: 9.5px;
+  padding: 1px 7px;
+  font-size: 9px;
   font-weight: 900;
-  color: #166534;
-  box-shadow: inset 1px 1px 2px #fff;
+  color: #fef08a;
   margin-top: 2px;
 }
+.vault-today-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #ffffff;
+  color: #e11d48;
+  font-size: 10px;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 3px 9px;
+  box-shadow: 0 3px 8px rgba(76, 5, 25, 0.22), inset -1px -1px 2px rgba(244, 63, 94, 0.15);
+}
 
-/* Clay Balance Core */
 .vault-balance-showcase {
-  margin-bottom: 16px;
   position: relative;
   z-index: 2;
+  margin-top: 12px;
+  max-width: 64%;
 }
 .vault-balance-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #ffffff;
-  border: 1.2px solid #bae6fd;
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 900;
-  color: #0369a1;
+  color: rgba(255, 255, 255, 0.88);
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.08), inset 1px 1px 2px #fff;
-  margin-bottom: 5px;
+}
+.vault-live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.35);
+  animation: vaultLive 2s ease-in-out infinite;
+}
+@keyframes vaultLive {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.35); }
+  50% { box-shadow: 0 0 0 5px rgba(52, 211, 153, 0.1); }
 }
 .vault-balance-main-num {
-  font-size: 34px;
+  font-size: 28px;
   font-weight: 900;
-  color: #0f172a;
+  color: #ffffff;
   letter-spacing: -0.8px;
-  line-height: 1.1;
+  line-height: 1.15;
   font-family: 'Nunito', sans-serif;
-  text-shadow: 0 2px 4px rgba(2, 132, 199, 0.08);
+  text-shadow: 0 2px 8px rgba(76, 5, 25, 0.30);
+  white-space: nowrap;
+}
+.vault-balance-main-num .rp-prefix {
+  font-size: 14px;
+  opacity: 0.85;
+  margin-right: 3px;
+  vertical-align: 4px;
 }
 .vault-stats-ribbon {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 5px;
+  margin-top: 8px;
 }
 .vault-stat-capsule {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1.2px solid #bae6fd;
-  border-radius: 10px;
-  padding: 3px 8px;
-  font-size: 10.5px;
+  border-radius: 8px;
+  padding: 2px 7px;
+  font-size: 9.5px;
   font-weight: 800;
-  color: #475569;
-  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.04), inset 1px 1px 2px #fff;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.3);
 }
-.vault-stat-capsule strong {
-  color: #0284c7;
-  font-weight: 900;
+.vault-stat-capsule strong { font-weight: 900; color: #fef08a; }
+
+/* Ilustrasi biota di kanan panel */
+.vault-hero-art {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 140px;
+  height: 108px;
+  pointer-events: none;
+  z-index: 1;
 }
-.vault-stat-capsule--baits {
-  background: #fefce8;
-  border-color: #fef08a;
-  color: #854d0e;
+.fish-swim {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fishSwim 4.5s ease-in-out infinite;
 }
-.vault-stat-capsule--baits strong {
-  color: #d97706;
+@keyframes fishSwim {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-6px, -4px) rotate(-4deg); }
+}
+.pearl-glow { animation: pearlPulse 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pearlPulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 0.95; transform: scale(1.15); }
+}
+.starfish-wiggle { animation: starWiggle 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes starWiggle {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(10deg); }
 }
 
-/* 3 Clay Action Buttons */
+/* Baris aksi: tile putih clay + ikon berwarna */
 .vault-actions-cluster {
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr;
-  gap: 8px;
-  position: relative;
-  z-index: 2;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 6px 0 0;
 }
 .clay-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  height: 44px;
-  border-radius: 16px;
-  font-size: 12px;
+  gap: 7px;
+  height: 42px;
+  border-radius: 14px;
+  background: #ffffff;
+  font-size: 11.5px;
   font-weight: 900;
   text-decoration: none;
   cursor: pointer;
   user-select: none;
+  box-shadow:
+    0 3px 8px rgba(30, 27, 46, 0.05),
+    inset 2px 2px 4px #ffffff,
+    inset -2px -2px 5px rgba(251, 146, 60, 0.14);
   transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s;
 }
 .clay-btn:active {
-  transform: translateY(2px) scale(0.96);
+  transform: translateY(1px) scale(0.97);
+  box-shadow: inset 2px 2px 5px rgba(251, 146, 60, 0.22);
 }
-.clay-btn--primary {
-  background: linear-gradient(145deg, #38bdf8 0%, #0284c7 60%, #0369a1 100%);
-  color: #ffffff !important;
-  border: 2px solid #ffffff;
-  box-shadow: 
-    0 8px 18px rgba(2, 132, 199, 0.38),
-    inset 2.5px 2.5px 4px rgba(255, 255, 255, 0.8),
-    inset -2.5px -2.5px 5px rgba(3, 105, 161, 0.45);
+.clay-btn-ico {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #ffffff;
+  box-shadow:
+    0 3px 6px var(--ico-sh, rgba(0, 0, 0, 0.12)),
+    inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.6),
+    inset -1.5px -1.5px 3px rgba(0, 0, 0, 0.15);
 }
-.clay-btn--secondary {
-  background: #ffffff;
-  color: #0284c7 !important;
-  border: 2px solid #bae6fd;
-  box-shadow: 
-    0 6px 14px rgba(2, 132, 199, 0.1),
-    inset 2px 2px 4px #ffffff,
-    inset -2px -2px 4px rgba(2, 132, 199, 0.08);
-}
-.clay-btn--ghost {
-  background: #f8fafc;
-  color: #475569 !important;
-  border: 2px solid #e2e8f0;
-  box-shadow: 
-    0 4px 10px rgba(0, 0, 0, 0.04),
-    inset 2px 2px 4px #ffffff;
-}
+.clay-btn--primary { color: #e11d48 !important; }
+.clay-btn--primary .clay-btn-ico { background: linear-gradient(145deg, #fda4af, #f43f5e); --ico-sh: rgba(244, 63, 94, 0.35); }
+.clay-btn--secondary { color: #059669 !important; }
+.clay-btn--secondary .clay-btn-ico { background: linear-gradient(145deg, #6ee7b7, #059669); --ico-sh: rgba(5, 150, 105, 0.32); }
+.clay-btn--ghost { color: #9a3412 !important; }
+.clay-btn--ghost .clay-btn-ico { background: linear-gradient(145deg, #fef3c7, #fdba74); color: #9a3412; --ico-sh: rgba(251, 146, 60, 0.32); }
 
-/* ── 2. THE TWIN FANTASY PORTALS (CLAY CARDS WITH MARINE ART) ── */
+/* ── 2. DUA PORTAL BIOTA (MANCING & VIDEO) ── */
 .fantasy-portals-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  position: relative;
-  z-index: 1;
+  gap: 10px;
 }
 .fantasy-portal-card {
   position: relative;
-  background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 100%);
-  border: 2.5px solid #bae6fd;
-  border-radius: 24px;
-  padding: 16px 14px 14px;
-  box-shadow: 
-    0 10px 24px rgba(2, 132, 199, 0.1),
-    inset 2px 2px 5px #ffffff,
-    inset -2px -2px 5px rgba(2, 132, 199, 0.06);
+  border: 2px solid transparent;
+  border-radius: 20px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -473,41 +509,49 @@ require dirname(__DIR__) . '/partials/header.php';
   overflow: hidden;
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
 }
-.fantasy-portal-card:active {
-  transform: translateY(2px) scale(0.97);
+.fantasy-portal-card:active { transform: translateY(2px) scale(0.97); }
+.portal-card--fish {
+  background:
+    linear-gradient(160deg, #ffffff 0%, #fff7ed 60%, #ffe4e6 100%) padding-box,
+    var(--reef-border) border-box;
+  box-shadow:
+    0 12px 26px rgba(244, 63, 94, 0.14),
+    inset 2.5px 2.5px 5px #ffffff,
+    inset -3px -3px 7px rgba(251, 146, 60, 0.16);
+}
+.portal-card--watch {
+  background:
+    linear-gradient(160deg, #ffffff 0%, #faf5ff 60%, #ecfeff 100%) padding-box,
+    var(--reef-border) border-box;
+  box-shadow:
+    0 12px 26px rgba(139, 92, 246, 0.16),
+    inset 2.5px 2.5px 5px #ffffff,
+    inset -3px -3px 7px rgba(139, 92, 246, 0.12);
 }
 
-/* Aquatic Portal Header Art */
 .portal-top-bar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 .portal-clay-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
   border: 2px solid #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  box-shadow: 
-    0 6px 14px rgba(2, 132, 199, 0.2),
-    inset 2px 2px 4px rgba(255, 255, 255, 0.8),
-    inset -2px -2px 4px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-.portal-clay-icon--fish {
-  background: linear-gradient(145deg, #38bdf8, #0284c7);
+  font-size: 14px;
   color: #fff;
+  box-shadow:
+    0 5px 12px rgba(0, 0, 0, 0.12),
+    inset 2px 2px 3px rgba(255, 255, 255, 0.7),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.12);
 }
-.portal-clay-icon--watch {
-  background: linear-gradient(145deg, #2dd4bf, #0891b2);
-  color: #fff;
-}
+.portal-clay-icon--fish  { background: linear-gradient(145deg, #fdba74, #f43f5e); }
+.portal-clay-icon--watch { background: linear-gradient(145deg, #c084fc, #8b5cf6 55%, #0891b2); }
 
 .portal-sparkle-tag {
   font-size: 8.5px;
@@ -516,205 +560,266 @@ require dirname(__DIR__) . '/partials/header.php';
   padding: 2.5px 8px;
   border-radius: 999px;
   letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
-.portal-card--fish .portal-sparkle-tag {
-  background: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #7dd3fc;
+.portal-card--fish .portal-sparkle-tag  { background: #ffe4e6; color: #be123c; }
+.portal-card--watch .portal-sparkle-tag { background: #f3e8ff; color: #7e22ce; }
+
+/* Jendela ilustrasi biota di dalam portal */
+.portal-scene {
+  position: relative;
+  height: 56px;
+  border-radius: 13px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  border: 2px solid #ffffff;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.10), 0 3px 8px rgba(0, 0, 0, 0.05);
 }
-.portal-card--watch .portal-sparkle-tag {
-  background: #ccfbf1;
-  color: #0f766e;
-  border: 1px solid #5eead4;
+.portal-scene svg { display: block; width: 100%; height: 100%; }
+.portal-scene--reef  { background: linear-gradient(180deg, #a5f3fc 0%, #67e8f9 55%, #22d3ee 100%); }
+.portal-scene--jelly { background: radial-gradient(circle at 50% 40%, #6d28d9 0%, #3b0764 55%, #164e63 100%); }
+
+.fish-jump-a, .fish-jump-b {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.fish-jump-a { animation: fishJumpA 3.6s ease-in-out infinite; }
+.fish-jump-b { animation: fishJumpB 4.2s ease-in-out infinite; animation-delay: -1.6s; }
+@keyframes fishJumpA {
+  0%, 100% { transform: translate(-4px, 10px) rotate(-28deg); }
+  50%      { transform: translate(6px, -6px) rotate(14deg); }
+}
+@keyframes fishJumpB {
+  0%, 100% { transform: translate(4px, 8px) rotate(24deg); }
+  50%      { transform: translate(-6px, -5px) rotate(-12deg); }
+}
+.jelly-bob {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: jellyBob 4s ease-in-out infinite;
+}
+.jelly-bob--small { animation-duration: 3.2s; animation-delay: -1.2s; }
+@keyframes jellyBob {
+  0%, 100% { transform: translateY(3px) scaleY(0.96); }
+  50%      { transform: translateY(-4px) scaleY(1.04); }
+}
+.sparkle-bubble { animation: sparkleTwinkle 2.4s ease-in-out infinite; }
+.sparkle-bubble:nth-of-type(2n) { animation-delay: -0.8s; }
+.sparkle-bubble:nth-of-type(3n) { animation-delay: -1.6s; }
+@keyframes sparkleTwinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
 }
 
 .portal-heading {
-  font-size: 14.5px;
+  font-size: 13px;
   font-weight: 900;
-  color: #0f172a;
-  margin-bottom: 2px;
+  color: var(--reef-ink);
+  margin-bottom: 0;
   letter-spacing: -0.2px;
 }
 .portal-subtext {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
-  color: #64748b;
-  margin-bottom: 10px;
+  color: var(--reef-muted);
+  margin-bottom: 7px;
+}
+.portal-bait-line {
+  font-size: 10px;
+  font-weight: 900;
+  color: #d97706;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-/* Water Wave Progress Bar */
 .portal-wave-progress {
   width: 100%;
   height: 6px;
-  background: #e2e8f0;
+  background: #ede9fe;
   border-radius: 999px;
   overflow: hidden;
   margin-bottom: 9px;
-  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.1);
+  box-shadow: inset 1px 1px 2px rgba(76, 29, 149, 0.15);
 }
 .portal-wave-fill {
   height: 100%;
-  background: linear-gradient(90deg, #38bdf8, #0284c7);
+  background: linear-gradient(90deg, #34d399, #22d3ee 50%, #a855f7);
   border-radius: 999px;
   transition: width 0.3s;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.55);
 }
 
 .portal-cta-badge {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1.2px solid #bae6fd;
-  font-size: 11px;
+  padding: 6px 9px;
+  border-radius: 11px;
+  font-size: 10.5px;
   font-weight: 900;
-  color: #0284c7;
-  box-shadow: 0 3px 6px rgba(2, 132, 199, 0.06), inset 1px 1px 2px #fff;
-  transition: background 0.15s;
+  color: #ffffff;
+  border: none;
+  transition: filter 0.15s;
 }
-.fantasy-portal-card:hover .portal-cta-badge {
-  background: #f0f9ff;
+.portal-card--fish .portal-cta-badge {
+  background: linear-gradient(145deg, #fb7185, #f43f5e);
+  box-shadow: 0 5px 12px rgba(244, 63, 94, 0.30), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.55), inset -2px -2px 4px rgba(190, 18, 60, 0.3);
 }
+.portal-card--watch .portal-cta-badge {
+  background: linear-gradient(145deg, #c084fc, #8b5cf6);
+  box-shadow: 0 5px 12px rgba(139, 92, 246, 0.32), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.55), inset -2px -2px 4px rgba(91, 33, 182, 0.3);
+}
+.fantasy-portal-card:hover .portal-cta-badge { filter: brightness(1.06); }
 
-/* ── 3. FANTASY REEF QUICK SERVICES (5 CLAY TOKENS) ── */
+/* ── 3. TOKEN LAYANAN KARANG (5 CLAY TOKENS) ── */
 .reef-services-deck {
-  position: relative;
-  z-index: 1;
-  background: linear-gradient(155deg, #ffffff 0%, #f8fafc 100%);
-  border: 2.5px solid #bae6fd;
-  border-radius: 26px;
-  padding: 14px 10px;
-  box-shadow: 
-    0 12px 28px rgba(2, 132, 199, 0.1),
-    inset 2px 2px 5px #ffffff,
-    inset -2px -2px 5px rgba(2, 132, 199, 0.05);
+  border: 2px solid transparent;
+  border-radius: 20px;
+  padding: 10px 6px 9px;
+  background: var(--reef-card) padding-box, var(--reef-border) border-box;
+  box-shadow: var(--reef-clay-shadow);
+  overflow: hidden;
 }
 .reef-tokens-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
+  position: relative;
+  z-index: 1;
 }
 .reef-token-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   text-decoration: none;
   background: transparent;
   border: none;
   cursor: pointer;
   padding: 4px 2px;
   border-radius: 16px;
+  font-family: inherit;
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
   width: 100%;
 }
-.reef-token-btn:active {
-  transform: translateY(2px) scale(0.92);
-}
+.reef-token-btn:active { transform: translateY(2px) scale(0.92); }
 .clay-token-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 15px;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
   border: 2px solid #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  box-shadow: 
-    0 6px 14px rgba(0, 0, 0, 0.08),
-    inset 2.5px 2.5px 4px rgba(255, 255, 255, 0.9),
-    inset -2px -2px 4px rgba(0, 0, 0, 0.12);
+  font-size: 17px;
+  position: relative;
+  box-shadow:
+    0 7px 14px var(--tk-shadow, rgba(0, 0, 0, 0.1)),
+    inset 2.5px 2.5px 4px rgba(255, 255, 255, 0.75),
+    inset -2.5px -2.5px 5px rgba(0, 0, 0, 0.14);
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.reef-token-btn:hover .clay-token-icon {
-  transform: translateY(-3px) scale(1.05);
+.reef-token-btn:hover .clay-token-icon { transform: translateY(-3px) scale(1.05); }
+.clay-token-icon.t-checkin { background: linear-gradient(145deg, #fef08a, #fbbf24 45%, #f59e0b); color: #78350f; --tk-shadow: rgba(245, 158, 11, 0.35); }
+.clay-token-icon.t-threads { background: linear-gradient(145deg, #3f3f46, #18181b); color: #fde68a; --tk-shadow: rgba(24, 24, 27, 0.30); }
+.clay-token-icon.t-survey  { background: linear-gradient(145deg, #6ee7b7, #10b981 55%, #059669); color: #ffffff; --tk-shadow: rgba(16, 185, 129, 0.35); }
+.clay-token-icon.t-invite  { background: linear-gradient(145deg, #fda4af, #fb7185 45%, #f43f5e); color: #ffffff; --tk-shadow: rgba(244, 63, 94, 0.35); }
+.clay-token-icon.t-vip     { background: linear-gradient(145deg, #e9d5ff, #c084fc 40%, #8b5cf6); color: #ffffff; --tk-shadow: rgba(139, 92, 246, 0.45); }
+.clay-token-icon.t-vip::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 15px;
+  box-shadow: 0 0 12px 2px rgba(192, 132, 252, 0.55);
+  animation: vipGlow 2.6s ease-in-out infinite;
+  pointer-events: none;
 }
-
-.clay-token-icon.t-checkin {
-  background: linear-gradient(135deg, #fcd34d, #f59e0b);
-  color: #78350f;
+@keyframes vipGlow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
 }
-.clay-token-icon.t-threads {
-  background: linear-gradient(135deg, #27272a, #18181b);
-  color: #fde68a;
+.token-ping {
+  position: absolute;
+  top: -4px; right: -4px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: #f43f5e;
+  border: 2px solid #fff;
 }
-.clay-token-icon.t-survey {
-  background: linear-gradient(135deg, #6ee7b7, #10b981);
-  color: #064e3b;
-}
-.clay-token-icon.t-invite {
-  background: linear-gradient(135deg, #38bdf8, #0284c7);
-  color: #ffffff;
-}
-.clay-token-icon.t-vip {
-  background: linear-gradient(135deg, #e879f9, #a855f7);
-  color: #ffffff;
-}
-
 .reef-token-label {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 900;
-  color: #334155;
+  color: #44403c;
   white-space: nowrap;
 }
 
-/* ── 4. CURATED VIDEOS: SAMUDRA VIDEO DECK ── */
+/* ── 4. VIDEO REKOMENDASI ── */
 .fantasy-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 4px;
-  position: relative;
-  z-index: 1;
 }
 .fsh-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--reef-ink);
   display: flex;
   align-items: center;
   gap: 6px;
   letter-spacing: -0.3px;
 }
+.fsh-title-icon {
+  width: 22px; height: 22px;
+  border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(145deg, #fef08a, #f59e0b);
+  color: #ffffff;
+  font-size: 13px;
+  border: none;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.35), inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+}
 .fsh-link {
   font-size: 11px;
   font-weight: 900;
-  color: #0284c7;
+  color: #e11d48;
   text-decoration: none;
+  background: #fff1f2;
+  padding: 3px 10px;
+  border-radius: 999px;
 }
-.fsh-link:hover { text-decoration: underline; }
+.fsh-link:hover { background: #ffe4e6; }
 
 .fantasy-video-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  position: relative;
-  z-index: 1;
+  gap: 10px;
 }
 .clay-video-card {
-  background: #ffffff;
-  border: 2px solid #bae6fd;
-  border-radius: 20px;
+  border: 2px solid transparent;
+  border-radius: 18px;
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  box-shadow: 
-    0 8px 20px rgba(2, 132, 199, 0.08),
+  background: linear-gradient(170deg, #ffffff 0%, #fff7ed 100%) padding-box, var(--reef-border) border-box;
+  box-shadow:
+    0 10px 22px rgba(244, 63, 94, 0.10),
+    0 4px 10px rgba(8, 145, 178, 0.08),
     inset 2px 2px 4px #ffffff;
   display: flex;
   flex-direction: column;
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
 }
-.clay-video-card:active {
-  transform: translateY(2px) scale(0.97);
-}
+.clay-video-card:active { transform: translateY(2px) scale(0.97); }
 .clay-video-thumb-wrap {
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: #0f172a;
+  background: linear-gradient(135deg, #3b0764, #164e63);
   position: relative;
   overflow: hidden;
 }
@@ -728,29 +833,28 @@ require dirname(__DIR__) . '/partials/header.php';
   position: absolute;
   top: 7px;
   left: 7px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(8px);
-  color: #38bdf8;
+  background: linear-gradient(135deg, #fef08a, #fbbf24);
+  color: #78350f;
   font-size: 9.5px;
   font-weight: 900;
   border-radius: 8px;
-  padding: 2.5px 7px;
-  border: 1px solid rgba(56, 189, 248, 0.5);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  padding: 2px 7px;
+  border: none;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.45), inset 1px 1px 2px rgba(255, 255, 255, 0.7);
 }
 .clay-duration-pill {
   position: absolute;
   bottom: 7px;
   right: 7px;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(59, 7, 100, 0.78);
   color: #ffffff;
   font-size: 8.5px;
   font-weight: 800;
-  border-radius: 5px;
-  padding: 1.5px 5px;
+  border-radius: 6px;
+  padding: 1.5px 6px;
 }
 .clay-video-body {
-  padding: 10px 10px 12px;
+  padding: 8px 9px 10px;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -759,7 +863,7 @@ require dirname(__DIR__) . '/partials/header.php';
 .clay-video-title-txt {
   font-size: 11.5px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--reef-ink);
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -773,7 +877,15 @@ require dirname(__DIR__) . '/partials/header.php';
   justify-content: space-between;
   font-size: 10px;
   font-weight: 900;
-  color: #0284c7;
+  color: #e11d48;
+}
+.clay-video-footer i {
+  width: 20px; height: 20px;
+  border-radius: 7px;
+  background: linear-gradient(145deg, #fb7185, #f43f5e);
+  color: #fff;
+  font-size: 10px;
+  box-shadow: 0 2px 5px rgba(244, 63, 94, 0.3);
 }
 
 /* Toast Notification */
@@ -782,13 +894,14 @@ require dirname(__DIR__) . '/partials/header.php';
   bottom: 80px;
   left: 50%;
   transform: translateX(-50%) translateY(30px);
-  background: #0f172a;
+  background: linear-gradient(135deg, #3b0764, #1e1b2e);
   color: #fff;
   padding: 10px 18px;
   border-radius: 999px;
   font-size: 11.5px;
   font-weight: 800;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+  border: none;
+  box-shadow: 0 10px 24px rgba(59, 7, 100, 0.35);
   opacity: 0;
   pointer-events: none;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -804,13 +917,13 @@ require dirname(__DIR__) . '/partials/header.php';
 }
 
 /* ══════════════════════════════════════════════════════════
-   MODAL DIALOGS — CLAYMORPHIC OCEAN AESTHETIC
+   MODAL DIALOGS — CORAL REEF CLAY
    ══════════════════════════════════════════════════════════ */
 .amber-modal-backdrop {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(30, 27, 46, 0.45);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 99999;
@@ -818,234 +931,339 @@ require dirname(__DIR__) . '/partials/header.php';
   justify-content: center;
   padding: 16px;
 }
-.amber-modal-backdrop.open {
-  display: flex !important;
-}
+.amber-modal-backdrop.open { display: flex !important; }
 .amber-modal-box {
-  background: linear-gradient(155deg, #ffffff 0%, #f0f9ff 100%);
-  border: 2.5px solid #bae6fd;
-  border-radius: 28px;
-  padding: 24px 20px 20px;
+  border: 2px solid transparent;
+  background: var(--reef-card) padding-box, var(--reef-border) border-box;
+  border-radius: 24px;
+  padding: 20px 18px 16px;
   width: 100%;
   max-width: 380px;
   position: relative;
-  box-shadow: 
-    0 22px 50px rgba(2, 132, 199, 0.25),
-    inset 2.5px 2.5px 5px #ffffff,
-    inset -2.5px -2.5px 5px rgba(2, 132, 199, 0.08);
+  box-shadow:
+    0 22px 50px rgba(244, 63, 94, 0.20),
+    0 8px 20px rgba(8, 145, 178, 0.12),
+    inset 3px 3px 6px #ffffff,
+    inset -4px -4px 9px rgba(251, 146, 60, 0.16);
   text-align: center;
 }
 .amber-modal-close {
   position: absolute;
   top: 14px; right: 14px;
-  background: #f1f5f9;
+  background: #ffffff;
   border: none;
   width: 28px; height: 28px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; color: #64748b;
+  font-size: 15px; color: #9a3412;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 4px rgba(251, 146, 60, 0.15), inset 1px 1px 2px #fff;
 }
 .amber-modal-badge {
-  width: 52px; height: 52px;
-  border-radius: 18px;
-  background: linear-gradient(145deg, #38bdf8, #0284c7);
+  width: 54px; height: 54px;
+  border-radius: 19px;
+  background: linear-gradient(145deg, #fda4af, #fb7185 40%, #f43f5e);
   color: #fff;
-  border: 2px solid #ffffff;
+  border: 2.5px solid #ffffff;
   display: flex; align-items: center; justify-content: center;
   font-size: 26px; margin: 0 auto 14px;
-  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.28), inset 2px 2px 4px rgba(255,255,255,0.7);
+  box-shadow: 0 8px 18px rgba(244, 63, 94, 0.32), inset 2.5px 2.5px 4px rgba(255, 255, 255, 0.65), inset -2.5px -2.5px 5px rgba(190, 18, 60, 0.3);
 }
 .amber-modal-title {
-  font-size: 16px; font-weight: 900; color: #0f172a; margin-bottom: 6px; letter-spacing: -0.3px; line-height: 1.3;
+  font-size: 16px; font-weight: 900; color: var(--reef-ink); margin-bottom: 6px; letter-spacing: -0.3px; line-height: 1.3;
 }
 .amber-modal-body {
-  font-size: 12px; font-weight: 700; color: #64748b; line-height: 1.55; margin-bottom: 18px;
+  font-size: 12px; font-weight: 700; color: var(--reef-muted); line-height: 1.55; margin-bottom: 18px;
 }
 .btn-modal-primary {
-  background: linear-gradient(145deg, #38bdf8 0%, #0284c7 60%, #0369a1 100%);
+  background: linear-gradient(145deg, #fda4af 0%, #fb7185 38%, #f43f5e 100%);
   color: #ffffff !important;
   padding: 12px 18px;
-  border-radius: 16px;
+  border-radius: 17px;
   text-align: center;
   font-size: 12.5px;
   font-weight: 900;
   text-decoration: none;
+  text-shadow: 0 1px 2px rgba(159, 18, 57, 0.4);
   display: flex; align-items: center; justify-content: center; gap: 6px;
-  border: 2px solid #ffffff;
-  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.35), inset 2px 2px 4px rgba(255,255,255,0.75);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 18px rgba(244, 63, 94, 0.35), inset 2.5px 2.5px 4px rgba(255, 255, 255, 0.6), inset -3px -3px 6px rgba(190, 18, 60, 0.35);
   cursor: pointer; width: 100%;
 }
 .btn-modal-dismiss {
-  background: transparent; border: none; color: #94a3b8; font-size: 11.5px; font-weight: 800; cursor: pointer; padding: 8px; width: 100%; text-align: center;
+  background: transparent; border: none; color: #a8a29e; font-size: 11.5px; font-weight: 800; cursor: pointer; padding: 8px; width: 100%; text-align: center;
 }
 
 /* Tour Select Modal */
 .tour-select-option {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 14px; border-radius: 18px;
-  border: 2px solid #bae6fd;
-  background: #ffffff;
+  border: 2px solid transparent;
+  background: linear-gradient(160deg, #ffffff, #fff7ed) padding-box, var(--reef-border) border-box;
   cursor: pointer; text-align: left; width: 100%; margin-bottom: 10px;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.06), inset 2px 2px 4px #ffffff;
+  font-family: inherit;
+  box-shadow: 0 5px 12px rgba(244, 63, 94, 0.08), inset 2px 2px 4px #ffffff;
 }
 .tour-select-icon {
-  width: 40px; height: 40px; border-radius: 12px;
+  width: 40px; height: 40px; border-radius: 13px;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px; color: #ffffff; flex-shrink: 0;
+  border: 2px solid #fff;
 }
-.tour-select-icon--watch { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
-.tour-select-title { font-size: 12.5px; font-weight: 900; color: #0f172a; margin-bottom: 2px; }
-.tour-select-desc { font-size: 10px; font-weight: 700; color: #64748b; line-height: 1.35; }
+.tour-select-icon--watch { background: linear-gradient(145deg, #c084fc, #8b5cf6); box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
+.tour-select-title { font-size: 12.5px; font-weight: 900; color: var(--reef-ink); margin-bottom: 2px; }
+.tour-select-desc { font-size: 10px; font-weight: 700; color: var(--reef-muted); line-height: 1.35; }
 
 /* Promo Hub Modal */
 .promo-hub-card-item {
-  background: #ffffff; border: 2px solid #bae6fd; border-radius: 18px;
+  background: #ffffff; border: 2px solid #ffffff; border-radius: 16px;
   padding: 12px 14px; margin-bottom: 10px; text-align: left;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.06), inset 1.5px 1.5px 3px #ffffff;
+  box-shadow: 0 4px 12px rgba(251, 146, 60, 0.10), inset 2px 2px 4px #ffffff, inset -2px -2px 4px rgba(251, 146, 60, 0.08);
 }
 .phc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .phc-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 8.5px; font-weight: 900; padding: 2px 7px; border-radius: 6px; text-transform: uppercase; }
-.phc-tag--threads { background: #18181b; color: #bae6fd; border: 1px solid #38bdf8; }
-.phc-tag--referral { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+.phc-tag--threads { background: #18181b; color: #fde68a; }
+.phc-tag--referral { background: #ffe4e6; color: #be123c; }
 .phc-reward { font-size: 10.5px; font-weight: 900; color: #059669; }
-.phc-title { font-size: 12.5px; font-weight: 900; color: #0f172a; margin-bottom: 2px; }
-.phc-desc { font-size: 10px; font-weight: 700; color: #64748b; line-height: 1.35; margin-bottom: 8px; }
-.phc-caption-box { background: #f0f9ff; border: 1.2px dashed #7dd3fc; border-radius: 12px; padding: 8px 10px; font-size: 9.5px; font-weight: 700; color: #0369a1; line-height: 1.4; margin-bottom: 8px; }
+.phc-title { font-size: 12.5px; font-weight: 900; color: var(--reef-ink); margin-bottom: 2px; }
+.phc-desc { font-size: 10px; font-weight: 700; color: var(--reef-muted); line-height: 1.35; margin-bottom: 8px; }
+.phc-caption-box { background: #fff7ed; border: none; border-radius: 12px; padding: 8px 10px; font-size: 9.5px; font-weight: 700; color: #9a3412; line-height: 1.4; margin-bottom: 8px; }
 .phc-actions { display: flex; align-items: center; gap: 6px; }
-.btn-phc-action { flex: 1; padding: 8px 10px; border-radius: 12px; font-size: 10.5px; font-weight: 900; text-align: center; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: 1px solid #e0f2fe; cursor: pointer; }
-.btn-phc-action--primary { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #ffffff !important; border: none; box-shadow: 0 3px 8px rgba(2, 132, 199, 0.25); }
-.btn-phc-action--share { background: linear-gradient(135deg, #10b981, #059669); color: #ffffff !important; border: none; box-shadow: 0 3px 8px rgba(5, 150, 105, 0.25); }
-.btn-phc-action--copy { background: #f0f9ff; color: #0369a1 !important; border-color: #bae6fd; }
+.btn-phc-action { flex: 1; padding: 8px 10px; border-radius: 12px; font-size: 10.5px; font-weight: 900; text-align: center; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: none; cursor: pointer; font-family: inherit; }
+.btn-phc-action--primary { background: linear-gradient(145deg, #fb7185, #f43f5e); color: #ffffff !important; border: none; box-shadow: 0 3px 8px rgba(244, 63, 94, 0.28), inset 1px 1px 2px rgba(255, 255, 255, 0.5); }
+.btn-phc-action--share { background: linear-gradient(145deg, #34d399, #059669); color: #ffffff !important; border: none; box-shadow: 0 3px 8px rgba(5, 150, 105, 0.28), inset 1px 1px 2px rgba(255, 255, 255, 0.5); }
+.btn-phc-action--copy { background: #fff7ed; color: #9a3412 !important; }
+
+/* Mobile kecil */
+@media (max-width: 360px) {
+  .vault-balance-main-num { font-size: 25px; }
+  .vault-hero-art { width: 112px; height: 88px; }
+  .reef-token-label { font-size: 9px; }
+  .clay-token-icon { width: 34px; height: 34px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sea-bubble, .kelp-blade, .fish-swim, .pearl-glow, .starfish-wiggle,
+  .fish-jump-a, .fish-jump-b, .jelly-bob, .sparkle-bubble, .vault-live-dot, .clay-token-icon.t-vip::after {
+    animation: none !important;
+  }
+}
 </style>
+
 
 <div class="fantasy-ocean-stage">
 
-  <!-- Ambient Rising Bubbles Layer -->
-  <div class="ambient-bubble-layer">
+  <!-- Gelembung naik -->
+  <div class="ambient-bubble-layer" aria-hidden="true">
     <div class="sea-bubble b-1"></div>
     <div class="sea-bubble b-2"></div>
     <div class="sea-bubble b-3"></div>
     <div class="sea-bubble b-4"></div>
     <div class="sea-bubble b-5"></div>
   </div>
-  
-  <!-- ── 1. THE FANTASY HORIZON VAULT CARD (3D CLAY CAPTAIN DECK) ── -->
-  <div class="clay-vault-card" id="tour-balance-box">
-    
-    <!-- Swimming Clownfish Mascot SVG Illustration -->
-    <div class="vault-marine-mascot" title="Ikan Cuan Samudra">
-      <svg viewBox="0 0 110 70" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
-        <defs>
-          <linearGradient id="fishBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#fb923c" />
-            <stop offset="50%" stop-color="#f97316" />
-            <stop offset="100%" stop-color="#ea580c" />
-          </linearGradient>
-          <linearGradient id="fishFinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#38bdf8" />
-            <stop offset="100%" stop-color="#0284c7" />
-          </linearGradient>
-          <filter id="clayFishGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#0284c7" flood-opacity="0.25" />
-          </filter>
-        </defs>
-        <!-- Tail Fin -->
-        <path d="M22 35 C10 18, 5 15, 2 24 C-1 33, 4 37, 2 46 C5 55, 10 52, 22 35 Z" fill="url(#fishFinGrad)" />
-        <!-- Top Fin -->
-        <path d="M48 18 C58 6, 76 9, 84 17 C75 19, 58 19, 48 18 Z" fill="url(#fishFinGrad)" />
-        <!-- Bottom Fin -->
-        <path d="M60 40 C58 50, 48 56, 42 50 C46 44, 53 41, 60 40 Z" fill="url(#fishFinGrad)" />
-        <!-- Main Fish Body with Clay Depth -->
-        <ellipse cx="65" cy="35" rx="36" ry="22" fill="url(#fishBodyGrad)" filter="url(#clayFishGlow)" />
-        <!-- White Clownfish Stripes with Specular Clay Highlight -->
-        <path d="M52 14 C56 22, 56 48, 52 56 C57 56, 61 54, 61 48 C61 38, 61 24, 57 14 Z" fill="#ffffff" opacity="0.95" />
-        <path d="M76 16 C80 23, 80 47, 76 54 C80 53, 83 50, 83 45 C83 36, 83 25, 80 16 Z" fill="#ffffff" opacity="0.95" />
-        <!-- Big Cute Eye -->
-        <circle cx="87" cy="30" r="5" fill="#ffffff" />
-        <circle cx="89" cy="29" r="2.6" fill="#0f172a" />
-        <circle cx="90" cy="28" r="0.9" fill="#ffffff" />
-        <!-- Cute Smile -->
-        <path d="M95 36 C97 38, 96 40, 93 40" stroke="#7c2d12" stroke-width="1.6" stroke-linecap="round" />
-        <!-- Bubbles rising from mouth -->
-        <circle cx="98" cy="22" r="3" fill="#bae6fd" opacity="0.85" />
-        <circle cx="104" cy="14" r="4" fill="#7dd3fc" opacity="0.7" />
-        <circle cx="108" cy="6" r="2" fill="#bae6fd" opacity="0.9" />
-      </svg>
-    </div>
 
+  <!-- ── 1. VAULT SALDO (PANEL SUNSET REEF + TILE AKSI) ── -->
+  <div class="clay-vault-card" id="tour-balance-box">
     <div id="cuan-ss-target">
-      <!-- Profile Header Row -->
-      <div class="vault-profile-row">
-        <div class="vault-clay-avatar">
-          <i class="ph-fill ph-fish"></i>
-        </div>
-        <div class="vault-user-info">
-          <div class="vault-username-txt">
-            Halo, <?= htmlspecialchars($user['username'] ?? 'Kapten Cuan') ?>
+      <div class="vault-hero">
+
+        <!-- Ilustrasi: ikan badut, karang, kerang mutiara, bintang laut -->
+        <svg class="vault-hero-art" viewBox="0 0 140 108" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="vaultClamGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#fef3c7"/>
+              <stop offset="100%" stop-color="#fdba74"/>
+            </linearGradient>
+            <radialGradient id="vaultPearlGrad" cx="35%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="55%" stop-color="#fef08a"/>
+              <stop offset="100%" stop-color="#f59e0b"/>
+            </radialGradient>
+            <radialGradient id="vaultPearlHalo" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#fef08a" stop-opacity="0.95"/>
+              <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <!-- gelembung -->
+          <g fill="#ffffff">
+            <circle class="sparkle-bubble" cx="104" cy="14" r="2.4" opacity="0.8"/>
+            <circle class="sparkle-bubble" cx="112" cy="6" r="1.5" opacity="0.7"/>
+            <circle class="sparkle-bubble" cx="40" cy="56" r="1.6" opacity="0.6"/>
+          </g>
+          <!-- ikan badut -->
+          <g class="fish-swim">
+            <g transform="translate(84 32)">
+              <path d="M-16 0 L-24 -7 L-23 7 Z" fill="#ea580c"/>
+              <path d="M-4 -9 C0 -15, 8 -14, 10 -8 Z" fill="#f97316"/>
+              <ellipse cx="0" cy="0" rx="16" ry="10" fill="#fb923c"/>
+              <path d="M-6 -9.6 C-4 -3, -4 3, -6 9.6 L-1.5 9.9 C-0.5 3, -0.5 -3, -1.5 -9.9 Z" fill="#ffffff" stroke="#1e1b2e" stroke-opacity="0.35" stroke-width="0.7"/>
+              <path d="M6 -8.4 C7.6 -3, 7.6 3, 6 8.4 L9.4 7.2 C10.6 3, 10.6 -3, 9.4 -7.2 Z" fill="#ffffff" stroke="#1e1b2e" stroke-opacity="0.35" stroke-width="0.7"/>
+              <ellipse cx="-1" cy="-4.5" rx="7" ry="2.2" fill="#ffffff" opacity="0.45"/>
+              <circle cx="12" cy="-2" r="2.3" fill="#ffffff"/><circle cx="12.6" cy="-2.2" r="1.2" fill="#1e1b2e"/>
+            </g>
+          </g>
+          <!-- gundukan pasir -->
+          <path d="M14 108 C34 94, 70 90, 140 92 V108 Z" fill="#fed7aa"/>
+          <path d="M40 108 C60 100, 96 98, 140 100 V108 Z" fill="#fdba74" opacity="0.6"/>
+          <!-- karang bercabang -->
+          <g stroke="#fecdd3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M114 98 V78 L104 64 L101 52 M104 64 L111 54 M114 82 L124 68 L122 56 M124 68 L132 62" stroke-width="4.5"/>
+            <path d="M134 98 V86 L139 78" stroke-width="3.5"/>
+          </g>
+          <g fill="#fff1f2">
+            <circle cx="101" cy="52" r="2.6"/><circle cx="111" cy="54" r="2.6"/>
+            <circle cx="122" cy="56" r="2.6"/><circle cx="132" cy="62" r="2.4"/><circle cx="139" cy="78" r="2.2"/>
+          </g>
+          <!-- kerang mutiara emas -->
+          <g transform="translate(66 98)">
+            <circle class="pearl-glow" cx="0" cy="-6" r="13" fill="url(#vaultPearlHalo)"/>
+            <path d="M-15 0 A15 10 0 0 0 15 0 Z" fill="url(#vaultClamGrad)" stroke="#f59e0b" stroke-width="1.2"/>
+            <g transform="rotate(-24 -15 0)">
+              <path d="M-15 0 A15 11 0 0 1 15 0 Z" fill="url(#vaultClamGrad)" stroke="#f59e0b" stroke-width="1.2"/>
+              <path d="M0 -9 L-10 -1 M0 -9 L-3.5 0 M0 -9 L3.5 0 M0 -9 L10 -1" stroke="#f59e0b" stroke-width="1" opacity="0.6"/>
+            </g>
+            <circle cx="1" cy="-4" r="5" fill="url(#vaultPearlGrad)"/>
+            <circle cx="-0.6" cy="-5.6" r="1.4" fill="#ffffff"/>
+          </g>
+          <!-- bintang laut -->
+          <g transform="translate(90 100)">
+            <g class="starfish-wiggle">
+              <path d="M0,-9 L2.4,-3.2 L8.6,-2.8 L3.9,1.3 L5.3,7.3 L0,4 L-5.3,7.3 L-3.9,1.3 L-8.6,-2.8 L-2.4,-3.2 Z"
+                    fill="#fb923c" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/>
+              <circle cx="0" cy="0" r="1.1" fill="#fde68a"/>
+            </g>
+          </g>
+        </svg>
+
+        <div class="vault-hero-top">
+          <div class="vault-greet">
+            <div class="vault-clay-avatar">
+              <i class="ph-fill ph-fish"></i>
+            </div>
+            <div class="vault-user-info">
+              <div class="vault-username-txt">
+                Halo, <?= htmlspecialchars($user['username'] ?? 'Kapten Cuan') ?>
+              </div>
+              <div>
+                <span class="vault-rank-pill">
+                  <i class="ph-fill ph-crown-simple"></i> <?= htmlspecialchars($membership_name ?? 'Kru Nelayan') ?>
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <span class="vault-rank-pill">
-              <i class="ph-fill ph-seal-check"></i> <?= htmlspecialchars($membership_name ?? 'Kru Nelayan') ?>
+          <span class="vault-today-chip">
+            <i class="ph-bold ph-trend-up"></i> +Rp <?= number_format($today_watch_earned, 0, ',', '.') ?>
+          </span>
+        </div>
+
+        <div class="vault-balance-showcase">
+          <div class="vault-balance-tag">
+            <span class="vault-live-dot"></span> Saldo Siap Tarik
+          </div>
+          <div class="vault-balance-main-num">
+            <span class="rp-prefix">Rp</span><?= number_format((float)($user['balance_wd'] ?? 0), 0, ',', '.') ?>
+          </div>
+          <div class="vault-stats-ribbon">
+            <span class="vault-stat-capsule">
+              <i class="ph-bold ph-wallet"></i> Kas <strong>Rp <?= number_format((float)($user['balance_dep'] ?? 0), 0, ',', '.') ?></strong>
+            </span>
+            <span class="vault-stat-capsule">
+              <i class="ph-fill ph-fish"></i> <strong><?= (int)($user['fishing_baits'] ?? 0) ?></strong> Umpan
             </span>
           </div>
         </div>
       </div>
 
-      <!-- Centerpiece: Saldo Tunai -->
-      <div class="vault-balance-showcase">
-        <div class="vault-balance-tag">
-          <i class="ph-fill ph-sparkle"></i> Saldo Siap Tarik
-        </div>
-        <div class="vault-balance-main-num">
-          Rp <?= number_format((float)($user['balance_wd'] ?? 0), 0, ',', '.') ?>
-        </div>
-        
-        <div class="vault-stats-ribbon">
-          <span class="vault-stat-capsule">
-            <i class="ph-bold ph-wallet"></i> Kas: <strong>Rp <?= number_format((float)($user['balance_dep'] ?? 0), 0, ',', '.') ?></strong>
-          </span>
-          <span class="vault-stat-capsule vault-stat-capsule--baits">
-            <i class="ph-fill ph-fish"></i> <strong><?= (int)($user['fishing_baits'] ?? 0) ?></strong> Umpan Siap
-          </span>
-          <span class="vault-stat-capsule">
-            <i class="ph-bold ph-trend-up"></i> Hari Ini: <strong>+Rp <?= number_format($today_watch_earned, 0, ',', '.') ?></strong>
-          </span>
-        </div>
-      </div>
-
-      <!-- 3 Tactile 3D Action Buttons -->
       <div class="vault-actions-cluster">
         <a href="/withdraw" class="clay-btn clay-btn--primary" id="tour-btn-withdraw">
-          <i class="ph-bold ph-arrow-up-right"></i> Tarik Saldo
+          <span class="clay-btn-ico"><i class="ph-bold ph-arrow-up-right"></i></span> Tarik
         </a>
         <a href="/deposit" class="clay-btn clay-btn--secondary">
-          <i class="ph-bold ph-plus-circle"></i> Isi Kas
+          <span class="clay-btn-ico"><i class="ph-bold ph-plus"></i></span> Isi Kas
         </a>
         <a href="/history" class="clay-btn clay-btn--ghost">
-          <i class="ph-bold ph-clock-counter-clockwise"></i> Riwayat
+          <span class="clay-btn-ico"><i class="ph-bold ph-clock-counter-clockwise"></i></span> Riwayat
         </a>
       </div>
     </div>
   </div>
 
-  <!-- ── 2. THE TWIN FANTASY PORTALS (KOLAM MANCING & BIOSKOP SAMUDRA) ── -->
+  <!-- ── 2. DUA PORTAL BIOTA (KOLAM MANCING & BIOSKOP SAMUDRA) ── -->
   <div class="fantasy-portals-grid">
-    <!-- Portal 1: Kolam Mancing Cuan -->
+    <!-- Portal 1: Mancing Cuan — ikan badut & yellow tang melompat di atas karang -->
     <a href="/minigame" class="fantasy-portal-card portal-card--fish" id="tour-sidejob-card">
       <div>
         <div class="portal-top-bar">
           <div class="portal-clay-icon portal-clay-icon--fish">
             <i class="ph-fill ph-fish-simple"></i>
           </div>
-          <span class="portal-sparkle-tag">✨ KOLAM CUAN</span>
+          <span class="portal-sparkle-tag"><i class="ph-fill ph-sparkle"></i> Kolam Cuan</span>
+        </div>
+        <div class="portal-scene portal-scene--reef" aria-hidden="true">
+          <svg viewBox="0 0 180 74" preserveAspectRatio="xMidYMax slice" fill="none">
+            <!-- Sinar matahari bawah air -->
+            <path d="M30 0 L48 0 L22 74 L4 74 Z" fill="#ffffff" opacity="0.18"/>
+            <path d="M96 0 L108 0 L92 74 L78 74 Z" fill="#ffffff" opacity="0.14"/>
+            <path d="M150 0 L160 0 L170 74 L156 74 Z" fill="#ffffff" opacity="0.12"/>
+            <!-- Pasir -->
+            <path d="M0 64 C30 58, 60 66, 90 61 C120 56, 150 64, 180 60 V74 H0 Z" fill="#fdba74"/>
+            <!-- Karang otak emas -->
+            <ellipse cx="34" cy="62" rx="14" ry="9" fill="#fbbf24"/>
+            <path d="M24 60 C28 56, 32 64, 36 58 C40 54, 42 62, 44 60" stroke="#d97706" stroke-width="1.4" stroke-linecap="round"/>
+            <!-- Anemon ungu -->
+            <g stroke="#c084fc" stroke-width="3" stroke-linecap="round">
+              <path d="M70 64 C68 56, 64 52, 62 46"/><path d="M73 64 C73 55, 72 50, 72 44"/>
+              <path d="M76 64 C78 56, 82 52, 84 47"/><path d="M71.5 64 C70 58, 66 56, 66 50"/>
+              <path d="M74.5 64 C76 58, 79 55, 80 50"/>
+            </g>
+            <g fill="#f0abfc"><circle cx="62" cy="46" r="2"/><circle cx="72" cy="44" r="2"/><circle cx="84" cy="47" r="2"/><circle cx="66" cy="50" r="1.7"/><circle cx="80" cy="50" r="1.7"/></g>
+            <!-- Karang bercabang coral -->
+            <g stroke="#f43f5e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M140 66 V52 L132 42 M140 55 L148 44 L146 36 M148 44 L155 40"/>
+              <path d="M162 66 V56 L168 50"/>
+            </g>
+            <g fill="#fda4af"><circle cx="132" cy="42" r="2.4"/><circle cx="146" cy="36" r="2.4"/><circle cx="155" cy="40" r="2.2"/><circle cx="168" cy="50" r="2.2"/></g>
+            <!-- Rumput laut -->
+            <path d="M110 66 C106 58, 114 52, 108 42" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>
+            <path d="M116 66 C120 58, 113 54, 118 46" stroke="#34d399" stroke-width="2.5" stroke-linecap="round"/>
+
+            <!-- Ikan badut melompat -->
+            <g class="fish-jump-a">
+              <g transform="translate(48 26)">
+                <path d="M-15 0 L-22 -6 L-21 6 Z" fill="#ea580c"/>
+                <ellipse cx="0" cy="0" rx="15" ry="9" fill="#f97316"/>
+                <path d="M-5 -8.6 C-3 -3, -3 3, -5 8.6 L-1 8.9 C0 3, 0 -3, -1 -8.9 Z" fill="#ffffff" stroke="#1e1b2e" stroke-opacity="0.4" stroke-width="0.6"/>
+                <path d="M6 -7.4 C7.5 -3, 7.5 3, 6 7.4 L9 6.4 C10 3, 10 -3, 9 -6.4 Z" fill="#ffffff" stroke="#1e1b2e" stroke-opacity="0.4" stroke-width="0.6"/>
+                <ellipse cx="-1" cy="-4" rx="7" ry="2" fill="#ffffff" opacity="0.4"/>
+                <circle cx="11" cy="-2" r="2.1" fill="#ffffff"/><circle cx="11.6" cy="-2.2" r="1.1" fill="#1e1b2e"/>
+              </g>
+            </g>
+            <!-- Yellow tang melompat -->
+            <g class="fish-jump-b">
+              <g transform="translate(112 22) scale(-1 1)">
+                <path d="M-13 0 L-20 -6 L-20 6 Z" fill="#eab308"/>
+                <path d="M-6 -9 C0 -16, 8 -12, 10 -6 Z" fill="#facc15"/>
+                <path d="M-6 9 C0 16, 8 12, 10 6 Z" fill="#facc15"/>
+                <ellipse cx="0" cy="0" rx="13" ry="10.5" fill="#fde047"/>
+                <path d="M-11 0 L-8 -1.6 L-8 1.6 Z" fill="#ffffff"/>
+                <ellipse cx="1" cy="-5" rx="6" ry="2" fill="#ffffff" opacity="0.5"/>
+                <circle cx="8" cy="-2" r="2" fill="#ffffff"/><circle cx="8.5" cy="-2.2" r="1.05" fill="#1e1b2e"/>
+                <path d="M12 1.5 L15 2.5" stroke="#ca8a04" stroke-width="1.6" stroke-linecap="round"/>
+              </g>
+            </g>
+            <!-- Percikan gelembung -->
+            <g fill="#ffffff">
+              <circle class="sparkle-bubble" cx="62" cy="14" r="2"/>
+              <circle class="sparkle-bubble" cx="68" cy="8" r="1.3"/>
+              <circle class="sparkle-bubble" cx="96" cy="12" r="1.6"/>
+              <circle class="sparkle-bubble" cx="126" cy="8" r="1.2"/>
+            </g>
+          </svg>
         </div>
         <div class="portal-heading">Mancing Cuan</div>
         <div class="portal-subtext">Pancing Ikan Emas Samudra</div>
       </div>
       <div>
-        <div style="font-size:10px;font-weight:900;color:#0284c7;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+        <div class="portal-bait-line">
           <i class="ph-fill ph-hook"></i> <?= (int)($user['fishing_baits'] ?? 0) ?> Umpan Tersedia
         </div>
         <div class="portal-cta-badge">
@@ -1055,14 +1273,88 @@ require dirname(__DIR__) . '/partials/header.php';
       </div>
     </a>
 
-    <!-- Portal 2: Bioskop Samudra (Nonton Video) -->
+    <!-- Portal 2: Tonton Video — ubur-ubur magis bercahaya -->
     <a href="/videos" class="fantasy-portal-card portal-card--watch" id="tour-video-mission">
       <div>
         <div class="portal-top-bar">
           <div class="portal-clay-icon portal-clay-icon--watch">
             <i class="ph-fill ph-play-circle"></i>
           </div>
-          <span class="portal-sparkle-tag">🎬 MISI HARIAN</span>
+          <span class="portal-sparkle-tag"><i class="ph-fill ph-film-strip"></i> Misi Harian</span>
+        </div>
+        <div class="portal-scene portal-scene--jelly" aria-hidden="true">
+          <svg viewBox="0 0 180 74" preserveAspectRatio="xMidYMid slice" fill="none">
+            <defs>
+              <radialGradient id="jellyBellGrad" cx="50%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#f5d0fe"/>
+                <stop offset="45%" stop-color="#c084fc"/>
+                <stop offset="100%" stop-color="#22d3ee"/>
+              </radialGradient>
+              <radialGradient id="jellyHalo" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#c084fc" stop-opacity="0.65"/>
+                <stop offset="60%" stop-color="#22d3ee" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="jellyPinkGrad" cx="50%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#ffe4e6"/>
+                <stop offset="100%" stop-color="#fb7185"/>
+              </radialGradient>
+            </defs>
+            <!-- Plankton -->
+            <g fill="#a5f3fc">
+              <circle class="sparkle-bubble" cx="14" cy="16" r="1.2"/>
+              <circle class="sparkle-bubble" cx="40" cy="58" r="1"/>
+              <circle class="sparkle-bubble" cx="160" cy="14" r="1.3"/>
+              <circle class="sparkle-bubble" cx="168" cy="54" r="1"/>
+              <circle class="sparkle-bubble" cx="120" cy="64" r="1.1"/>
+            </g>
+            <!-- Ubur-ubur utama -->
+            <g class="jelly-bob">
+              <circle cx="88" cy="26" r="30" fill="url(#jellyHalo)"/>
+              <path d="M66 30 C66 10, 110 10, 110 30 C104 33, 100 29, 95 32 C90 29, 86 33, 81 30 C76 33, 72 29, 66 30 Z" fill="url(#jellyBellGrad)"/>
+              <ellipse cx="80" cy="18" rx="7" ry="3" fill="#ffffff" opacity="0.55"/>
+              <circle cx="82" cy="24" r="1.6" fill="#3b0764"/><circle cx="94" cy="24" r="1.6" fill="#3b0764"/>
+              <path d="M85 27 C87 29, 89 29, 91 27" stroke="#3b0764" stroke-width="1.2" stroke-linecap="round"/>
+              <g stroke-width="2" stroke-linecap="round">
+                <path d="M72 31 q4 8 0 16 q-4 8 0 16" stroke="#e9d5ff">
+                  <animate attributeName="d" dur="2.4s" repeatCount="indefinite" values="M72 31 q4 8 0 16 q-4 8 0 16;M72 31 q-4 8 0 16 q4 8 0 16;M72 31 q4 8 0 16 q-4 8 0 16"/>
+                </path>
+                <path d="M81 32 q-4 9 0 18 q4 9 0 18" stroke="#67e8f9">
+                  <animate attributeName="d" dur="2.8s" repeatCount="indefinite" values="M81 32 q-4 9 0 18 q4 9 0 18;M81 32 q4 9 0 18 q-4 9 0 18;M81 32 q-4 9 0 18 q4 9 0 18"/>
+                </path>
+                <path d="M90 32 q4 9 0 18 q-4 9 0 18" stroke="#f0abfc">
+                  <animate attributeName="d" dur="2.2s" repeatCount="indefinite" values="M90 32 q4 9 0 18 q-4 9 0 18;M90 32 q-4 9 0 18 q4 9 0 18;M90 32 q4 9 0 18 q-4 9 0 18"/>
+                </path>
+                <path d="M99 32 q-4 8 0 16 q4 8 0 16" stroke="#67e8f9">
+                  <animate attributeName="d" dur="2.6s" repeatCount="indefinite" values="M99 32 q-4 8 0 16 q4 8 0 16;M99 32 q4 8 0 16 q-4 8 0 16;M99 32 q-4 8 0 16 q4 8 0 16"/>
+                </path>
+                <path d="M106 31 q4 7 0 14 q-4 7 0 14" stroke="#e9d5ff">
+                  <animate attributeName="d" dur="3s" repeatCount="indefinite" values="M106 31 q4 7 0 14 q-4 7 0 14;M106 31 q-4 7 0 14 q4 7 0 14;M106 31 q4 7 0 14 q-4 7 0 14"/>
+                </path>
+              </g>
+            </g>
+            <!-- Ubur-ubur kecil -->
+            <g class="jelly-bob jelly-bob--small">
+              <circle cx="146" cy="40" r="14" fill="url(#jellyHalo)"/>
+              <path d="M136 42 C136 30, 156 30, 156 42 C152 44, 150 41, 146 43 C142 41, 140 44, 136 42 Z" fill="url(#jellyPinkGrad)"/>
+              <ellipse cx="142" cy="35" rx="3.5" ry="1.5" fill="#ffffff" opacity="0.6"/>
+              <g stroke="#fecdd3" stroke-width="1.4" stroke-linecap="round">
+                <path d="M140 43 q2 5 0 10 q-2 5 0 10"/>
+                <path d="M146 44 q-2 5 0 10 q2 5 0 10"/>
+                <path d="M152 43 q2 5 0 10 q-2 5 0 10"/>
+              </g>
+            </g>
+            <!-- Gelembung berkilau -->
+            <g stroke="#a5f3fc" stroke-width="1" fill="#ffffff" fill-opacity="0.15">
+              <circle class="sparkle-bubble" cx="30" cy="34" r="4"/>
+              <circle class="sparkle-bubble" cx="40" cy="22" r="2.5"/>
+              <circle class="sparkle-bubble" cx="34" cy="12" r="1.8"/>
+              <circle class="sparkle-bubble" cx="124" cy="22" r="2.6"/>
+            </g>
+            <!-- Kilau bintang -->
+            <path class="sparkle-bubble" d="M22 50 l1.4 3 l3 1.4 l-3 1.4 l-1.4 3 l-1.4 -3 l-3 -1.4 l3 -1.4 Z" fill="#fef08a"/>
+            <path class="sparkle-bubble" d="M164 26 l1 2.2 l2.2 1 l-2.2 1 l-1 2.2 l-1 -2.2 l-2.2 -1 l2.2 -1 Z" fill="#f0abfc"/>
+          </svg>
         </div>
         <div class="portal-heading">Tonton Video</div>
         <div class="portal-subtext"><?= $watch_today ?> / <?= $watch_limit ?> Video Tuntas</div>
@@ -1079,13 +1371,14 @@ require dirname(__DIR__) . '/partials/header.php';
     </a>
   </div>
 
-  <!-- ── 3. FANTASY REEF QUICK SERVICES (5 CLAY TOKENS) ── -->
+  <!-- ── 3. TOKEN LAYANAN KARANG (5 CLAY TOKENS) ── -->
   <div class="reef-services-deck" id="tour-bento-grid">
     <div class="reef-tokens-grid">
       <!-- 1. Check-in Harian (Kerang Ajaib) -->
       <button type="button" class="reef-token-btn" onclick="openCheckinModal()" title="Klaim Hadiah Login Harian">
         <div class="clay-token-icon t-checkin">
           <i class="ph-fill ph-gift"></i>
+          <?php if (!$has_checked_in_today && !$is_guest): ?><span class="token-ping"></span><?php endif; ?>
         </div>
         <span class="reef-token-label"><?= $has_checked_in_today ? 'Absen' : 'Klaim' ?></span>
       </button>
@@ -1124,12 +1417,12 @@ require dirname(__DIR__) . '/partials/header.php';
     </div>
   </div>
 
-  <!-- ── 4. PALUNG VIDEO PILIHAN (REKOMENDASI VIDEO CUAN) ── -->
+  <!-- ── 4. REKOMENDASI VIDEO CUAN ── -->
   <?php if (!empty($cms['featured_videos']['enabled']) && !empty($featured_videos)): ?>
   <div>
     <div class="fantasy-section-head">
       <div class="fsh-title">
-        <i class="ph-fill ph-sparkle" style="color:#0284c7;"></i> Rekomendasi Video Cuan
+        <span class="fsh-title-icon"><i class="ph-fill ph-sparkle"></i></span> Rekomendasi Video Cuan
       </div>
       <a href="/videos" class="fsh-link">Lihat Semua &rarr;</a>
     </div>
@@ -1138,19 +1431,19 @@ require dirname(__DIR__) . '/partials/header.php';
       <?php foreach ($featured_videos as $fv): ?>
       <a href="/watch/<?= (int)$fv['id'] ?>" class="clay-video-card">
         <div class="clay-video-thumb-wrap">
-          <img src="<?= htmlspecialchars($fv['thumbnail_url'] ?: '/assets/placeholder-video.jpg') ?>" 
-               alt="<?= htmlspecialchars($fv['title']) ?>" 
-               class="clay-video-thumb-img" 
+          <img src="<?= htmlspecialchars(yt_thumb($fv['youtube_id'])) ?>"
+               alt="<?= htmlspecialchars($fv['title']) ?>"
+               class="clay-video-thumb-img"
                loading="lazy"
-               onerror="this.src='/assets/placeholder-video.jpg'">
+               onerror="this.onerror=null;this.src='https://img.youtube.com/vi/<?= htmlspecialchars($fv['youtube_id']) ?>/hqdefault.jpg'">
           <div class="clay-reward-pill">+<?= format_rp((float)$fv['reward_amount']) ?></div>
-          <div class="clay-duration-pill"><?= (int)$fv['duration_seconds'] ?>s</div>
+          <div class="clay-duration-pill"><?= (int)($fv['watch_duration'] ?? 0) ?>s</div>
         </div>
         <div class="clay-video-body">
           <div class="clay-video-title-txt"><?= htmlspecialchars($fv['title']) ?></div>
           <div class="clay-video-footer">
             <span>Tonton Video</span>
-            <i class="ph-bold ph-play"></i>
+            <i class="ph-fill ph-play"></i>
           </div>
         </div>
       </a>
@@ -1611,6 +1904,16 @@ function triggerCheckinPopupIfEligible() {
 
   const m = document.getElementById('checkin-prompt-modal');
   if (!m) return;
+  m.style.display = 'flex';
+  setTimeout(() => {
+    const b = m.querySelector('.amber-modal-box');
+    if (b) { b.style.transform = 'scale(1)'; b.style.opacity = '1'; }
+  }, 40);
+}
+
+function openCheckinModal() {
+  const m = document.getElementById('checkin-prompt-modal');
+  if (!m) { window.location.href = '/checkin'; return; }
   m.style.display = 'flex';
   setTimeout(() => {
     const b = m.querySelector('.amber-modal-box');
