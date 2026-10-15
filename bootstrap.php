@@ -296,6 +296,14 @@ function home_cms_config(PDO $pdo): array {
                     'bg'      => 'linear-gradient(135deg,#8b5cf6,#6d28d9)',
                 ],
                 [
+                    'id'      => 'redeem',
+                    'enabled' => true,
+                    'label'   => 'Redeem',
+                    'url'     => '/redeem',
+                    'icon'    => 'ph-gift',
+                    'bg'      => 'linear-gradient(135deg,#ec4899,#be185d)',
+                ],
+                [
                     'id'      => 'referral',
                     'enabled' => true,
                     'label'   => 'Undang',
@@ -403,6 +411,14 @@ function home_cms_config(PDO $pdo): array {
 
     if (!isset($saved['bento']['tiles']) || !is_array($saved['bento']['tiles'])) {
         $saved['bento']['tiles'] = $defaults['bento']['tiles'];
+    } else {
+        // Otomatis masukkan default tile baru (seperti redeem) jika belum ada di database
+        $existing_ids = array_column($saved['bento']['tiles'], 'id');
+        foreach ($defaults['bento']['tiles'] as $defTile) {
+            if (!in_array($defTile['id'], $existing_ids, true)) {
+                $saved['bento']['tiles'][] = $defTile;
+            }
+        }
     }
 
     return $saved;

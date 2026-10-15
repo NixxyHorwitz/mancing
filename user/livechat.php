@@ -214,7 +214,7 @@ body { margin: 0; padding: 0; overflow: hidden; color: var(--ink); font-family: 
         <button type="button" class="mode-btn mode-ai active" id="start-mode-ai" onclick="selectStartMode('ai')"><i class="ph-fill ph-robot"></i>Asisten AI<small>Instan</small></button>
         <?php endif; ?>
         <?php if ($_adm_enabled): ?>
-        <button type="button" class="mode-btn mode-adm" id="start-mode-admin" onclick="selectStartMode('admin')"><i class="ph-fill ph-headset"></i>Admin<small>Dibalas tim</small></button>
+        <button type="button" class="mode-btn mode-adm<?= $_ai_enabled ? '' : ' active' ?>" id="start-mode-admin" onclick="selectStartMode('admin')"><i class="ph-fill ph-headset"></i>Admin<small>Dibalas tim</small></button>
         <?php endif; ?>
       </div>
       <p class="start-desc" id="start-mode-desc"><?= $_ai_enabled ? 'AI akan menjawab pertanyaan Anda secara otomatis & instan.' : 'Admin akan membalas pesan Anda langsung.' ?></p>

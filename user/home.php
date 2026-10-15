@@ -733,6 +733,7 @@ require dirname(__DIR__) . '/partials/header.php';
 .clay-token-icon.t-survey  { background: linear-gradient(145deg, #6ee7b7, #10b981 55%, #059669); color: #ffffff; --tk-shadow: rgba(16, 185, 129, 0.35); }
 .clay-token-icon.t-invite  { background: linear-gradient(145deg, #fda4af, #fb7185 45%, #f43f5e); color: #ffffff; --tk-shadow: rgba(244, 63, 94, 0.35); }
 .clay-token-icon.t-vip     { background: linear-gradient(145deg, #e9d5ff, #c084fc 40%, #8b5cf6); color: #ffffff; --tk-shadow: rgba(139, 92, 246, 0.45); }
+.clay-token-icon.t-redeem  { background: linear-gradient(145deg, #f472b6, #ec4899 45%, #be185d); color: #ffffff; --tk-shadow: rgba(236, 72, 153, 0.35); }
 .clay-token-icon.t-vip::after {
   content: '';
   position: absolute;
@@ -1508,14 +1509,16 @@ require dirname(__DIR__) . '/partials/header.php';
     $tiles = array_values(array_filter((array)($cms['bento']['tiles'] ?? []), function ($t) use ($fish_on) {
         return !empty($t['enabled']) && ($fish_on || ($t['id'] ?? '') !== 'fishing');
     }));
+    $bento_cnt = count($tiles);
+    $bento_cols = ($bento_cnt >= 9 || $bento_cnt === 5) ? 5 : ($bento_cnt === 6 ? 3 : min(4, max(3, $bento_cnt)));
   ?>
   <?php if (!empty($cms['bento']['show_section']) && $tiles): ?>
   <div class="reef-services-deck" id="tour-bento-grid">
     <?php if (trim((string)$cms['bento']['title']) !== ''): ?><div class="cms-deck-title"><?= htmlspecialchars((string)$cms['bento']['title']) ?></div><?php endif; ?>
-    <div class="reef-tokens-grid" style="grid-template-columns: repeat(<?= min(5, max(3, count($tiles) > 5 ? 4 : count($tiles))) ?>, 1fr)">
+    <div class="reef-tokens-grid" style="grid-template-columns: repeat(<?= $bento_cols ?>, 1fr)">
       <?php foreach ($tiles as $t):
         $tid = (string)($t['id'] ?? '');
-        $ico = '<div class="clay-token-icon" style="background:' . htmlspecialchars((string)$t['bg'], ENT_QUOTES) . ';color:#fff"><i class="ph-fill ' . htmlspecialchars((string)$t['icon']) . '"></i>'
+        $ico = '<div class="clay-token-icon t-' . htmlspecialchars($tid, ENT_QUOTES) . '" style="background:' . htmlspecialchars((string)$t['bg'], ENT_QUOTES) . ';color:#fff"><i class="ph-fill ' . htmlspecialchars((string)$t['icon']) . '"></i>'
              . ($tid === 'checkin' && !$has_checked_in_today && !$is_guest ? '<span class="token-ping"></span>' : '') . '</div>';
         $lbl = '<span class="reef-token-label">' . htmlspecialchars($tid === 'checkin' && $has_checked_in_today ? 'Absen ✓' : (string)$t['label']) . '</span>';
       ?>

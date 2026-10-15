@@ -390,7 +390,12 @@ require __DIR__ . '/partials/header.php';
           <div class="col-md-6 col-lg-3">
             <div class="tile-edit-card">
               <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="badge bg-secondary small"><?= htmlspecialchars($t['id']) ?></span>
+                <div class="d-flex align-items-center gap-2">
+                  <div style="width:26px;height:26px;border-radius:8px;background:<?= htmlspecialchars($t['bg']) ?>;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;box-shadow:0 2px 5px rgba(0,0,0,0.35);">
+                    <i class="ph-fill <?= htmlspecialchars($t['icon']) ?>"></i>
+                  </div>
+                  <span class="badge bg-secondary small"><?= htmlspecialchars($t['id']) ?></span>
+                </div>
                 <div class="form-check form-switch m-0">
                   <input class="form-check-input cms-toggle" type="checkbox" name="bento_tiles[<?= $idx ?>][enabled]" <?= !empty($t['enabled']) ? 'checked' : '' ?> title="Aktifkan / Sembunyikan Tombol Ini">
                 </div>
