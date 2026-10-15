@@ -2,604 +2,315 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/auth/guard.php';
 
-// Dynamic level name for Daily Spin
-$level2_name = $pdo->query("SELECT name FROM memberships WHERE id = 2")->fetchColumn() ?: 'Juragan Silver';
+// ── Daftar misi dari database (tabel `missions`, satu sumber untuk halaman ini, riwayat & console) ──
+$ALL_MISSIONS = [];
+foreach ($pdo->query("SELECT * FROM missions WHERE is_active = 1 ORDER BY FIELD(category, 'daily', 'weekly', 'lifetime'), sort_order, id") as $r) {
+    $ALL_MISSIONS[] = [
+        'slug'     => (string)$r['slug'],
+        'category' => (string)$r['category'],
+        'title'    => (string)$r['title'],
+        'desc'     => (string)$r['description'],
+        'target'   => max(1, (int)$r['target_value']),
+        'reward'   => (float)$r['reward_amount'],
+        'icon'     => (string)($r['icon'] ?: 'ph-target'),
+    ];
+}
 
+/** Jenis misi → warna ikon & tujuan tombol "Mulai" */
+function mission_kind(string $slug): array {
+    return match (true) {
+        str_contains($slug, 'ref')                                   => ['ref', '/referral'],
+        str_contains($slug, '_wd')                                   => ['wd', '/withdraw'],
+        str_contains($slug, 'upgrade')                               => ['up', '/upgrade'],
+        str_contains($slug, 'active')                                => ['mix', '/home'],
+        (bool)preg_match('/cast|sell|catch|rare|fish|jackpot/', $slug) => ['fish', '/minigame'],
+        default                                                      => ['video', '/videos'],
+    };
+}
 
-// â”€â”€ Mission definitions (hardcoded) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-$ALL_MISSIONS = [
-    // HARIAN
-    ['slug'=>'daily_watch_3',       'category'=>'daily',    'title'=>'Tonton 3 Video',             'desc'=>'Tonton minimal 3 video hari ini.',              'target'=>3,   'reward'=>1000,  'icon'=>'ph-film-slate'],
-    ['slug'=>'daily_watch_5',       'category'=>'daily',    'title'=>'Tonton 5 Video',             'desc'=>'Tonton minimal 5 video hari ini.',              'target'=>5,   'reward'=>2500,  'icon'=>'ph-film-reel'],
-    // MINGGUAN
-    ['slug'=>'weekly_streak_7',     'category'=>'weekly',   'title'=>'Streak 7 Hari',              'desc'=>'Check-in setiap hari selama 7 hari penuh.',  'target'=>7,   'reward'=>10000, 'icon'=>'ph-fire'],
-    ['slug'=>'weekly_watch_20',     'category'=>'weekly',   'title'=>'Tonton 20 Video Minggu Ini', 'desc'=>'Tonton total 20 video minggu ini.',          'target'=>20,  'reward'=>8000,  'icon'=>'ph-television'],
-    ['slug'=>'weekly_watch_7days',  'category'=>'weekly',   'title'=>'Aktif 7 Hari (Nonton)',      'desc'=>'Tonton video di 7 hari berbeda minggu ini.', 'target'=>7,   'reward'=>12000, 'icon'=>'ph-star'],
-    // LIFETIME
-    ['slug'=>'lifetime_first_ref',  'category'=>'lifetime', 'title'=>'Daftarkan 1 Referral',       'desc'=>'Ajak 1 teman bergabung via kode referralmu.','target'=>1,   'reward'=>5000,  'icon'=>'ph-user-plus'],
-    ['slug'=>'lifetime_5_refs',     'category'=>'lifetime', 'title'=>'Agen Rekruter',               'desc'=>'Ajak 5 teman bergabung via kode referralmu.','target'=>5,   'reward'=>15000, 'icon'=>'ph-users-three'],
-    ['slug'=>'lifetime_first_wd',   'category'=>'lifetime', 'title'=>'Penarikan Pertama',           'desc'=>'Lakukan penarikan saldo pertama kalinya.',   'target'=>1,   'reward'=>3000,  'icon'=>'ph-money'],
-    ['slug'=>'lifetime_100_videos', 'category'=>'lifetime', 'title'=>'Penonton Sejati',             'desc'=>'Tonton total 100 video di MancingCuan.',        'target'=>100, 'reward'=>10000, 'icon'=>'ph-popcorn'],
-    ['slug'=>'lifetime_upgrade',    'category'=>'lifetime', 'title'=>'Member Premium',              'desc'=>'Upgrade ke paket membership berbayar.',      'target'=>1,   'reward'=>8000,  'icon'=>'ph-crown'],
-];
-
-$today    = date('Y-m-d');
-$weekKey  = date('Y-\WW'); // e.g. 2026-W23
-
-// ── Helper: get real-time progress ─────────────────────────────────────
+// ── Progress real-time ─────────────────────────────────────────────────
 function get_progress(PDO $pdo, array $user, array $mission): int {
-    $uid = $user['id'];
+    $uid = (int)$user['id'];
+    $q = static function (string $sql, array $p) use ($pdo): int {
+        try { $s = $pdo->prepare($sql); $s->execute($p); return (int)$s->fetchColumn(); } catch (\Throwable) { return 0; }
+    };
+    $week  = "YEARWEEK(%s, 1) = YEARWEEK(CURDATE(), 1)";
+    $notJunk = "UPPER(rarity) <> 'JUNK'";
     switch ($mission['slug']) {
+        // Video
         case 'daily_watch_3':
         case 'daily_watch_5':
-            $s = $pdo->prepare("SELECT COUNT(*) FROM watch_history WHERE user_id=? AND DATE(watched_at)=CURDATE()");
-            $s->execute([$uid]);
-            return (int)$s->fetchColumn();
-        case 'daily_checkin':
-            return ($user['last_checkin'] === date('Y-m-d')) ? 1 : 0;
-        case 'weekly_streak_7':
-            // Count distinct days this week with check-in (approximate via watch_history)
-            $s = $pdo->prepare("SELECT COUNT(DISTINCT DATE(watched_at)) FROM watch_history WHERE user_id=? AND YEARWEEK(watched_at,1)=YEARWEEK(CURDATE(),1)");
-            $s->execute([$uid]);
-            return min(7, (int)$s->fetchColumn());
+        case 'daily_watch_6':
+            return $q("SELECT COUNT(*) FROM watch_history WHERE user_id = ? AND DATE(watched_at) = CURDATE()", [$uid]);
         case 'weekly_watch_20':
-            $s = $pdo->prepare("SELECT COUNT(*) FROM watch_history WHERE user_id=? AND YEARWEEK(watched_at,1)=YEARWEEK(CURDATE(),1)");
-            $s->execute([$uid]);
-            return (int)$s->fetchColumn();
-        case 'weekly_watch_7days':
-            $s = $pdo->prepare("SELECT COUNT(DISTINCT DATE(watched_at)) FROM watch_history WHERE user_id=? AND YEARWEEK(watched_at,1)=YEARWEEK(CURDATE(),1)");
-            $s->execute([$uid]);
-            return (int)$s->fetchColumn();
+            return $q("SELECT COUNT(*) FROM watch_history WHERE user_id = ? AND " . sprintf($week, 'watched_at'), [$uid]);
+        case 'lifetime_100_videos':
+            return $q("SELECT COUNT(*) FROM watch_history WHERE user_id = ?", [$uid]);
+        // Mancing (zonk/sampah tidak dihitung sebagai tangkapan)
+        case 'daily_cast_5':
+            return $q("SELECT COUNT(*) FROM fishing_logs WHERE user_id = ? AND DATE(created_at) = CURDATE()", [$uid])
+                 + $q("SELECT COUNT(*) FROM fishing_released WHERE user_id = ? AND DATE(caught_at) = CURDATE()", [$uid]);
+        case 'daily_sell_fish':
+            return $q("SELECT COUNT(*) FROM fishing_sales WHERE user_id = ? AND DATE(created_at) = CURDATE()", [$uid]);
+        case 'weekly_catch_30':
+            return $q("SELECT COUNT(*) FROM fishing_logs WHERE user_id = ? AND $notJunk AND " . sprintf($week, 'created_at'), [$uid]);
+        case 'weekly_rare_3':
+            return $q("SELECT COUNT(*) FROM fishing_logs WHERE user_id = ? AND UPPER(rarity) IN ('RARE', 'EPIC', 'JACKPOT') AND " . sprintf($week, 'created_at'), [$uid]);
+        case 'lifetime_100_fish':
+            return $q("SELECT COUNT(*) FROM fishing_logs WHERE user_id = ? AND $notJunk", [$uid]);
+        case 'lifetime_jackpot':
+            return $q("SELECT COUNT(*) FROM fishing_logs WHERE user_id = ? AND UPPER(rarity) = 'JACKPOT'", [$uid]);
+        // Gabungan: hari berbeda dengan aktivitas nonton ATAU mancing
+        case 'weekly_active_5':
+            return $q("SELECT COUNT(*) FROM (
+                         SELECT DATE(watched_at) d FROM watch_history WHERE user_id = ? AND " . sprintf($week, 'watched_at') . "
+                         UNION SELECT DATE(created_at) FROM fishing_logs WHERE user_id = ? AND " . sprintf($week, 'created_at') . "
+                       ) x", [$uid, $uid]);
+        // Lainnya
         case 'lifetime_first_ref':
         case 'lifetime_5_refs':
-            $s = $pdo->prepare("SELECT COUNT(*) FROM users WHERE referred_by=?");
-            $s->execute([$user['referral_code']]);
-            return (int)$s->fetchColumn();
+            return $q("SELECT COUNT(*) FROM users WHERE TRIM(UPPER(referred_by)) = TRIM(UPPER(?))", [(string)$user['referral_code']]);
         case 'lifetime_first_wd':
-            $s = $pdo->prepare("SELECT COUNT(*) FROM withdrawals WHERE user_id=?");
-            $s->execute([$uid]);
-            return (int)$s->fetchColumn();
-        case 'lifetime_100_videos':
-            $s = $pdo->prepare("SELECT COUNT(*) FROM watch_history WHERE user_id=?");
-            $s->execute([$uid]);
-            return (int)$s->fetchColumn();
+            return $q("SELECT COUNT(*) FROM withdrawals WHERE user_id = ?", [$uid]);
         case 'lifetime_upgrade':
-            return ($user['membership_id'] ? 1 : 0);
+            return !empty($user['membership_id']) ? 1 : 0;
     }
     return 0;
 }
 
-// ── Helper: get period key ─────────────────────────────────────────────
 function get_period_key(string $category): ?string {
-    if ($category === 'daily')   return date('Y-m-d');
-    if ($category === 'weekly')  return date('Y-\WW');
+    if ($category === 'daily')  return date('Y-m-d');
+    if ($category === 'weekly') return date('o-\WW');
     return null; // lifetime
 }
 
-// ── Helper: check if already claimed ───────────────────────────────────
-function is_claimed(PDO $pdo, int|string $user_id, string $slug, ?string $period_key): bool {
-    $user_id = (int)$user_id;
-    $s = $pdo->prepare("SELECT claimed_at FROM user_missions WHERE user_id=? AND mission_slug=? AND period_key<=>?");
+function is_claimed(PDO $pdo, int $user_id, string $slug, ?string $period_key): bool {
+    $s = $pdo->prepare("SELECT 1 FROM user_missions WHERE user_id = ? AND mission_slug = ? AND period_key <=> ? AND claimed_at IS NOT NULL LIMIT 1");
     $s->execute([$user_id, $slug, $period_key]);
-    $row = $s->fetch();
-    return $row && $row['claimed_at'] !== null;
+    return (bool)$s->fetchColumn();
 }
 
-
+// ── Klaim hadiah ───────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'claim_mission') {
     header('Content-Type: application/json');
-    if (!csrf_verify()) { echo json_encode(['ok'=>false,'msg'=>'CSRF tidak valid.']); exit; }
+    if (!csrf_verify()) { echo json_encode(['ok' => false, 'msg' => 'Sesi kedaluwarsa, muat ulang halaman.']); exit; }
 
-    $slug = trim($_POST['slug'] ?? '');
+    $slug = trim((string)($_POST['slug'] ?? ''));
     $mission = null;
-    foreach ($ALL_MISSIONS as $m) {
-        if ($m['slug'] === $slug) { $mission = $m; break; }
-    }
-    if (!$mission) { echo json_encode(['ok'=>false,'msg'=>'Misi tidak ditemukan.']); exit; }
+    foreach ($ALL_MISSIONS as $m) if ($m['slug'] === $slug) { $mission = $m; break; }
+    if (!$mission) { echo json_encode(['ok' => false, 'msg' => 'Misi tidak ditemukan.']); exit; }
 
-    $period = get_period_key($mission['category']);
-    if (is_claimed($pdo, (int)$user['id'], $slug, $period)) {
-        echo json_encode(['ok'=>false,'msg'=>'Misi ini sudah pernah diklaim!']); exit;
-    }
-
+    $period   = get_period_key($mission['category']);
     $progress = get_progress($pdo, $user, $mission);
     if ($progress < $mission['target']) {
-        echo json_encode(['ok'=>false,'msg'=>"Progress belum cukup. ({$progress}/{$mission['target']})"]); exit;
+        echo json_encode(['ok' => false, 'msg' => "Belum selesai ({$progress}/{$mission['target']})."]); exit;
     }
 
     try {
         $pdo->beginTransaction();
-        // Upsert record
-        $pdo->prepare("INSERT INTO user_missions (user_id, mission_slug, progress, completed_at, claimed_at, period_key)
-            VALUES (?, ?, ?, NOW(), NOW(), ?)
-            ON DUPLICATE KEY UPDATE progress=VALUES(progress), completed_at=COALESCE(completed_at,NOW()), claimed_at=NOW()")
+        // Kunci baris user agar klik ganda tidak membayar dua kali
+        $pdo->prepare("SELECT id FROM users WHERE id = ? FOR UPDATE")->execute([$user['id']]);
+        if (is_claimed($pdo, (int)$user['id'], $slug, $period)) {
+            $pdo->rollBack();
+            echo json_encode(['ok' => false, 'msg' => 'Misi ini sudah diklaim.']); exit;
+        }
+        $pdo->prepare("INSERT INTO user_missions (user_id, mission_slug, progress, completed_at, claimed_at, period_key) VALUES (?, ?, ?, NOW(), NOW(), ?)")
             ->execute([$user['id'], $slug, $progress, $period]);
-        // Give reward
-        $pdo->prepare("UPDATE users SET balance_wd = balance_wd + ? WHERE id=?")
-            ->execute([$mission['reward'], $user['id']]);
-
-        $tgMsg = "🎯 <b>MEMBER KLAIM MISI!</b>\n";
-        $tgMsg .= "Username: <code>" . htmlspecialchars($user['username']) . "</code>\n";
-        $tgMsg .= "Misi: <b>" . htmlspecialchars($mission['title']) . "</b>\n";
-        $tgMsg .= "Reward: Rp " . number_format($mission['reward'], 0, ',', '.') . "\n";
-        send_telegram_notif($pdo, $tgMsg, [], 'misi');
-
+        $pdo->prepare("UPDATE users SET balance_wd = balance_wd + ? WHERE id = ?")->execute([$mission['reward'], $user['id']]);
         $pdo->commit();
-        
-        $msg = '🎉 Reward diklaim! +'.number_format($mission['reward'],0,',','.').' ke Saldo Tarik.';
-        echo json_encode(['ok'=>true,'msg'=>$msg,'reward'=>$mission['reward']]);
+
+        $tg  = "🎯 <b>MEMBER KLAIM MISI!</b>\n";
+        $tg .= "Username: <code>" . htmlspecialchars((string)$user['username']) . "</code>\n";
+        $tg .= "Misi: <b>" . htmlspecialchars($mission['title']) . "</b>\n";
+        $tg .= "Reward: " . format_rp($mission['reward']);
+        send_telegram_notif($pdo, $tg, [], 'misi');
+
+        echo json_encode(['ok' => true, 'msg' => 'Hadiah +' . format_rp($mission['reward']) . ' masuk ke Saldo Tarik!', 'reward' => $mission['reward']]);
     } catch (\Throwable $e) {
-        $pdo->rollBack();
-        echo json_encode(['ok'=>false,'msg'=>'Terjadi kesalahan: '.$e->getMessage()]);
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        echo json_encode(['ok' => false, 'msg' => 'Gagal mengklaim, coba lagi.']);
     }
     exit;
 }
 
-// ── Build mission data with progress ───────────────────────────────────
-$missions_data = [];
+// ── Data tampilan ──────────────────────────────────────────────────────
+$groups = ['daily' => [], 'weekly' => [], 'lifetime' => []];
+$ready_total = 0.0; $ready_count = 0;
 foreach ($ALL_MISSIONS as $m) {
     $period   = get_period_key($m['category']);
     $progress = get_progress($pdo, $user, $m);
     $claimed  = is_claimed($pdo, (int)$user['id'], $m['slug'], $period);
     $done     = $progress >= $m['target'];
-
-    $missions_data[] = array_merge($m, [
-        'progress' => min($progress, $m['target']),
-        'claimed'  => $claimed,
-        'done'     => $done,
-        'period'   => $period,
-    ]);
+    [$kind, $go] = mission_kind($m['slug']);
+    if ($done && !$claimed) { $ready_total += $m['reward']; $ready_count++; }
+    $groups[$m['category']][] = $m + [
+        'progress' => min($progress, $m['target']), 'claimed' => $claimed, 'done' => $done, 'kind' => $kind, 'go' => $go,
+    ];
 }
+$TABS = ['daily' => ['Harian', 'ph-sun', 'Reset tiap 00:00'], 'weekly' => ['Mingguan', 'ph-calendar-blank', 'Reset tiap Senin'], 'lifetime' => ['Pencapaian', 'ph-trophy', 'Sekali seumur akun']];
+$active_tab = 'daily';
+foreach ($groups as $cat => $list) { foreach ($list as $m) if ($m['done'] && !$m['claimed']) { $active_tab = $cat; break 2; } }
 
-$daily    = array_filter($missions_data, fn($m) => $m['category'] === 'daily');
-$weekly   = array_filter($missions_data, fn($m) => $m['category'] === 'weekly');
-$lifetime = array_filter($missions_data, fn($m) => $m['category'] === 'lifetime');
-
-$claimed_today = count(array_filter($missions_data, fn($m) => $m['claimed']));
-
-$pageTitle  = 'Misi & Tantangan — MancingCuan';
+$pageTitle  = 'Misi Harian';
 $activePage = 'missions';
 require dirname(__DIR__) . '/partials/header.php';
 ?>
-
 <style>
 /* ══════════════════════════════════════════════════════════
-   MISSIONS PAGE — MANCINGCUAN THEME
+   MISI — Living Coral Reef, ringkas & minimalis
+   Token warna & latar laut dari partials/header.php (--reef-*)
    ══════════════════════════════════════════════════════════ */
-html body {
-  background: #fef8ee !important;
-  font-family: 'Nunito', sans-serif;
-  color: #78350f;
-}
-
-/* ── HERO TOP BANNER ── */
-.wd-top {
-  background: linear-gradient(180deg, #78350f 0%, #92400e 35%, #b45309 70%, #d97706 100%);
-  position: relative;
-  padding: 16px 16px 22px;
-  border-bottom: 3.5px solid #78350f;
-  box-shadow: 0 6px 20px rgba(120,53,15,0.28);
-  overflow: hidden;
-}
-/* Subtle honeycomb dot pattern */
-.wd-top::before {
-  content: ''; position: absolute; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.18) 15%, transparent 16%), radial-gradient(rgba(255,255,255,0.18) 15%, transparent 16%);
-  background-size: 24px 24px;
-  background-position: 0 0, 12px 12px;
-  opacity: 0.2; pointer-events: none;
-}
-/* Amber glow */
-.wd-top::after {
-  content: ''; position: absolute; top: -30px; right: -30px;
-  width: 140px; height: 140px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(254,240,138,0.3) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.wd-top-inner {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  position: relative; z-index: 2;
-}
-.wd-top-left {
-  display: flex; align-items: center; gap: 12px; min-width: 0;
-}
-.wd-back-btn {
-  width: 36px; height: 36px; background: #ffffff;
-  border: 2px solid #78350f; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  color: #78350f; font-size: 18px;
-  box-shadow: 0 3px 0 #78350f; text-decoration: none; flex-shrink: 0;
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-.wd-back-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #78350f; }
-
-.wd-top-title {
-  font-size: 18px; font-weight: 900; color: #ffffff;
-  text-shadow: 0 2px 0 #78350f; margin-bottom: 2px;
-  display: flex; align-items: center; gap: 6px;
-}
-.wd-top-sub {
-  font-size: 11px; font-weight: 800; color: #fef3c7;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-
-.ms-hero-badge {
-  background: rgba(120,53,15,0.45);
-  border: 2px solid rgba(254,240,138,0.7);
-  border-radius: 14px;
-  padding: 6px 14px;
-  text-align: center;
-  flex-shrink: 0;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
-}
-.ms-hero-badge__val {
-  font-size: 22px; font-weight: 900; color: #fef08a;
-  line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-.ms-hero-badge__lbl {
-  font-size: 9px; font-weight: 900; color: #fde68a;
-  text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px;
-}
-
-/* ── BODY WRAPPER ── */
-.wd-body {
-  flex: 1;
-  background: #fef8ee;
-  padding: 16px 14px 110px;
-  position: relative;
-}
-.wd-body::before {
-  content: ''; position: absolute; inset: 0;
-  background-image: radial-gradient(rgba(120,53,15,0.04) 12%, transparent 13%), radial-gradient(rgba(120,53,15,0.04) 12%, transparent 13%);
-  background-size: 32px 32px; background-position: 0 0, 16px 16px;
-  pointer-events: none;
-}
-
-/* ── TABS ── */
-.ms-tabs {
-  display: flex;
-  background: #fef3c7;
-  border: 2.5px solid #78350f;
-  border-radius: 16px;
-  box-shadow: 0 4px 0 #78350f;
-  padding: 4px;
-  gap: 4px;
-  margin-bottom: 16px;
-  position: relative;
-  z-index: 2;
-}
-.ms-tab {
-  flex: 1; padding: 9px 6px; text-align: center;
-  font-size: 11.5px; font-weight: 900; color: #78350f;
-  background: transparent; border: none; border-radius: 12px;
-  transition: all 0.15s ease; cursor: pointer;
-  font-family: 'Nunito', sans-serif;
-  -webkit-tap-highlight-color: transparent;
-}
-.ms-tab.active {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #ffffff;
-  box-shadow: 0 2px 0 #78350f;
-  text-shadow: 0 1px 2px rgba(120,53,15,0.35);
-}
-
-/* ── SECTION HEADER ── */
-.ms-section-hdr {
-  font-size: 11.5px; font-weight: 900; color: #78350f;
-  text-transform: uppercase; letter-spacing: 0.6px;
-  margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
-  position: relative; z-index: 2;
-}
-.ms-section-hdr i { color: #d97706; font-size: 17px; }
-
-/* ── MISSION CARD ── */
-.ms-card {
-  background: #ffffff;
-  border: 2.5px solid #78350f;
-  border-radius: 18px;
-  box-shadow: 0 4px 0 #78350f;
-  margin-bottom: 12px;
-  overflow: hidden;
-  transition: all 0.2s ease;
-  position: relative;
-  z-index: 2;
-}
-.ms-card--done {
-  background: #f0fdf4;
-  border-color: #059669;
-  box-shadow: 0 4px 0 #047857, 0 6px 16px rgba(5,150,105,0.12);
-}
-.ms-card--claimed {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  box-shadow: 0 3px 0 #94a3b8;
-  opacity: 0.75;
-}
-
-.ms-card__head {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 14px 10px;
-}
-.ms-card__icon {
-  width: 44px; height: 44px; flex-shrink: 0;
-  background: linear-gradient(135deg, #fef08a, #fde047);
-  border: 2px solid #78350f; border-radius: 14px;
-  box-shadow: 0 2.5px 0 #78350f;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; color: #78350f;
-}
-.ms-card--done .ms-card__icon {
-  background: linear-gradient(135deg, #34d399, #10b981);
-  border-color: #047857; box-shadow: 0 2.5px 0 #065f46; color: #ffffff;
-}
-.ms-card--claimed .ms-card__icon {
-  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-  border-color: #94a3b8; box-shadow: 0 2px 0 #64748b; color: #64748b;
-}
-
-.ms-card__info { flex: 1; min-width: 0; }
-.ms-card__title {
-  font-size: 13.5px; font-weight: 900; color: #78350f;
-  line-height: 1.25; margin-bottom: 2px;
-}
-.ms-card--done    .ms-card__title { color: #064e3b; }
-.ms-card--claimed .ms-card__title { color: #64748b; }
-
-.ms-card__desc {
-  font-size: 10.5px; font-weight: 700; color: #92400e;
-  line-height: 1.35;
-}
-.ms-card--claimed .ms-card__desc { color: #94a3b8; }
-
-.ms-card__reward {
-  background: #fef3c7; border: 1.5px solid #f59e0b;
-  border-radius: 10px; padding: 4px 8px;
-  font-size: 10.5px; font-weight: 900; color: #b45309;
-  flex-shrink: 0; box-shadow: 0 2px 0 #d97706;
-}
-.ms-card--done .ms-card__reward {
-  background: #dcfce7; border-color: #10b981; color: #047857; box-shadow: 0 2px 0 #059669;
-}
-.ms-card--claimed .ms-card__reward {
-  background: #f1f5f9; border-color: #cbd5e1; color: #94a3b8; box-shadow: none;
-}
-
-/* ── PROGRESS ── */
-.ms-prog { padding: 0 14px 12px; }
-.ms-prog-bar-wrap {
-  height: 10px; background: #fffbeb;
-  border: 1.5px solid #fde68a; border-radius: 8px;
-  overflow: hidden; box-shadow: inset 0 1px 3px rgba(120,53,15,0.06);
-}
-.ms-card--done    .ms-prog-bar-wrap { background: #ecfdf5; border-color: #a7f3d0; }
-.ms-card--claimed .ms-prog-bar-wrap { background: #f1f5f9; border-color: #e2e8f0; box-shadow: none; }
-
-.ms-prog-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #f59e0b, #d97706);
-  border-radius: 6px; transition: width 0.5s ease;
-}
-.ms-card--done    .ms-prog-bar { background: linear-gradient(90deg, #34d399, #059669); }
-.ms-card--claimed .ms-prog-bar { background: #cbd5e1; }
-
-.ms-prog-meta {
-  display: flex; justify-content: space-between;
-  font-size: 9.5px; font-weight: 800; color: #92400e; margin-top: 4px;
-}
-.ms-card--claimed .ms-prog-meta { color: #94a3b8; }
-
-/* ── BUTTONS ── */
-.ms-btn {
-  width: 100%; margin-top: 10px; padding: 10px;
-  border-radius: 12px; font-size: 12px; font-weight: 900;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
-  font-family: 'Nunito', sans-serif;
-}
-.ms-btn:active:not(:disabled) {
-  transform: translateY(2px); box-shadow: 0 1px 0 #064e3b !important;
-}
-.ms-btn--locked {
-  background: #f8fafc; border: 2px solid #e2e8f0;
-  color: #94a3b8; cursor: not-allowed;
-}
-.ms-btn--ready {
-  background: linear-gradient(135deg, #10b981, #059669);
-  border: 2.5px solid #064e3b; color: #ffffff;
-  box-shadow: 0 4px 0 #064e3b;
-  animation: pulseReady 2s infinite ease-in-out;
-}
-@keyframes pulseReady {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.015); box-shadow: 0 4px 12px rgba(16,185,129,0.35), 0 4px 0 #064e3b; }
-}
-.ms-btn--claimed {
-  background: #ecfdf5; border: 2px solid #86efac;
-  color: #059669; cursor: default;
-}
-.ms-btn--claimed:active { transform: none; }
-
-/* ── PANELS ── */
+.ms-wrap { position: relative; z-index: 1; width: 100%; max-width: 440px; margin: 0 auto; padding: 6px 12px 96px; color: var(--reef-ink); display: flex; flex-direction: column; gap: 10px; }
+.ms-top-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 2px; }
+.ms-back-btn { width: 36px; height: 36px; border-radius: 12px; border: 1.5px solid #ffffff; background: #ffffff; display: inline-flex; align-items: center; justify-content: center; color: var(--reef-ink); font-size: 17px; text-decoration: none; box-shadow: 0 3px 8px rgba(30, 27, 46, 0.05), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95); transition: transform 0.12s ease; }
+.ms-back-btn:active { transform: scale(0.92); }
+.ms-nav-title { display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.92); border: 1.5px solid #ffffff; border-radius: 14px; padding: 6px 14px; font-size: 13px; font-weight: 900; color: var(--reef-ink); box-shadow: 0 2px 8px rgba(30, 27, 46, 0.04); }
+.ms-bounty-badge { background: linear-gradient(135deg, #fef08a 0%, #f59e0b 100%); border: 1.5px solid #ffffff; color: #78350f; font-weight: 900; font-size: 11px; padding: 6px 11px; border-radius: 14px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.22), inset 1px 1px 2px #ffffff; }
+.ms-sum { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 2px solid #fff; border-radius: 20px; color: #fff;
+  background: linear-gradient(150deg, #0e7490, #22d3ee); box-shadow: 0 10px 22px rgba(8, 145, 178, 0.24), inset 2px 2px 5px rgba(255, 255, 255, 0.3); }
+.ms-sum-ic { width: 42px; height: 42px; flex-shrink: 0; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.6); }
+.ms-sum-tx { flex: 1; min-width: 0; }
+.ms-sum-tx small { display: block; font-size: 9.5px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.9; }
+.ms-sum-tx b { display: block; font-size: 20px; font-weight: 900; line-height: 1.15; }
+.ms-sum-pill { flex-shrink: 0; padding: 5px 11px; border-radius: 999px; font-size: 11px; font-weight: 900; background: #fff; color: #0e7490; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+.ms-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0; padding: 4px; border: 2px solid #fff; border-radius: 16px; background: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 8px rgba(30, 27, 46, 0.04); }
+.ms-tab { position: relative; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 4px; border: none; border-radius: 12px; background: none; cursor: pointer; font-family: inherit; font-size: 11.5px; font-weight: 900; color: var(--reef-muted); transition: all 0.15s ease; }
+.ms-tab i { font-size: 14px; }
+.ms-tab.on { color: #fff; background: linear-gradient(145deg, #fb7185, #e11d48); box-shadow: 0 5px 12px rgba(225, 29, 72, 0.28), inset 2px 2px 3px rgba(255, 255, 255, 0.4); }
+.ms-tab .dot { position: absolute; top: 4px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; border: 1.5px solid #fff; }
 .ms-panel { display: none; }
-.ms-panel.active { display: block; animation: fade-in 0.25s ease-out; }
-@keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-@keyframes spin    { to { transform: rotate(360deg); } }
+.ms-panel.on { display: block; }
+.ms-note { margin: 0 4px 6px; font-size: 10px; font-weight: 800; color: var(--reef-muted); display: flex; align-items: center; gap: 4px; }
+.ms-card { border: 2px solid #fff; border-radius: 18px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); overflow: hidden; }
+.ms-row { display: flex; align-items: center; gap: 9px; padding: 10px 12px; }
+.ms-row + .ms-row { border-top: 1.5px dashed rgba(251, 146, 60, 0.22); }
+.ms-row.is-claimed { opacity: 0.55; }
+.ms-ic { width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; box-shadow: inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5), inset -2px -2px 4px rgba(0, 0, 0, 0.14); }
+.ms-ic.k-video { background: linear-gradient(145deg, #c084fc, #7c3aed); }
+.ms-ic.k-fish { background: linear-gradient(145deg, #67e8f9, #0891b2); }
+.ms-ic.k-mix { background: linear-gradient(145deg, #6ee7b7, #059669); }
+.ms-ic.k-ref { background: linear-gradient(145deg, #fda4af, #e11d48); }
+.ms-ic.k-wd { background: linear-gradient(145deg, #fcd34d, #f59e0b); }
+.ms-ic.k-up { background: linear-gradient(145deg, #fde68a, #d97706); }
+.ms-body { flex: 1; min-width: 0; }
+.ms-title { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; font-weight: 900; }
+.ms-title span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-title em { flex-shrink: 0; margin-left: auto; font-style: normal; font-size: 11.5px; font-weight: 900; color: #059669; }
+.ms-bar { height: 6px; margin: 4px 0 3px; border-radius: 999px; background: rgba(8, 145, 178, 0.13); overflow: hidden; }
+.ms-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #22d3ee, #34d399); }
+.ms-meta { display: flex; justify-content: space-between; gap: 6px; font-size: 10px; font-weight: 700; color: var(--reef-muted); }
+.ms-meta span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-meta b { flex-shrink: 0; font-weight: 900; color: #0e7490; }
+.ms-act { flex-shrink: 0; }
+.ms-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 64px; padding: 7px 11px; border: 2px solid #fff; border-radius: 999px; cursor: pointer; text-decoration: none; font-family: inherit; font-size: 11px; font-weight: 900; transition: transform 0.1s ease; }
+.ms-btn:active { transform: scale(0.95); }
+.ms-btn.claim { color: #fff; background: linear-gradient(145deg, #fcd34d, #f59e0b); box-shadow: 0 5px 12px rgba(245, 158, 11, 0.35), inset 2px 2px 3px rgba(255, 255, 255, 0.45); animation: msPulse 1.6s ease-in-out infinite; }
+.ms-btn.go { color: #0e7490; background: #fff; box-shadow: 0 3px 8px rgba(8, 145, 178, 0.12), inset 1.5px 1.5px 3px #fff; }
+.ms-btn.done { color: #059669; background: #d1fae5; cursor: default; }
+@keyframes msPulse { 50% { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.18), inset 2px 2px 3px rgba(255, 255, 255, 0.45); } }
+@keyframes msSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ms-btn.claim { animation: none; } }
 </style>
 
-<!-- TOP BANNER -->
-<div class="wd-top">
-  <div class="wd-top-inner">
-    <div class="wd-top-left">
-      <a href="/home" class="wd-back-btn" title="Kembali ke Beranda"><i class="ph-bold ph-arrow-left"></i></a>
-      <div>
-        <div class="wd-top-title">Misi & Tantangan 🎯</div>
-        <div class="wd-top-sub">Selesaikan misi harian, klaim reward cuan!</div>
-      </div>
+<div class="ms-wrap">
+
+  <!-- ── COMPACT TOP NAVIGATOR ── -->
+  <div class="ms-top-nav">
+    <a href="/home" class="ms-back-btn" title="Kembali ke Beranda">
+      <i class="ph-bold ph-caret-left"></i>
+    </a>
+    <div class="ms-nav-title">
+      <i class="ph-fill ph-target" style="color:var(--reef-coral-500);"></i>
+      <span>Misi Samudra</span>
     </div>
-    <div class="ms-hero-badge">
-      <div class="ms-hero-badge__val"><?= $claimed_today ?></div>
-      <div class="ms-hero-badge__lbl">Diklaim</div>
+    <div class="ms-bounty-badge">
+      <i class="ph-bold ph-coins"></i>
+      <span>Saldo Tarik</span>
     </div>
   </div>
-</div>
 
-<div class="wd-body">
-  <!-- TABS -->
+  <section class="ms-sum">
+    <span class="ms-sum-ic"><i class="ph-fill ph-target"></i></span>
+    <span class="ms-sum-tx"><small>Siap diklaim</small><b id="ms-ready-amt"><?= format_rp($ready_total) ?></b></span>
+    <span class="ms-sum-pill" id="ms-ready-n"><?= $ready_count ?> misi</span>
+  </section>
+
   <div class="ms-tabs" role="tablist">
-    <button class="ms-tab active" id="tab-daily"    onclick="switchTab('daily')">Harian</button>
-    <button class="ms-tab"        id="tab-weekly"   onclick="switchTab('weekly')">Mingguan</button>
-    <button class="ms-tab"        id="tab-lifetime" onclick="switchTab('lifetime')">Pencapaian</button>
-  </div>
-
-  <!-- DAILY -->
-  <div class="ms-panel active" id="panel-daily">
-    <div class="ms-section-hdr"><i class="ph-fill ph-sun"></i> Misi Harian - Reset tiap hari</div>
-    <?php foreach ($daily as $m):
-      $pct = $m['target'] > 0 ? min(100, round($m['progress'] / $m['target'] * 100)) : 0;
-      $cardClass = $m['claimed'] ? 'ms-card--claimed' : ($m['done'] ? 'ms-card--done' : '');
-    ?>
-    <div class="ms-card <?= $cardClass ?>" id="mc-<?= htmlspecialchars($m['slug']) ?>">
-      <div class="ms-card__head">
-        <div class="ms-card__icon"><i class="ph-fill <?= htmlspecialchars($m['icon']) ?>"></i></div>
-        <div class="ms-card__info">
-          <div class="ms-card__title"><?= htmlspecialchars($m['title']) ?></div>
-          <div class="ms-card__desc"><?= htmlspecialchars($m['desc']) ?></div>
-        </div>
-        <div class="ms-card__reward">+Rp<?= number_format($m['reward'],0,',','.') ?></div>
-      </div>
-      <div class="ms-prog">
-        <div class="ms-prog-bar-wrap"><div class="ms-prog-bar" style="width:<?= $pct ?>%"></div></div>
-        <div class="ms-prog-meta"><span><?= $m['progress'] ?> / <?= $m['target'] ?></span><span><?= $pct ?>%</span></div>
-        <?php if ($m['claimed']): ?>
-          <button class="ms-btn ms-btn--claimed" disabled><i class="ph-bold ph-check-circle"></i> Selesai</button>
-        <?php elseif ($m['done']): ?>
-          <button class="ms-btn ms-btn--ready" onclick="claimMission('<?= $m['slug'] ?>', this)"><i class="ph-bold ph-gift"></i> Klaim Reward!</button>
-        <?php else: ?>
-          <button class="ms-btn ms-btn--locked" disabled><i class="ph-bold ph-lock"></i> Belum Selesai</button>
-        <?php endif; ?>
-      </div>
-    </div>
+    <?php foreach ($TABS as $cat => [$lbl, $ic]):
+      $hasReady = (bool)array_filter($groups[$cat], fn($m) => $m['done'] && !$m['claimed']); ?>
+      <button type="button" class="ms-tab <?= $cat === $active_tab ? 'on' : '' ?>" data-tab="<?= $cat ?>" onclick="msTab('<?= $cat ?>')">
+        <i class="ph-bold <?= $ic ?>"></i><?= $lbl ?><?php if ($hasReady): ?><span class="dot"></span><?php endif; ?>
+      </button>
     <?php endforeach; ?>
   </div>
 
-  <!-- WEEKLY -->
-  <div class="ms-panel" id="panel-weekly">
-    <div class="ms-section-hdr"><i class="ph-fill ph-calendar"></i> Misi Mingguan - Reset tiap Senin</div>
-    <?php foreach ($weekly as $m):
-      $pct = $m['target'] > 0 ? min(100, round($m['progress'] / $m['target'] * 100)) : 0;
-      $cardClass = $m['claimed'] ? 'ms-card--claimed' : ($m['done'] ? 'ms-card--done' : '');
-    ?>
-    <div class="ms-card <?= $cardClass ?>" id="mc-<?= htmlspecialchars($m['slug']) ?>">
-      <div class="ms-card__head">
-        <div class="ms-card__icon"><i class="ph-fill <?= htmlspecialchars($m['icon']) ?>"></i></div>
-        <div class="ms-card__info">
-          <div class="ms-card__title"><?= htmlspecialchars($m['title']) ?></div>
-          <div class="ms-card__desc"><?= htmlspecialchars($m['desc']) ?></div>
+  <?php foreach ($TABS as $cat => [$lbl, $ic, $note]): ?>
+  <div class="ms-panel <?= $cat === $active_tab ? 'on' : '' ?>" id="ms-<?= $cat ?>">
+    <div class="ms-note"><i class="ph-bold ph-clock-counter-clockwise"></i> <?= $note ?></div>
+    <div class="ms-card">
+      <?php foreach ($groups[$cat] as $m): $pct = (int)round($m['progress'] / $m['target'] * 100); ?>
+      <div class="ms-row <?= $m['claimed'] ? 'is-claimed' : '' ?>" id="mr-<?= htmlspecialchars($m['slug']) ?>" data-reward="<?= (float)$m['reward'] ?>">
+        <span class="ms-ic k-<?= $m['kind'] ?>"><i class="ph-fill <?= htmlspecialchars($m['icon']) ?>"></i></span>
+        <div class="ms-body">
+          <div class="ms-title"><span><?= htmlspecialchars($m['title']) ?></span><em>+<?= format_rp($m['reward']) ?></em></div>
+          <div class="ms-bar"><i style="width:<?= $pct ?>%"></i></div>
+          <div class="ms-meta"><span><?= htmlspecialchars($m['desc']) ?></span><b><?= $m['progress'] ?>/<?= $m['target'] ?></b></div>
         </div>
-        <div class="ms-card__reward">+Rp<?= number_format($m['reward'],0,',','.') ?></div>
-      </div>
-      <div class="ms-prog">
-        <div class="ms-prog-bar-wrap"><div class="ms-prog-bar" style="width:<?= $pct ?>%"></div></div>
-        <div class="ms-prog-meta"><span><?= $m['progress'] ?> / <?= $m['target'] ?></span><span><?= $pct ?>%</span></div>
-        <?php if ($m['claimed']): ?>
-          <button class="ms-btn ms-btn--claimed" disabled><i class="ph-bold ph-check-circle"></i> Selesai</button>
-        <?php elseif ($m['done']): ?>
-          <button class="ms-btn ms-btn--ready" onclick="claimMission('<?= $m['slug'] ?>', this)"><i class="ph-bold ph-gift"></i> Klaim Reward!</button>
-        <?php else: ?>
-          <button class="ms-btn ms-btn--locked" disabled><i class="ph-bold ph-lock"></i> Belum Selesai</button>
-        <?php endif; ?>
-      </div>
-    </div>
-    <?php endforeach; ?>
-  </div>
-
-  <!-- LIFETIME -->
-  <div class="ms-panel" id="panel-lifetime">
-    <div class="ms-section-hdr"><i class="ph-fill ph-trophy"></i> Pencapaian - Klaim sekali selamanya</div>
-    <?php foreach ($lifetime as $m):
-      $pct = $m['target'] > 0 ? min(100, round($m['progress'] / $m['target'] * 100)) : 0;
-      $cardClass = $m['claimed'] ? 'ms-card--claimed' : ($m['done'] ? 'ms-card--done' : '');
-    ?>
-    <div class="ms-card <?= $cardClass ?>" id="mc-<?= htmlspecialchars($m['slug']) ?>">
-      <div class="ms-card__head">
-        <div class="ms-card__icon"><i class="ph-fill <?= htmlspecialchars($m['icon']) ?>"></i></div>
-        <div class="ms-card__info">
-          <div class="ms-card__title"><?= htmlspecialchars($m['title']) ?></div>
-          <div class="ms-card__desc"><?= htmlspecialchars($m['desc']) ?></div>
+        <div class="ms-act">
+          <?php if ($m['claimed']): ?>
+            <span class="ms-btn done"><i class="ph-bold ph-check"></i> Beres</span>
+          <?php elseif ($m['done']): ?>
+            <button type="button" class="ms-btn claim" onclick="claimMission('<?= htmlspecialchars($m['slug'], ENT_QUOTES) ?>', this)"><i class="ph-fill ph-gift"></i> Klaim</button>
+          <?php else: ?>
+            <a href="<?= $m['go'] ?>" class="ms-btn go">Mulai <i class="ph-bold ph-arrow-right"></i></a>
+          <?php endif; ?>
         </div>
-        <div class="ms-card__reward">+Rp<?= number_format($m['reward'],0,',','.') ?></div>
       </div>
-      <div class="ms-prog">
-        <div class="ms-prog-bar-wrap"><div class="ms-prog-bar" style="width:<?= $pct ?>%"></div></div>
-        <div class="ms-prog-meta"><span><?= $m['progress'] ?> / <?= $m['target'] ?></span><span><?= $pct ?>%</span></div>
-        <?php if ($m['claimed']): ?>
-          <button class="ms-btn ms-btn--claimed" disabled><i class="ph-bold ph-check-circle"></i> Selesai</button>
-        <?php elseif ($m['done']): ?>
-          <button class="ms-btn ms-btn--ready" onclick="claimMission('<?= $m['slug'] ?>', this)"><i class="ph-bold ph-gift"></i> Klaim Reward!</button>
-        <?php else: ?>
-          <button class="ms-btn ms-btn--locked" disabled><i class="ph-bold ph-lock"></i> Belum Selesai</button>
-        <?php endif; ?>
-      </div>
+      <?php endforeach; ?>
     </div>
-    <?php endforeach; ?>
   </div>
+  <?php endforeach; ?>
 </div>
 
 <script>
 const _csrf = '<?= csrf_token() ?>';
-
-function switchTab(cat) {
-  document.querySelectorAll('.ms-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.ms-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + cat).classList.add('active');
-  document.getElementById('panel-' + cat).classList.add('active');
+function msTab(cat) {
+  document.querySelectorAll('.ms-tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === cat));
+  document.querySelectorAll('.ms-panel').forEach((p) => p.classList.toggle('on', p.id === 'ms-' + cat));
 }
-
+function msRefreshSummary() {
+  let amt = 0, n = 0;
+  document.querySelectorAll('.ms-btn.claim').forEach((b) => { n++; amt += +b.closest('.ms-row').dataset.reward || 0; });
+  document.getElementById('ms-ready-amt').textContent = 'Rp ' + Math.round(amt).toLocaleString('id-ID');
+  document.getElementById('ms-ready-n').textContent = n + ' misi';
+  document.querySelectorAll('.ms-tab').forEach((t) => {
+    const has = document.querySelector('#ms-' + t.dataset.tab + ' .ms-btn.claim');
+    const dot = t.querySelector('.dot'); if (!has && dot) dot.remove();
+  });
+}
 function claimMission(slug, btn) {
   btn.disabled = true;
-  btn.innerHTML = '<i class="ph-bold ph-spinner-gap" style="animation:spin 0.8s linear infinite"></i> Mengklaim...';
+  btn.innerHTML = '<i class="ph-bold ph-spinner-gap" style="animation:msSpin .8s linear infinite"></i>';
   const fd = new FormData();
-  fd.append('action', 'claim_mission');
-  fd.append('slug', slug);
-  fd.append('_csrf', _csrf);
+  fd.append('action', 'claim_mission'); fd.append('slug', slug); fd.append('_csrf', _csrf);
   fetch(location.href, { method: 'POST', body: fd })
-    .then(r => r.json())
-    .then(data => {
+    .then((r) => r.json())
+    .then((data) => {
       if (data.ok) {
-        if (data.tickets_added && data.tickets_added > 0) {
-          const tc = document.getElementById('spin-tickets-count');
-          if (tc) tc.innerText = parseInt(tc.innerText) + data.tickets_added;
-        }
-        const card = document.getElementById('mc-' + slug);
-        if (card) { card.classList.remove('ms-card--done'); card.classList.add('ms-card--claimed'); }
-        btn.className = 'ms-btn ms-btn--claimed';
-        btn.innerHTML = '<i class="ph-bold ph-check-circle"></i> Selesai';
-        btn.disabled = true;
-        try {
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtx) {
-            const actx = new AudioCtx(), osc = actx.createOscillator(), gain = actx.createGain();
-            osc.connect(gain); gain.connect(actx.destination);
-            osc.frequency.value = 1046.5;
-            gain.gain.setValueAtTime(0, actx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.2, actx.currentTime + 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.3);
-            osc.start(); osc.stop(actx.currentTime + 0.3);
-          }
-        } catch(e) {}
+        const row = document.getElementById('mr-' + slug);
+        if (row) row.classList.add('is-claimed');
+        const done = document.createElement('span');
+        done.className = 'ms-btn done'; done.innerHTML = '<i class="ph-bold ph-check"></i> Beres';
+        btn.replaceWith(done);
+        msRefreshSummary();
         if (typeof nToast !== 'undefined') nToast(data.msg, 'success');
       } else {
-        btn.disabled = false;
-        btn.className = 'ms-btn ms-btn--ready';
-        btn.innerHTML = '<i class="ph-bold ph-gift"></i> Klaim Reward!';
+        btn.disabled = false; btn.innerHTML = '<i class="ph-fill ph-gift"></i> Klaim';
         if (typeof nToast !== 'undefined') nToast(data.msg, 'error');
       }
     })
     .catch(() => {
-      btn.disabled = false;
-      btn.className = 'ms-btn ms-btn--ready';
-      btn.innerHTML = '<i class="ph-bold ph-gift"></i> Klaim Reward!';
+      btn.disabled = false; btn.innerHTML = '<i class="ph-fill ph-gift"></i> Klaim';
       if (typeof nToast !== 'undefined') nToast('Koneksi terputus.', 'error');
     });
 }

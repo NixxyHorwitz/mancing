@@ -18,13 +18,22 @@ $offset      = ($page - 1) * $per_page;
 $where  = ['um.claimed_at IS NOT NULL'];
 $params = [];
 
+// ── Daftar misi dari database (tabel `missions`, sama dengan user/missions.php) ──
+$CAT_LABEL = ['daily' => 'Harian', 'weekly' => 'Mingguan', 'lifetime' => 'Pencapaian'];
+$REWARD_MAP = [];
+$SLUGS_BY_CAT = ['daily' => [], 'weekly' => [], 'lifetime' => []];
+foreach ($pdo->query("SELECT * FROM missions ORDER BY is_active DESC, FIELD(category, 'daily', 'weekly', 'lifetime'), sort_order, id") as $mr) {
+    $REWARD_MAP[$mr['slug']] = [
+        'label'  => $mr['title'] . ((int)$mr['is_active'] ? '' : ' (nonaktif)'),
+        'cat'    => $CAT_LABEL[$mr['category']] ?? 'Lainnya',
+        'reward' => (float)$mr['reward_amount'],
+        'icon'   => 'ph-bold ' . ($mr['icon'] ?: 'ph-target'),
+    ];
+    $SLUGS_BY_CAT[$mr['category']][] = $mr['slug'];
+}
+
 if ($filter_cat) {
-    $cat_slugs = match($filter_cat) {
-        'daily'    => ['daily_watch_3','daily_watch_5','daily_checkin'],
-        'weekly'   => ['weekly_streak_7','weekly_watch_20','weekly_watch_7days'],
-        'lifetime' => ['lifetime_first_ref','lifetime_5_refs','lifetime_first_wd','lifetime_100_videos','lifetime_upgrade'],
-        default    => []
-    };
+    $cat_slugs = $SLUGS_BY_CAT[$filter_cat] ?? [];
     if ($cat_slugs) {
         $in = implode(',', array_fill(0, count($cat_slugs), '?'));
         $where[] = "um.mission_slug IN ($in)";
@@ -66,21 +75,6 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute($params);
 $rows = $stmt->fetchAll();
-
-// ── Reward map (mirrors user/missions.php) ─────────────────
-$REWARD_MAP = [
-    'daily_watch_3'       => ['label'=>'Tonton 3 Video',          'cat'=>'Harian',    'reward'=>1000,  'icon'=>'ph-bold ph-play-circle'],
-    'daily_watch_5'       => ['label'=>'Tonton 5 Video',          'cat'=>'Harian',    'reward'=>2500,  'icon'=>'ph-bold ph-film-strip'],
-    'daily_checkin'       => ['label'=>'Check-in Harian',         'cat'=>'Harian',    'reward'=>100,   'icon'=>'ph-bold ph-calendar-check'],
-    'weekly_streak_7'     => ['label'=>'Streak 7 Hari',           'cat'=>'Mingguan',  'reward'=>10000, 'icon'=>'ph-bold ph-flame'],
-    'weekly_watch_20'     => ['label'=>'Tonton 20 Video',         'cat'=>'Mingguan',  'reward'=>8000,  'icon'=>'ph-bold ph-video-camera'],
-    'weekly_watch_7days'  => ['label'=>'Aktif 7 Hari',            'cat'=>'Mingguan',  'reward'=>12000, 'icon'=>'ph-bold ph-lightning'],
-    'lifetime_first_ref'  => ['label'=>'1 Referral',              'cat'=>'Pencapaian','reward'=>5000,  'icon'=>'ph-bold ph-user-plus'],
-    'lifetime_5_refs'     => ['label'=>'5 Referral',              'cat'=>'Pencapaian','reward'=>15000, 'icon'=>'ph-bold ph-users-three'],
-    'lifetime_first_wd'   => ['label'=>'Penarikan Pertama',       'cat'=>'Pencapaian','reward'=>3000,  'icon'=>'ph-bold ph-wallet'],
-    'lifetime_100_videos' => ['label'=>'Penonton Sejati 100 Vid', 'cat'=>'Pencapaian','reward'=>10000, 'icon'=>'ph-bold ph-trophy'],
-    'lifetime_upgrade'    => ['label'=>'Member Premium',          'cat'=>'Pencapaian','reward'=>8000,  'icon'=>'ph-bold ph-crown'],
-];
 
 // ── Summary stats ─────────────────────────────────────────────
 $total_reward_given = 0;

@@ -27,626 +27,255 @@ error_log('[LiveChat] page loaded, user=' . ($user['username'] ?? 'null')
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<meta name="theme-color" content="#78350f">
+<meta name="theme-color" content="#0891b2">
 <title>Live Chat — <?= htmlspecialchars($_seo_title) ?></title>
 <?php
 $_abs_fav = $_favicon ? (preg_match('~^https?://~', $_favicon) ? $_favicon : '/' . ltrim($_favicon, '/')) : '';
+$_logo    = site_logo($pdo);
 if ($_abs_fav): ?>
 <link rel="icon" href="<?= htmlspecialchars($_abs_fav) ?>">
 <link rel="apple-touch-icon" href="<?= htmlspecialchars($_abs_fav) ?>">
 <?php endif; ?>
 <link rel="stylesheet" href="/assets/css/app.css?v=<?= @filemtime($_SERVER['DOCUMENT_ROOT'].'/assets/css/app.css') ?: time() ?>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <style>
-/* ── LiveChat: position:fixed layout (keyboard-safe, app.css-proof) ── */
+/* ══════════════════════════════════════════════════════════
+   LIVE CHAT — Living Coral Reef, ringkas & minimalis
+   Layout position:fixed (aman keyboard HP, kebal app.css)
+   ══════════════════════════════════════════════════════════ */
+:root {
+  --ink: #1e1b2e; --muted: #6b6478; --lagoon: #0891b2; --coral: #e11d48; --violet: #7c3aed; --kelp: #059669;
+  --card: linear-gradient(160deg, #ffffff 0%, #fff7ed 70%, #ffedd5 100%);
+  --clay: 0 10px 22px rgba(8, 145, 178, 0.10), 0 4px 10px rgba(244, 63, 94, 0.06), inset 2px 2px 5px #fff, inset -3px -3px 7px rgba(251, 146, 60, 0.12);
+}
 * { box-sizing: border-box; }
-body { margin: 0; padding: 0; overflow: hidden; background: #fef8ee; font-family: 'Nunito', sans-serif; }
+html, body { height: 100%; }
+body { margin: 0; padding: 0; overflow: hidden; color: var(--ink); font-family: 'Nunito', -apple-system, sans-serif;
+  background: radial-gradient(circle at 12% 8%, rgba(253, 164, 175, 0.20), transparent 38%), radial-gradient(circle at 90% 30%, rgba(192, 132, 252, 0.12), transparent 40%), linear-gradient(180deg, #ecfeff 0%, #f0f9ff 40%, #fff7ed 100%); }
 
-/* Topbar: fixed to top */
-.chat-topbar {
-  position: fixed !important;
-  top: 0; left: 0; right: 0;
-  height: 60px;
-  z-index: 100;
-  background: linear-gradient(180deg, #78350f 0%, #92400e 35%, #b45309 70%, #d97706 100%);
-  border-bottom: 3.5px solid #78350f;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  flex-shrink: 0;
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(120,53,15,0.25);
-  overflow: hidden;
-}
-.chat-topbar::before {
-  content: ''; position: absolute; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.18) 15%, transparent 16%), radial-gradient(rgba(255,255,255,0.18) 15%, transparent 16%);
-  background-size: 24px 24px;
-  background-position: 0 0, 12px 12px;
-  opacity: 0.18; pointer-events: none;
-}
+/* Topbar */
+.chat-topbar { position: fixed !important; top: 0; left: 0; right: 0; height: 56px; z-index: 100; display: flex; align-items: center; gap: 10px; padding: 0 12px;
+  background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 0 0 18px 18px;
+  box-shadow: 0 6px 18px rgba(30, 27, 46, 0.07), inset 0 -3px 6px rgba(251, 146, 60, 0.08); }
+.chat-back-btn { width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 12px; text-decoration: none; color: var(--ink); background: #fff; box-shadow: 0 3px 8px rgba(30, 27, 46, 0.08), inset 1.5px 1.5px 3px #fff; }
+.chat-back-btn i { font-size: 18px; }
+.chat-ava { position: relative; width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; padding: 2px; background: linear-gradient(145deg, #fff, #ffedd5); box-shadow: 0 3px 8px rgba(8, 145, 178, 0.2); }
+.chat-ava img { width: 100%; height: 100%; object-fit: contain; border-radius: 10px; }
+.chat-ava::after { content: ''; position: absolute; right: -2px; bottom: -2px; width: 11px; height: 11px; border-radius: 50%; background: #10b981; border: 2px solid #fff; }
+.chat-topbar__info { flex: 1; min-width: 0; line-height: 1.15; }
+.chat-topbar__title { display: block; font-size: 14px; font-weight: 900; }
+.chat-topbar__sub { display: block; font-size: 10.5px; font-weight: 800; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-status-badge { flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 9.5px; font-weight: 900; letter-spacing: 0.4px; text-transform: uppercase; }
+.chat-status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chat-status-badge.online { color: #047857; background: #d1fae5; }
+.chat-status-badge.busy { color: #be123c; background: #ffe4e6; }
 
-.chat-back-btn {
-  width: 36px; height: 36px;
-  border: 2px solid #78350f;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 2.5px 0 #78350f;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: #78350f;
-  text-decoration: none;
-  transition: transform .1s, box-shadow .1s;
-  position: relative; z-index: 2;
-}
-.chat-back-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #78350f; }
+/* Root */
+#chat-root { position: fixed; top: 56px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; overflow: hidden; }
+.chat-page { display: flex; flex-direction: column; width: 100%; max-width: 560px; height: 100%; margin: 0 auto; overflow: hidden; min-height: 0; }
 
-.chat-topbar__info { flex: 1; min-width: 0; position: relative; z-index: 2; }
-.chat-topbar__title { font-size: 16px; font-weight: 900; display: flex; align-items: center; gap: 6px; letter-spacing: -0.3px; text-shadow: 0 1px 2px rgba(120,53,15,0.4); color: #fff; }
-.chat-topbar__sub   { font-size: 11px; color: #fef3c7; font-weight: 800; display: block; margin-top: -2px; }
+/* Mode bar (ringkas) */
+.chat-modebar { display: flex; align-items: center; gap: 8px; padding: 8px 12px 6px; flex-shrink: 0; }
+.mode-pill { display: flex; gap: 3px; padding: 3px; border: 2px solid #fff; border-radius: 999px; background: rgba(255, 255, 255, 0.7); box-shadow: inset 1px 1px 3px rgba(8, 145, 178, 0.12); }
+.mode-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 5px 12px; border: none; border-radius: 999px; background: transparent; cursor: pointer; font-family: inherit; font-size: 11.5px; font-weight: 900; color: var(--muted); transition: all 0.15s; }
+.mode-btn i { font-size: 14px; }
+.mode-btn.active { color: #fff; box-shadow: 0 4px 10px rgba(30, 27, 46, 0.15), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.4); }
+.mode-btn.active.mode-ai { background: linear-gradient(145deg, #c084fc, #7c3aed); }
+.mode-btn.active.mode-adm { background: linear-gradient(145deg, #6ee7b7, #059669); }
+.mode-info-banner { flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mode-info-banner span { overflow: hidden; text-overflow: ellipsis; }
+.mode-info-banner.ai-mode { color: var(--violet); }
+.mode-info-banner.adm-mode { color: var(--kelp); }
 
-.chat-status-badge {
-  flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 900;
-  padding: 4px 10px;
-  border: 2px solid #78350f;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  box-shadow: 0 2px 0 #78350f;
-  text-transform: uppercase;
-  position: relative; z-index: 2;
-}
-.chat-status-badge.online { background: linear-gradient(135deg, #34d399, #10b981); color: #fff; border-color: #064e3b; box-shadow: 0 2px 0 #064e3b; }
-.chat-status-badge.busy   { background: linear-gradient(135deg, #f87171, #ef4444); color: #fff; border-color: #991b1b; box-shadow: 0 2px 0 #991b1b; }
-.chat-status-badge::before {
-  content: '';
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #fff;
-  display: inline-block;
-  box-shadow: 0 0 4px rgba(255,255,255,0.8);
-}
+/* Pesan */
+.chat-messages { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 6px 12px 12px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #a5f3fc transparent; }
+.bubble-wrap { display: flex; flex-direction: column; max-width: 82%; animation: bubblePop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes bubblePop { from { opacity: 0; transform: translateY(6px) scale(0.96); } to { opacity: 1; transform: none; } }
+.bubble-wrap.user { align-self: flex-end; align-items: flex-end; }
+.bubble-wrap.other, .bubble-wrap.ai, .bubble-wrap.admin { align-self: flex-start; align-items: flex-start; }
+.bubble-wrap.system { align-self: center; align-items: center; max-width: 92%; }
+.bubble { position: relative; padding: 8px 12px; font-size: 13px; font-weight: 700; line-height: 1.45; word-break: break-word; }
+.bubble-wrap.user .bubble { color: #fff; border-radius: 16px 16px 4px 16px; background: linear-gradient(145deg, #22d3ee, #0891b2); box-shadow: 0 5px 12px rgba(8, 145, 178, 0.22), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.35); }
+.bubble-wrap.ai .bubble, .bubble-wrap.admin .bubble { color: var(--ink); border: 2px solid #fff; border-radius: 16px 16px 16px 4px; background: var(--card); box-shadow: var(--clay); }
+.bubble-wrap.ai .bubble { border-left: 3px solid #c084fc; }
+.bubble-wrap.admin .bubble { border-left: 3px solid #34d399; }
+.bubble-wrap.system .bubble { padding: 4px 11px; border-radius: 999px; font-size: 10.5px; font-weight: 800; color: var(--muted); background: rgba(255, 255, 255, 0.75); }
+.bubble-meta { display: flex; align-items: center; gap: 4px; margin-top: 2px; padding: 0 4px; font-size: 9.5px; font-weight: 800; color: var(--muted); }
+.bubble-wrap.user .bubble-meta { flex-direction: row-reverse; }
+.bubble-sender-tag { display: inline-flex; align-items: center; gap: 3px; margin: 0 0 3px 4px; font-size: 9.5px; font-weight: 900; }
+.sender-ai { color: var(--violet); } .sender-admin { color: var(--kelp); } .sender-user { color: var(--lagoon); }
+.bubble a { color: inherit; }
 
-/* Chat root: fills everything below topbar */
-#chat-root {
-  position: fixed;
-  top: 60px;
-  left: 0; right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: #fef8ee;
-}
+/* Mengetik */
+.typing-bubble { display: flex; align-items: center; gap: 4px; width: fit-content; padding: 9px 13px; border: 2px solid #fff; border-radius: 16px 16px 16px 4px; background: var(--card); box-shadow: var(--clay); }
+.typing-dot { width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; animation: typingBounce 1.4s infinite ease-in-out both; }
+.typing-dot:nth-child(1) { animation-delay: -0.32s; } .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes typingBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+/* Input */
+.chat-inputbar { display: flex; align-items: flex-end; gap: 6px; flex-shrink: 0; z-index: 10; margin: 0 10px; padding: 6px; padding-bottom: 6px; margin-bottom: calc(8px + env(safe-area-inset-bottom));
+  border: 2px solid #fff; border-radius: 22px; background: rgba(255, 255, 255, 0.92); box-shadow: 0 8px 20px rgba(30, 27, 46, 0.08), inset 2px 2px 4px #fff; }
+.chat-textarea { flex: 1; min-height: 40px; max-height: 120px; resize: none; border: none; outline: none; padding: 10px 6px; background: transparent; font-family: inherit; font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.35; overflow-y: auto; }
+.chat-textarea::placeholder { color: #94a3b8; font-weight: 700; }
+.chat-attach-btn, .chat-send-btn { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: none; border-radius: 14px; cursor: pointer; transition: transform 0.12s; }
+.chat-attach-btn { color: var(--muted); background: #f1f5f9; font-size: 19px; }
+.chat-send-btn { color: #fff; background: linear-gradient(145deg, #fb7185, #e11d48); box-shadow: 0 5px 12px rgba(225, 29, 72, 0.3), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.35); }
+.chat-attach-btn:active, .chat-send-btn:active { transform: scale(0.92); }
+.chat-send-btn:disabled { background: #e2e8f0; box-shadow: none; color: #94a3b8; cursor: not-allowed; }
+.att-chip { display: none; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 10px; background: #ecfeff; font-size: 11px; font-weight: 800; color: #0e7490; }
+.att-chip span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.att-chip button { border: none; background: none; cursor: pointer; color: var(--coral); font-size: 14px; padding: 0; }
+
+/* Overlay mulai & antrean */
+.chat-start-overlay { position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(236, 254, 255, 0.55); backdrop-filter: blur(4px); }
+.chat-start-card { width: 100%; max-width: 330px; padding: 18px 16px 16px; text-align: center; border: 2px solid #fff; border-radius: 24px; background: var(--card); box-shadow: 0 20px 40px rgba(30, 27, 46, 0.14), inset 3px 3px 6px #fff; animation: bubblePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.chat-start-icon { width: 56px; height: 56px; margin: 0 auto 8px; border-radius: 18px; padding: 3px; background: linear-gradient(145deg, #fff, #ffedd5); box-shadow: 0 6px 14px rgba(8, 145, 178, 0.22); display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--lagoon); }
+.chat-start-icon img { width: 100%; height: 100%; object-fit: contain; border-radius: 14px; }
+.chat-start-title { font-size: 17px; font-weight: 900; }
+.chat-start-sub { margin: 2px 0 12px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.start-modes { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+.start-modes .mode-btn { flex-direction: column; gap: 2px; padding: 10px 6px; border: 2px solid #fff; border-radius: 16px; background: rgba(255, 255, 255, 0.85); color: var(--ink); box-shadow: inset 1px 1px 3px rgba(8, 145, 178, 0.1); }
+.start-modes .mode-btn i { font-size: 22px; }
+.start-modes .mode-btn small { font-size: 9.5px; font-weight: 800; opacity: 0.8; }
+.start-modes .mode-btn.mode-ai i { color: var(--violet); } .start-modes .mode-btn.mode-adm i { color: var(--kelp); }
+.start-modes .mode-btn.active i { color: #fff; }
+.start-desc { margin: 8px 0 12px; font-size: 10.5px; font-weight: 700; color: var(--muted); min-height: 14px; }
+.btn-main { width: 100%; height: 46px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 2px solid #fff; border-radius: 16px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 900; color: #fff;
+  background: linear-gradient(145deg, #22d3ee, #0891b2); box-shadow: 0 8px 18px rgba(8, 145, 178, 0.3), inset 2px 2px 4px rgba(255, 255, 255, 0.4); }
+.btn-main i { font-size: 18px; }
+.btn-main.danger { background: linear-gradient(145deg, #fb7185, #e11d48); box-shadow: 0 8px 18px rgba(225, 29, 72, 0.28), inset 2px 2px 4px rgba(255, 255, 255, 0.4); }
+.btn-main:disabled { opacity: 0.7; cursor: wait; }
+.queue-box { margin: 4px 0 10px; padding: 10px; border-radius: 16px; background: rgba(255, 255, 255, 0.85); box-shadow: inset 1px 1px 3px rgba(251, 146, 60, 0.15); }
+.queue-box small { display: block; font-size: 9.5px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); }
+.queue-box b { display: block; font-size: 30px; font-weight: 900; line-height: 1.1; color: var(--lagoon); }
+.queue-box span { font-size: 11px; font-weight: 800; color: var(--muted); }
+.queue-wait { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 10px; font-size: 10.5px; font-weight: 800; color: var(--muted); }
+
+/* Sesi ditutup */
+.chat-closed-bar { display: flex; align-items: center; justify-content: center; gap: 10px; flex-shrink: 0; margin: 0 10px calc(8px + env(safe-area-inset-bottom)); padding: 8px 10px; border: 2px solid #fff; border-radius: 18px; background: #fff1f2; font-size: 12px; font-weight: 800; color: #9f1239; }
+.chat-closed-bar button { padding: 6px 13px; border: 2px solid #fff; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 900; color: #fff; background: linear-gradient(145deg, #fb7185, #e11d48); }
+
+/* Live chat nonaktif */
+.lc-off { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.lc-off-card { max-width: 320px; padding: 22px 18px; text-align: center; border: 2px solid #fff; border-radius: 24px; background: var(--card); box-shadow: 0 20px 40px rgba(30, 27, 46, 0.12), inset 3px 3px 6px #fff; }
+.lc-off-card .ic { width: 56px; height: 56px; margin: 0 auto 10px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; background: linear-gradient(145deg, #fcd34d, #f59e0b); box-shadow: 0 6px 14px rgba(245, 158, 11, 0.3); }
+.lc-off-card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 900; }
+.lc-off-card p { margin: 0 0 14px; font-size: 11.5px; font-weight: 700; color: var(--muted); line-height: 1.5; }
+.lc-off-card a { text-decoration: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .bubble-wrap, .chat-start-card { animation: none !important; } }
 </style>
 </head>
 <body>
 
 <?php if (!$_lc_enabled): ?>
-<!-- Live Chat Disabled -->
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fef8ee;padding:24px;">
-  <div style="text-align:center;max-width:340px;background:#ffffff;border:3px solid #78350f;border-radius:24px;box-shadow:0 6px 0 #78350f;padding:32px 24px;">
-    <div style="width:72px;height:72px;margin:0 auto 16px;background:linear-gradient(135deg,#fef08a,#fde047);border:2.5px solid #78350f;box-shadow:0 4px 0 #78350f;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;color:#78350f;">
-      <i class="ph-fill ph-clock-countdown"></i>
-    </div>
-    <h2 style="font-weight:900;font-size:20px;margin-bottom:8px;color:#78350f;">Live Chat Sedang Ditutup</h2>
-    <p style="color:#92400e;font-size:13px;font-weight:700;margin-bottom:24px;line-height:1.5;"><?= nl2br(htmlspecialchars(setting($pdo, 'lc_offline_msg', 'Layanan live chat saat ini tidak tersedia. Silakan coba lagi nanti pada jam operasional.'))) ?></p>
-    <a href="/home" style="background:linear-gradient(135deg, #f59e0b, #d97706);border:2.5px solid #78350f;box-shadow:0 4px 0 #78350f;border-radius:14px;font-weight:900;padding:12px 24px;font-size:13px;text-decoration:none;color:#fff;display:inline-flex;align-items:center;gap:6px;transition:transform 0.1s;"><i class="ph-bold ph-house"></i> Kembali ke Beranda</a>
+<div class="lc-off">
+  <div class="lc-off-card">
+    <div class="ic"><i class="ph-fill ph-clock-countdown"></i></div>
+    <h2>Live Chat Sedang Tutup</h2>
+    <p><?= nl2br(htmlspecialchars(setting($pdo, 'lc_offline_msg', 'Layanan live chat saat ini tidak tersedia. Silakan coba lagi nanti pada jam operasional.'))) ?></p>
+    <a href="/home" class="btn-main"><i class="ph-bold ph-house"></i> Kembali ke Beranda</a>
   </div>
 </div>
 <?php else: ?>
-<!-- Live Chat Active -->
-<!-- ── Custom Topbar ── -->
 <header class="chat-topbar" id="chat-topbar">
-  <a href="/home" class="chat-back-btn" title="Kembali ke Beranda">
-    <i class="ph-bold ph-caret-left" style="font-size:20px;"></i>
-  </a>
+  <a href="/home" class="chat-back-btn" title="Kembali ke Beranda"><i class="ph-bold ph-caret-left"></i></a>
+  <span class="chat-ava"><?php if ($_logo): ?><img src="<?= htmlspecialchars($_logo) ?>" alt=""><?php endif; ?></span>
   <div class="chat-topbar__info">
-    <span class="chat-topbar__title"><i class="ph-fill ph-chat-circle-dots" style="color:#fde047;"></i> Live Support 🍯</span>
+    <span class="chat-topbar__title">Live Support</span>
     <span class="chat-topbar__sub" id="topbar-username"><?= htmlspecialchars($user['username']) ?></span>
   </div>
-  <div class="chat-topbar__actions">
-    <div class="chat-status-badge online" id="chat-status-badge">Online</div>
-  </div>
+  <div class="chat-status-badge online" id="chat-status-badge">Online</div>
 </header>
 
 <?php if ($_debug_on): ?>
 <!-- ── DEBUG PANEL ── -->
-<div id="lc-debug-wrapper" style="
-  position:fixed; bottom:0; left:0; right:0; z-index:9999;
-  background:rgba(0,0,10,0.92); color:#e0e0e0;
-  font-size:10px; font-family:monospace; line-height:1.5;
-  max-height:38vh; display:flex; flex-direction:column;
-  border-top:2px solid #f59e0b;
-">
+<div id="lc-debug-wrapper" style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:rgba(0,0,10,0.92);color:#e0e0e0;font-size:10px;font-family:monospace;line-height:1.5;max-height:38vh;display:flex;flex-direction:column;border-top:2px solid #22d3ee;">
   <div style="display:flex;justify-content:space-between;padding:4px 8px;background:#111;flex-shrink:0;border-bottom:1px solid #333">
-    <strong style="color:#f59e0b">🐛 LiveChat Debug</strong>
-    <button onclick="this.closest('#lc-debug-wrapper').style.display='none'"
-      style="background:none;border:none;color:#aaa;cursor:pointer;font-size:12px">✕ tutup</button>
+    <strong style="color:#22d3ee">🐛 LiveChat Debug</strong>
+    <button onclick="this.closest('#lc-debug-wrapper').style.display='none'" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:12px">✕ tutup</button>
   </div>
   <div id="lc-debug" style="overflow-y:auto;flex:1;padding:6px 8px"></div>
 </div>
 <?php endif; ?>
 
-<style>
-/* ═══════════════════════════════════════
-   LIVECHAT — MANCINGCUAN THEME
-   ═══════════════════════════════════════ */
-.chat-page {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  overflow: hidden;
-  min-height: 0;
-}
-
-/* ── Mode switch bar ─────────────────── */
-.chat-modebar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: #fffbeb;
-  border-bottom: 2px solid #fde68a;
-  flex-shrink: 0;
-}
-.chat-modebar__label {
-  font-size: 11px;
-  font-weight: 900;
-  color: #78350f;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
-}
-.mode-pill {
-  display: flex;
-  background: #fef3c7;
-  border: 2px solid #78350f;
-  border-radius: 14px;
-  box-shadow: 0 2px 0 #78350f;
-  overflow: hidden;
-  flex: 1;
-  padding: 2px;
-}
-.mode-btn {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 7px 6px;
-  cursor: pointer;
-  transition: all .15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: #92400e;
-  border-radius: 10px;
-  font-family: 'Nunito', sans-serif;
-}
-.mode-btn.active {
-  color: #fff;
-  font-weight: 900;
-  box-shadow: 0 2px 4px rgba(120,53,15,0.2);
-}
-.mode-btn.active.mode-ai  { background: linear-gradient(135deg, #8b5cf6, #6d28d9); text-shadow: 0 1px 1px rgba(0,0,0,0.2); }
-.mode-btn.active.mode-adm { background: linear-gradient(135deg, #f59e0b, #d97706); text-shadow: 0 1px 1px rgba(0,0,0,0.2); }
-
-/* ── Mode info banner ────────────────── */
-.mode-info-banner {
-  margin: 0 16px;
-  padding: 9px 13px;
-  border-radius: 14px;
-  border: 2px solid;
-  font-size: 11.5px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  animation: fadeIn 0.3s ease;
-}
-@keyframes fadeIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
-.mode-info-banner.ai-mode  { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
-.mode-info-banner.adm-mode { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
-
-/* ── Messages area ───────────────────── */
-.chat-messages {
-  flex: 1 1 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: #fef8ee;
-  background-image: radial-gradient(rgba(120,53,15,0.04) 12%, transparent 13%), radial-gradient(rgba(120,53,15,0.04) 12%, transparent 13%);
-  background-size: 32px 32px;
-  background-position: 0 0, 16px 16px;
-  scroll-behavior: smooth;
-  min-height: 0;
-  -webkit-overflow-scrolling: touch;
-}
-.chat-messages::-webkit-scrollbar { width: 6px; }
-.chat-messages::-webkit-scrollbar-thumb { background: #fde68a; border-radius: 6px; }
-
-/* ── Bubble ──────────────────────────── */
-.bubble-wrap {
-  display: flex;
-  flex-direction: column;
-  max-width: 85%;
-  animation: bubblePop .3s cubic-bezier(.175,.885,.32,1.275);
-}
-@keyframes bubblePop {
-  0% { opacity: 0; transform: scale(0.8) translateY(10px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-.bubble-wrap.user  { align-self: flex-end; align-items: flex-end; }
-.bubble-wrap.other { align-self: flex-start; align-items: flex-start; }
-.bubble-wrap.system{ align-self: center; align-items: center; max-width: 90%; }
-
-.bubble {
-  padding: 12px 16px;
-  font-size: 13.5px;
-  font-weight: 700;
-  line-height: 1.5;
-  word-break: break-word;
-  position: relative;
-}
-
-.bubble-wrap.user .bubble {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-  border: 2.5px solid #78350f;
-  box-shadow: 0 3px 0 #78350f;
-  border-radius: 20px 20px 4px 20px;
-  color: #78350f;
-}
-.bubble-wrap.ai .bubble {
-  background: #ffffff;
-  border: 2.5px solid #6366f1;
-  box-shadow: 0 3px 0 #4f46e5;
-  border-radius: 20px 20px 20px 4px;
-  color: #1e1b4b;
-}
-.bubble-wrap.admin .bubble {
-  background: #ffffff;
-  border: 2.5px solid #059669;
-  box-shadow: 0 3px 0 #047857;
-  border-radius: 20px 20px 20px 4px;
-  color: #064e3b;
-}
-.bubble-wrap.system .bubble {
-  background: #fffbeb;
-  color: #92400e;
-  font-size: 11px;
-  border: 1.5px dashed #d97706;
-  box-shadow: none;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 800;
-}
-
-.bubble-meta {
-  font-size: 10px;
-  color: #92400e;
-  font-weight: 800;
-  margin-top: 5px;
-  padding: 0 6px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.bubble-wrap.user .bubble-meta { flex-direction: row-reverse; }
-
-.bubble-sender-tag {
-  font-size: 10px;
-  font-weight: 900;
-  padding: 3px 10px;
-  border-radius: 12px;
-  border: 2px solid #fff;
-  margin-bottom: 6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #fff;
-  text-shadow: 0 1px 1px rgba(0,0,0,0.3);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-.sender-ai    { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
-.sender-admin { background: linear-gradient(135deg, #10b981, #059669); }
-.sender-user  { background: linear-gradient(135deg, #f59e0b, #d97706); }
-
-/* ── Typing indicator ────────────────── */
-.typing-bubble {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 18px;
-  background: #ffffff;
-  border: 2.5px solid #6366f1;
-  border-radius: 20px 20px 20px 4px;
-  box-shadow: 0 3px 0 #4f46e5;
-  width: fit-content;
-}
-.typing-dot {
-  width: 8px; height: 8px;
-  background: #6366f1;
-  border-radius: 50%;
-  animation: typingBounce 1.4s infinite ease-in-out both;
-}
-.typing-dot:nth-child(1) { animation-delay: -0.32s; }
-.typing-dot:nth-child(2) { animation-delay: -0.16s; }
-@keyframes typingBounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
-}
-
-/* ── Input area ──────────────────────── */
-.chat-inputbar {
-  padding: 12px 16px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  background: #ffffff;
-  border-top: 2.5px solid #fde68a;
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  flex-shrink: 0;
-  z-index: 10;
-  box-shadow: 0 -4px 16px rgba(120,53,15,0.06);
-}
-.chat-textarea {
-  flex: 1;
-  min-height: 48px;
-  max-height: 120px;
-  resize: none;
-  border: 2px solid #fde68a;
-  border-radius: 16px;
-  padding: 12px 16px;
-  font-size: 16px; /* Prevent iOS zoom */
-  font-family: inherit;
-  font-weight: 700;
-  color: #78350f;
-  background: #fffbeb;
-  outline: none;
-  transition: all .2s;
-  overflow-y: auto;
-  line-height: 1.4;
-}
-.chat-textarea:focus { border-color: #f59e0b; background: #ffffff; box-shadow: 0 0 0 3px #fef3c7; }
-.chat-textarea::placeholder { color: #b45309; opacity: 0.65; font-weight: 600; }
-
-.chat-attach-btn {
-  width: 48px; height: 48px;
-  flex-shrink: 0;
-  background: #fef3c7;
-  border: 2px solid #78350f;
-  border-radius: 14px;
-  box-shadow: 0 2.5px 0 #78350f;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform .1s, box-shadow .1s;
-  color: #78350f;
-  font-size: 20px;
-}
-.chat-attach-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #78350f; }
-
-.chat-send-btn {
-  width: 48px; height: 48px;
-  flex-shrink: 0;
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  border: 2.5px solid #78350f;
-  border-radius: 14px;
-  box-shadow: 0 3.5px 0 #78350f;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform .1s, box-shadow .1s;
-  color: #fff;
-}
-.chat-send-btn:hover { transform: translateY(-1px); box-shadow: 0 4.5px 0 #78350f; }
-.chat-send-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #78350f; }
-.chat-send-btn:disabled { background: #f1f5f9; border-color: #cbd5e1; box-shadow: 0 2px 0 #94a3b8; color: #94a3b8; cursor: not-allowed; transform: none; }
-
-/* ── Session start overlay ───────────── */
-.chat-start-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(120, 53, 15, 0.45);
-  backdrop-filter: blur(5px);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.chat-start-card {
-  width: 100%;
-  max-width: 360px;
-  background: #ffffff;
-  border: 3px solid #78350f;
-  border-radius: 24px;
-  box-shadow: 0 6px 0 #78350f, 0 16px 32px rgba(120,53,15,0.2);
-  padding: 28px 22px;
-  text-align: center;
-  animation: bubblePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.chat-start-icon {
-  width: 76px; height: 76px;
-  margin: 0 auto 16px;
-  background: linear-gradient(135deg, #fef08a, #fde047);
-  border: 2.5px solid #78350f;
-  box-shadow: 0 4px 0 #78350f;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 38px;
-}
-.chat-start-title { font-size: 21px; font-weight: 900; margin-bottom: 6px; color: #78350f; }
-.chat-start-sub   { font-size: 13px; color: #92400e; font-weight: 700; margin-bottom: 22px; line-height: 1.4; }
-
-/* ── Closed overlay ──────────────────── */
-.chat-closed-bar {
-  padding: 14px;
-  background: #fef2f2;
-  border-top: 2.5px solid #fca5a5;
-  color: #991b1b;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-</style>
-
 <div id="chat-root">
 
-  <!-- Start Overlay -->
+  <!-- Mulai -->
   <div class="chat-start-overlay" id="chat-start-overlay">
     <div class="chat-start-card">
-      <div class="chat-start-icon">🍯</div>
-      <div class="chat-start-title">Live Support</div>
-      <div class="chat-start-sub">Pilih mode chat dan mulai percakapan sekarang.</div>
-
-      <!-- Mode selector in start screen -->
-      <div style="margin-bottom:24px;">
-        <p style="font-size:12px;font-weight:900;color:#78350f;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Pilih Mode Chat</p>
-        <div class="mode-pill" style="box-shadow: 0 3px 0 #78350f; border-width: 2px; padding: 3px; background: #fef3c7;">
-          <?php if ($_ai_enabled): ?>
-          <button class="mode-btn mode-ai active" id="start-mode-ai" onclick="selectStartMode('ai')" style="font-size:13px; padding:10px;">
-            🤖 Asisten AI
-          </button>
-          <?php endif; ?>
-          <?php if ($_adm_enabled): ?>
-          <button class="mode-btn mode-adm" id="start-mode-admin" onclick="selectStartMode('admin')" style="font-size:13px; padding:10px;">
-            👨‍💼 Admin
-          </button>
-          <?php endif; ?>
-        </div>
-        <p id="start-mode-desc" style="font-size:12px;color:#92400e;margin-top:12px;font-weight:700;">
-          <?php if ($_ai_enabled): ?>
-          AI akan menjawab pertanyaan Anda secara otomatis & instan.
-          <?php else: ?>
-          Admin akan membalas pesan Anda langsung.
-          <?php endif; ?>
-        </p>
-      </div>
-
-      <button id="btn-start-chat" onclick="startChat()" style="width:100%; background:linear-gradient(135deg, #10b981, #059669); border: 2.5px solid #064e3b; box-shadow: 0 4px 0 #064e3b; color: #fff; font-size: 15px; font-weight: 900; padding: 13px; border-radius: 16px; cursor: pointer; transition: transform 0.1s; display:flex; align-items:center; justify-content:center; gap:8px;">
-        <i class="ph-bold ph-paper-plane-right" style="font-size:20px;"></i> Mulai Chat
-      </button>
-    </div>
-  </div>
-
-  <!-- Queue Overlay (Saat Kapasitas Sesi Penuh) -->
-  <div class="chat-start-overlay" id="chat-queue-overlay" style="display:none;">
-    <div class="chat-start-card" style="text-align:center;">
-      <div class="chat-start-icon" style="font-size:44px; margin-bottom:12px;">⏳</div>
-      <div class="chat-start-title" style="font-size:20px; font-weight:900; color:#78350f;">Sesi Chat Sedang Penuh</div>
-      <div class="chat-start-sub" style="font-size:13px; color:#92400e; margin-bottom:16px;">Mohon tunggu sebentar, Anda berada dalam antrean customer support.</div>
-
-      <!-- Queue Box -->
-      <div style="background:#fffbeb; border:2.5px dashed #f59e0b; border-radius:18px; padding:18px 14px; margin-bottom:18px;">
-        <div style="font-size:11px; font-weight:900; color:#78350f; text-transform:uppercase; letter-spacing:0.5px;">Nomor Antrean Anda</div>
-        <div style="font-size:38px; font-weight:900; color:#d97706; margin:4px 0; text-shadow:0 2px 4px rgba(217,119,6,0.15);">#<span id="queue-pos-num">1</span></div>
-        <div style="font-size:12px; font-weight:800; color:#92400e;">
-          <span id="queue-ahead-num">0</span> orang di depan Anda
-        </div>
-      </div>
-
-      <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; font-weight:800; color:#78350f; margin-bottom:20px; background:#fef3c7; padding:10px 14px; border-radius:14px; border:1.5px solid #fde68a;">
-        <i class="ph-bold ph-spinner ph-spin" style="font-size:16px; color:#d97706;"></i>
-        <span>Menghubungkan otomatis saat giliran Anda...</span>
-      </div>
-
-      <button id="btn-cancel-queue" onclick="cancelQueue()" style="width:100%; background:linear-gradient(135deg, #ef4444, #dc2626); border: 2.5px solid #991b1b; box-shadow: 0 4px 0 #991b1b; color: #fff; font-size: 14px; font-weight: 900; padding: 12px; border-radius: 16px; cursor: pointer; transition: transform 0.1s; display:flex; align-items:center; justify-content:center; gap:8px;">
-        <i class="ph-bold ph-x-circle" style="font-size:18px;"></i> Batal Antre
-      </button>
-    </div>
-  </div>
-
-  <!-- Chat UI -->
-  <div class="chat-page" id="chat-ui" style="display:none;">
-
-    <!-- Mode Bar -->
-    <div class="chat-modebar">
-      <span class="chat-modebar__label"><i class="ph-bold ph-swap"></i> Mode:</span>
-      <div class="mode-pill" id="mode-pill-wrap">
+      <div class="chat-start-icon"><?php if ($_logo): ?><img src="<?= htmlspecialchars($_logo) ?>" alt=""><?php else: ?><i class="ph-fill ph-chat-circle-dots"></i><?php endif; ?></div>
+      <div class="chat-start-title">Butuh bantuan?</div>
+      <div class="chat-start-sub">Pilih mau ngobrol dengan siapa.</div>
+      <div class="start-modes">
         <?php if ($_ai_enabled): ?>
-        <button class="mode-btn mode-ai" id="modebtn-ai" onclick="switchMode('ai')">
-          🤖 AI
-        </button>
+        <button type="button" class="mode-btn mode-ai active" id="start-mode-ai" onclick="selectStartMode('ai')"><i class="ph-fill ph-robot"></i>Asisten AI<small>Instan</small></button>
         <?php endif; ?>
         <?php if ($_adm_enabled): ?>
-        <button class="mode-btn mode-adm" id="modebtn-admin" onclick="switchMode('admin')">
-          👨‍💼 Admin
-        </button>
+        <button type="button" class="mode-btn mode-adm" id="start-mode-admin" onclick="selectStartMode('admin')"><i class="ph-fill ph-headset"></i>Admin<small>Dibalas tim</small></button>
         <?php endif; ?>
       </div>
-      <div class="chat-status-badge online" id="chat-status-badge">Online</div>
+      <p class="start-desc" id="start-mode-desc"><?= $_ai_enabled ? 'AI akan menjawab pertanyaan Anda secara otomatis & instan.' : 'Admin akan membalas pesan Anda langsung.' ?></p>
+      <button type="button" id="btn-start-chat" class="btn-main" onclick="startChat()"><i class="ph-bold ph-paper-plane-right"></i> Mulai Chat</button>
+    </div>
+  </div>
+
+  <!-- Antrean (kapasitas penuh) -->
+  <div class="chat-start-overlay" id="chat-queue-overlay" style="display:none;">
+    <div class="chat-start-card">
+      <div class="chat-start-icon"><i class="ph-fill ph-hourglass-medium"></i></div>
+      <div class="chat-start-title">Antrean penuh</div>
+      <div class="chat-start-sub">Tunggu sebentar, kamu sedang antre.</div>
+      <div class="queue-box">
+        <small>Nomor antrean</small>
+        <b>#<span id="queue-pos-num">1</span></b>
+        <span><span id="queue-ahead-num">0</span> orang di depanmu</span>
+      </div>
+      <div class="queue-wait"><i class="ph-bold ph-spinner ph-spin"></i> Tersambung otomatis saat giliranmu</div>
+      <button type="button" id="btn-cancel-queue" class="btn-main danger" onclick="cancelQueue()"><i class="ph-bold ph-x-circle"></i> Batal Antre</button>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-page" id="chat-ui" style="display:none;">
+    <div class="chat-modebar">
+      <div class="mode-pill" id="mode-pill-wrap">
+        <?php if ($_ai_enabled): ?>
+        <button type="button" class="mode-btn mode-ai" id="modebtn-ai" onclick="switchMode('ai')"><i class="ph-fill ph-robot"></i> AI</button>
+        <?php endif; ?>
+        <?php if ($_adm_enabled): ?>
+        <button type="button" class="mode-btn mode-adm" id="modebtn-admin" onclick="switchMode('admin')"><i class="ph-fill ph-headset"></i> Admin</button>
+        <?php endif; ?>
+      </div>
+      <div class="mode-info-banner ai-mode" id="mode-info-banner"><i class="ph-fill ph-info"></i><span id="mode-info-text">Mode AI aktif — Dijawab otomatis oleh AI.</span></div>
     </div>
 
-    <!-- Mode info banner -->
-    <div class="mode-info-banner ai-mode" id="mode-info-banner" style="margin-top:12px;">
-      <i class="ph-fill ph-info"></i>
-      <span id="mode-info-text">Mode AI aktif — Dijawab otomatis oleh AI.</span>
-    </div>
-
-    <!-- Messages -->
     <div class="chat-messages" id="chat-messages"></div>
 
-    <!-- Typing indicator -->
-    <div id="typing-wrap" style="padding:0 16px 12px;display:none;">
-      <div class="typing-bubble">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-      </div>
+    <div id="typing-wrap" style="padding:0 12px 8px;display:none;">
+      <div class="typing-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
     </div>
 
-    <!-- Input bar -->
     <div class="chat-inputbar" id="chat-inputbar">
       <?php if ($_att_enabled): ?>
-      <button class="chat-attach-btn" onclick="document.getElementById('chat-attachment-input').click()" title="Lampirkan File"><i class="ph-bold ph-paperclip"></i></button>
+      <button type="button" class="chat-attach-btn" onclick="document.getElementById('chat-attachment-input').click()" title="Lampirkan File"><i class="ph-bold ph-paperclip"></i></button>
       <input type="file" id="chat-attachment-input" style="display:none;" accept="image/jpeg,image/png,image/gif,application/pdf,.zip,.rar" onchange="previewAttachment(this)">
       <?php endif; ?>
-      
-      <div style="flex:1; display:flex; flex-direction:column; gap:6px; position:relative;">
-        <div id="attachment-preview" style="display:none; font-size:11px; background:#fffbeb; border-radius:10px; padding:6px 10px; border:2px solid #fde68a; font-weight:800; color:#78350f;">
-            <i class="ph-bold ph-file"></i> <span id="att-preview-name"></span>
-            <span style="color:#ef4444; cursor:pointer; float:right; padding: 0 4px;" onclick="clearAttachment()"><i class="ph-bold ph-x"></i> Hapus</span>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;">
+        <div id="attachment-preview" class="att-chip" style="display:none;">
+          <i class="ph-bold ph-file"></i><span id="att-preview-name"></span>
+          <button type="button" onclick="clearAttachment()" title="Hapus lampiran"><i class="ph-bold ph-x-circle"></i></button>
         </div>
-        <textarea class="chat-textarea" id="chat-input"
-          placeholder="Ketik pesan..." rows="1"
-          onkeydown="handleKey(event)"
-          oninput="autoResize(this)"
-        ></textarea>
+        <textarea class="chat-textarea" id="chat-input" placeholder="Ketik pesan..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       </div>
-      
-      <button class="chat-send-btn" id="chat-send-btn" onclick="sendMessage()" title="Kirim Pesan">
-        <i class="ph-bold ph-paper-plane-right" style="font-size:22px;"></i>
-      </button>
+      <button type="button" class="chat-send-btn" id="chat-send-btn" onclick="sendMessage()" title="Kirim Pesan"><i class="ph-fill ph-paper-plane-right" style="font-size:19px;"></i></button>
     </div>
 
-    <!-- Closed bar -->
     <div class="chat-closed-bar" id="chat-closed-bar" style="display:none;">
       <i class="ph-fill ph-lock-key"></i> Sesi ditutup.
-      <button onclick="resetChat()" style="background:#ef4444;color:#fff;border:2px solid #991b1b;border-radius:10px;padding:6px 16px;font-weight:900;font-size:12px;cursor:pointer;box-shadow:0 2.5px 0 #991b1b;">Chat Baru</button>
+      <button type="button" onclick="resetChat()">Chat Baru</button>
     </div>
   </div>
 
@@ -933,7 +562,7 @@ function previewAttachment(input) {
           clearAttachment();
           return;
       }
-      document.getElementById('attachment-preview').style.display = 'block';
+      document.getElementById('attachment-preview').style.display = 'flex';
       document.getElementById('att-preview-name').textContent = file.name;
   }
 }
@@ -1158,12 +787,7 @@ function handleKey(e) {
 })();
 </script>
 
-<style>
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-</style>
-<script src="/assets/js/toast.js"></script>
+<script src="/assets/js/toast.js?v=<?= @filemtime(dirname(__DIR__) . '/assets/js/toast.js') ?>"></script>
 <?php endif; ?>
 </body>
 </html>
