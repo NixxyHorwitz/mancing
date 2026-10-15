@@ -202,6 +202,33 @@ if (isset($update['callback_query'])) {
         http_response_code(200); return;
     }
 
+    // ── GLOBAL CHAT (tombol notifikasi 🚨 Deteksi Abuse) ─────────────────────
+    if (preg_match('/^gc_(del|mute|block)_(\d+)$/', $data, $m)) {
+        require_once __DIR__ . '/lib/global_chat.php';
+        gc_ensure_schema($pdo);
+        $id = (int)$m[2];
+        $who = 'telegram:' . ($cb['from']['username'] ?? $cb['from']['id'] ?? '?');
+        if ($m[1] === 'del') {
+            $st = $pdo->prepare("UPDATE gc_messages SET is_deleted = 1, deleted_by = ?, deleted_at = NOW() WHERE id = ? AND is_deleted = 0");
+            $st->execute([$who, $id]);
+            $uid = (int)$pdo->query("SELECT user_id FROM gc_messages WHERE id = " . $id)->fetchColumn();
+            gc_admin_log($pdo, $who, 'msg.delete', $uid ?: null, ['msg_id' => $id]);
+            $txt = $st->rowCount() ? "🗑 Pesan #{$id} dihapus." : "Pesan #{$id} sudah terhapus / tidak ada.";
+        } elseif ($m[1] === 'mute') {
+            $pdo->prepare("INSERT INTO gc_user_overrides (user_id, muted_until) VALUES (?, DATE_ADD(NOW(), INTERVAL 24 HOUR))
+                           ON DUPLICATE KEY UPDATE muted_until = VALUES(muted_until)")->execute([$id]);
+            gc_admin_log($pdo, $who, 'user.mute', $id, ['hours' => 24]);
+            $txt = "🔇 User #{$id} dibisukan 24 jam.";
+        } else {
+            $pdo->prepare("INSERT INTO gc_user_overrides (user_id, can_send) VALUES (?, 0)
+                           ON DUPLICATE KEY UPDATE can_send = 0")->execute([$id]);
+            gc_admin_log($pdo, $who, 'user.block', $id);
+            $txt = "⛔ User #{$id} diblokir dari mengirim pesan.";
+        }
+        answer_cb($token, $cb_id, $txt);
+        http_response_code(200); return;
+    }
+
     // ── REFRESH ──────────────────────────────────────────────────────────────
     if (preg_match('/^refresh_(depo|wd)_(\d+)$/', $data, $m)) {
         $type = $m[1];

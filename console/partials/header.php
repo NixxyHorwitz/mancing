@@ -676,9 +676,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 
     <!-- 5. PENGGUNA & AKSES (COLLAPSIBLE) -->
     <?php
-    $usrPages = ['users', 'user_txns', 'requests', 'livechat'];
+    $usrPages = ['users', 'user_txns', 'requests', 'livechat', 'global_chat', 'global_chat_settings', 'global_chat_users'];
     $isUsrActive = in_array($activePage ?? '', $usrPages, true);
-    $canUsr = staff_can('users') || staff_can('user_txns') || staff_can('livechat');
+    $canUsr = staff_can('users') || staff_can('user_txns') || staff_can('livechat') || staff_can('global_chat');
     $usrPendingSum = $pending_req;
     try {
         $pChat = (int)$pdo->query("SELECT COUNT(*) FROM chat_sessions WHERE status='open'")->fetchColumn();
@@ -730,6 +730,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
             <span>Live Chat CS</span>
             <?php if ($pChat > 0): ?><span class="badge-dot ms-auto"><?= $pChat ?></span><?php endif; ?>
+          </a>
+          <?php endif; ?>
+
+          <?php if (staff_can('global_chat')): ?>
+          <a href="/console/global_chat.php" class="c-nav-sublink <?= strpos($activePage ?? '', 'global_chat') === 0 ? 'active' : '' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            <span>Global Chat</span>
           </a>
           <?php endif; ?>
         </div>
