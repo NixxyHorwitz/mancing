@@ -24,28 +24,26 @@ $lock_until = (int)($_SESSION[$ip_key . '_lock'] ?? 0);
 // ── Captcha "Laut Bersih": pilih semua ikan / semua sampah dari 6 kotak gambar ──
 // Jawaban disimpan di session (tidak pernah dikirim ke browser), gambar diacak ulang tiap permintaan.
 const REG_CAP_FISH = ['biasa', 'bagus', 'langka', 'super'];
-const REG_CAP_JUNK = ['junk-bag', 'junk-boot', 'junk-bottle', 'junk-can', 'junk-cup', 'junk-trashbag'];
+// Sampah yang jelas bukan ikan (kantong plastik dibuang karena mirip ikan/bawang)
+const REG_CAP_JUNK = ['junk-boot', 'junk-bottle', 'junk-can', 'junk-cup', 'junk-trashbag'];
 const REG_CAP_TTL  = 900;
 
+/** Soal selalu sama: 1 ikan di antara 5 sampah, cukup ketuk ikannya. */
 function generate_captcha_challenge(): array {
-    $mode    = random_int(0, 1) ? 'fish' : 'junk';
-    $targets = random_int(2, 3);
     $fish = REG_CAP_FISH; shuffle($fish);
     $junk = REG_CAP_JUNK; shuffle($junk);
-    $tiles = $mode === 'fish'
-        ? array_merge(array_slice($fish, 0, $targets), array_slice($junk, 0, 6 - $targets))
-        : array_merge(array_slice($junk, 0, $targets), array_slice($fish, 0, 6 - $targets));
+    $tiles = array_merge([$fish[0]], $junk);
     shuffle($tiles);
 
     $ans = [];
     foreach ($tiles as $i => $t) {
-        if (($mode === 'junk') === str_starts_with($t, 'junk-')) $ans[] = $i;
+        if (!str_starts_with($t, 'junk-')) $ans[] = $i;
     }
     $_SESSION['reg_cap'] = ['tiles' => $tiles, 'ans' => $ans, 'ts' => time(), 'v' => bin2hex(random_bytes(4))];
 
     return [
-        'prompt' => $mode === 'fish' ? 'Tangkap semua ikan' : 'Bersihkan semua sampah',
-        'icon'   => $mode === 'fish' ? 'ph-fish-simple' : 'ph-trash',
+        'prompt' => 'Ketuk gambar ikan',
+        'icon'   => 'ph-fish-simple',
         'v'      => $_SESSION['reg_cap']['v'],
     ];
 }
@@ -649,7 +647,9 @@ select.inp-field:invalid { color: #64748b; font-weight: 700; font-size: 12px; }
 .cap-q i { width: 24px; height: 24px; border-radius: 8px; font-size: 13px; color: #fff; background: linear-gradient(145deg, #22d3ee, #0e7490); box-shadow: 0 3px 6px rgba(14, 116, 144, .3), var(--chip-sh); }
 .cap-re { width: 30px; height: 30px; border-radius: 10px; border: 1.5px solid #bae6fd; background: #fff; color: #0e7490; font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer;
   box-shadow: 0 2px 6px rgba(8, 145, 178, .15); transition: transform .3s; }
-.cap-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.cap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cap-hint { margin-top: 8px; text-align: center; font-size: 10.5px; font-weight: 800; color: #0c4a6e; }
+.cap-hint.ok { color: #047857; }
 .cap-t { position: relative; aspect-ratio: 1; padding: 0; border-radius: 13px; border: 2.5px solid #fff; overflow: hidden; cursor: pointer; background: #fff;
   box-shadow: 0 4px 8px rgba(8, 51, 68, .16); transition: transform .15s cubic-bezier(.34, 1.56, .64, 1), border-color .12s, box-shadow .12s; }
 .cap-t img { width: 100%; height: 100%; display: block; pointer-events: none; }
@@ -659,7 +659,6 @@ select.inp-field:invalid { color: #64748b; font-weight: 700; font-size: 12px; }
   background: linear-gradient(145deg, #34d399, #047857); display: flex; align-items: center; justify-content: center; transform: scale(0); transition: transform .18s cubic-bezier(.3, 1.6, .6, 1); }
 .cap-t.on { border-color: #10b981; transform: translateY(-3px); box-shadow: 0 8px 14px rgba(4, 120, 87, .3), 0 0 0 2px rgba(16, 185, 129, .35); }
 .cap-t.on .ok { transform: scale(1); }
-@media (max-width: 340px) { .cap-grid { grid-template-columns: repeat(3, 1fr); } }
 
 .btn-reg-submit { position: relative; overflow: hidden; width: 100%; height: 50px; margin-top: 12px; border-radius: 17px; border: 2px solid #fff; cursor: pointer;
   background: linear-gradient(135deg, #fb7185 0%, #f43f5e 50%, #e11d48 100%); color: #fff; font: 900 15px/1 'Nunito', sans-serif;
@@ -863,6 +862,7 @@ select.inp-field:invalid { color: #64748b; font-weight: 700; font-size: 12px; }
               </button>
             <?php endfor; ?>
           </div>
+          <div class="cap-hint" id="cap-hint">Ada 1 ikan di antara sampah. Ketuk ikannya, cukup sekali.</div>
         </div>
       </section>
 
@@ -927,9 +927,15 @@ function capSync() {
   document.getElementById('f_captcha_answer').value = picked.join(',');
 }
 function capPick(btn) {
-  btn.classList.toggle('on');
-  btn.setAttribute('aria-pressed', btn.classList.contains('on') ? 'true' : 'false');
+  // Pilih satu saja: ketuk gambar lain = pindah pilihan
+  document.querySelectorAll('.cap-t').forEach(b => {
+    const on = b === btn;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
   document.getElementById('f_captcha').classList.remove('bad');
+  const hint = document.getElementById('cap-hint');
+  if (hint) { hint.textContent = 'Sip! Gambar terpilih. Salah pilih? Ketuk gambar lain.'; hint.classList.add('ok'); }
   capSync();
 }
 async function refreshCaptcha() {
@@ -945,6 +951,8 @@ async function refreshCaptcha() {
         b.classList.remove('on'); b.setAttribute('aria-pressed', 'false');
         b.querySelector('img').src = '/register?cap_tile=' + b.dataset.i + '&v=' + data.v;
       });
+      const hint = document.getElementById('cap-hint');
+      if (hint) { hint.textContent = 'Ada 1 ikan di antara sampah. Ketuk ikannya, cukup sekali.'; hint.classList.remove('ok'); }
       capSync();
     }
   } catch (err) {
