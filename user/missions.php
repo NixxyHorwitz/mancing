@@ -2,6 +2,9 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/auth/guard.php';
 
+// Aturan: hadiah uang misi tidak boleh receh, minimal Rp 1.500 (berlaku juga bila nilai di DB lebih kecil)
+const MISSION_MIN_REWARD = 1500;
+
 // ── Daftar misi dari database (tabel `missions`, satu sumber untuk halaman ini, riwayat & console) ──
 $ALL_MISSIONS = [];
 foreach ($pdo->query("SELECT * FROM missions WHERE is_active = 1 ORDER BY FIELD(category, 'daily', 'weekly', 'lifetime'), sort_order, id") as $r) {
@@ -11,7 +14,7 @@ foreach ($pdo->query("SELECT * FROM missions WHERE is_active = 1 ORDER BY FIELD(
         'title'    => (string)$r['title'],
         'desc'     => (string)$r['description'],
         'target'   => max(1, (int)$r['target_value']),
-        'reward'   => (float)$r['reward_amount'],
+        'reward'   => max(MISSION_MIN_REWARD, (float)$r['reward_amount']),
         'bait'     => max(0, (int)($r['reward_bait'] ?? 0)),   // hadiah umpan pancing (opsional)
         'icon'     => (string)($r['icon'] ?: 'ph-target'),
     ];
