@@ -460,15 +460,10 @@ require dirname(__DIR__) . '/partials/header.php';
 .pk-guide summary .chev { margin-left: auto; font-size: 13px; color: var(--reef-muted); transition: transform 0.2s; }
 .pk-guide[open] summary .chev { transform: rotate(180deg); }
 .pk-steps { list-style: none; margin: 0; padding: 0 12px 10px; display: flex; flex-direction: column; gap: 6px; }
-.pk-steps li { display: flex; align-items: flex-start; gap: 9px; }
+.pk-steps li { display: flex; align-items: center; gap: 9px; }
 .pk-steps li > span { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff; background: linear-gradient(145deg, #67e8f9, #0891b2); border: 2px solid #fff; box-shadow: 0 3px 6px rgba(8, 145, 178, 0.25); }
-.pk-steps b { display: block; font-size: 11.5px; font-weight: 900; }
-.pk-steps small { display: block; font-size: 10px; font-weight: 700; color: var(--reef-muted); line-height: 1.35; }
-.pk-glos { margin: 0; padding: 0 12px 10px; display: flex; flex-direction: column; gap: 6px; }
-.pk-glos > div { padding: 6px 9px; border-radius: 12px; background: rgba(255, 255, 255, 0.85); }
-.pk-glos dt { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 900; }
-.pk-glos dt i { font-size: 14px; }
-.pk-glos dd { margin: 1px 0 0 19px; font-size: 10px; font-weight: 700; color: var(--reef-muted); line-height: 1.35; }
+.pk-steps b { font-weight: 900; color: var(--reef-ink); }
+.pk-steps small { font-size: 11px; font-weight: 700; color: var(--reef-muted); }
 .pk-empty { padding: 20px; text-align: center; border-radius: 20px; border: 2px dashed rgba(8, 145, 178, 0.35); background: rgba(255, 255, 255, 0.65); font-size: 11.5px; font-weight: 800; color: var(--reef-muted); }
 
 /* Modal */
@@ -641,28 +636,13 @@ $short = static fn(float $n): string => $n >= 1000000 ? rtrim(rtrim(number_forma
     <span><i class="ph-fill ph-clock"></i>WD 1×24 jam</span>
   </div>
 
-  <details class="pk-guide" open>
+  <details class="pk-guide">
     <summary><i class="ph-fill ph-compass"></i> Cara naik pangkat <i class="ph-bold ph-caret-down chev"></i></summary>
     <ol class="pk-steps">
-      <li><span>1</span><div><b>Isi Saldo Beli</b><small>Tekan <i class="ph-bold ph-plus"></i> di atas, bayar via QRIS.</small></div></li>
-      <li><span>2</span><div><b>Pilih pangkat</b><small>Geser pilihan di atas, cek harga &amp; bonusnya.</small></div></li>
-      <li><span>3</span><div><b>Tekan tombol &amp; konfirmasi</b><small>Saldo Beli terpotong, pangkat langsung aktif.</small></div></li>
-      <li><span>4</span><div><b>Nikmati bonusnya</b><small>Kuota video naik, joran baru terbuka di menu <b>Joran</b> saat mancing.</small></div></li>
+      <li><span>1</span><small>Isi <b>Saldo Beli</b> lewat tombol +</small></li>
+      <li><span>2</span><small>Pilih pangkat, tekan tombol, konfirmasi</small></li>
+      <li><span>3</span><small>Pangkat aktif, joran baru terbuka saat mancing</small></li>
     </ol>
-  </details>
-
-  <details class="pk-guide">
-    <summary><i class="ph-fill ph-info"></i> Arti angka di kartu <i class="ph-bold ph-caret-down chev"></i></summary>
-    <dl class="pk-glos">
-      <div><dt><i class="ph-fill ph-play-circle" style="color:#0891b2"></i> Video / hari</dt><dd>Jumlah video berhadiah yang bisa ditonton tiap hari.</dd></div>
-      <div><dt><i class="ph-fill ph-trend-up" style="color:#059669"></i> Estimasi / hari</dt><dd>Perkiraan cuan: kuota video × rata-rata hadiah video. Bukan jaminan.</dd></div>
-      <div><dt><i class="ph-fill ph-arrow-circle-down" style="color:#7c3aed"></i> Min &amp; maks tarik</dt><dd>Batas nominal sekali penarikan saldo.</dd></div>
-      <div><dt><i class="ph-bold ph-lightning" style="color:#047857"></i> Balik modal</dt><dd>Perkiraan hari sampai estimasi cuan menutup harga pangkat.</dd></div>
-      <div><dt><i class="ph-bold ph-arrows-clockwise" style="color:#e11d48"></i> Tarik +%</dt><dd>Gulungan joran lebih cepat saat menarik ikan.</dd></div>
-      <div><dt><i class="ph-bold ph-timer" style="color:#d97706"></i> Umpan +%</dt><dd>Ikan lebih cepat menyambar umpan.</dd></div>
-      <div><dt><i class="ph-fill ph-shield-check" style="color:#059669"></i> Garansi 12 jam</dt><dd>Berubah pikiran? Ajukan refund lewat ikon <i class="ph-bold ph-arrow-u-up-left"></i> di kartu pangkatmu (dipotong biaya admin).</dd></div>
-      <div><dt><i class="ph-bold ph-arrows-clockwise" style="color:#0891b2"></i> Perpanjang</dt><dd>Beli lagi pangkat yang sama untuk memulai masa aktif baru.</dd></div>
-    </dl>
   </details>
 </div>
 

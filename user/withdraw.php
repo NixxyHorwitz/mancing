@@ -244,393 +244,709 @@ require dirname(__DIR__) . '/partials/header.php';
 ?>
 
 <style>
-/* ══════════════════════════════════════════════
-   WITHDRAW PAGE — LUXURIOUS AMBER HONEY THEME
-   ══════════════════════════════════════════════ */
-.wd-page-wrap {
-  min-height: 100vh;
-  max-width: 480px;
+/* ══════════════════════════════════════════════════════════════
+   OCEAN VAULT WITHDRAWAL — PENARIKAN SALDO SAMUDRA
+   Tema: Living Coral Reef Fantasy & 3D Tactile Claymorphism
+   Konsep: Ultra Compact & Minimalist
+   ══════════════════════════════════════════════════════════════ */
+
+.wd-reef-stage {
+  width: 100%;
+  max-width: 440px;
   margin: 0 auto;
-  padding-bottom: 40px;
+  padding: 6px 12px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
-/* ── TOP HERO BANNER ── */
-.wd-top-banner {
-  background: linear-gradient(135deg, #78350f 0%, #92400e 30%, #b45309 65%, #d97706 100%);
-  padding: 16px 14px 28px;
-  border-bottom: 4px solid #78350f;
-  box-shadow: 0 6px 20px rgba(120,53,15,0.28);
+/* Claymorphism Base */
+.wd-clay {
+  border: 2px solid #ffffff;
+  border-radius: 20px;
+  background: var(--reef-card);
+  box-shadow: var(--reef-clay-shadow);
   position: relative;
   overflow: hidden;
 }
-.wd-top-banner::before {
-  content: ''; position: absolute; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.18) 15%, transparent 16%), radial-gradient(rgba(255,255,255,0.18) 15%, transparent 16%);
-  background-size: 20px 20px;
-  background-position: 0 0, 10px 10px;
-  opacity: 0.18; pointer-events: none;
+
+/* Ambient Marine Floating Bubbles */
+.wd-bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95) 0%, rgba(103, 232, 249, 0.35) 60%, rgba(16, 185, 129, 0.15) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: inset 1px 1px 2px #ffffff, 0 2px 6px rgba(8, 145, 178, 0.15);
+  pointer-events: none;
+  z-index: 0;
 }
+.wd-bubble--1 {
+  width: 16px;
+  height: 16px;
+  top: 10px;
+  right: 18px;
+  animation: wdBubbleFloat 5s infinite ease-in-out alternate;
+}
+.wd-bubble--2 {
+  width: 24px;
+  height: 24px;
+  bottom: 12px;
+  right: 14px;
+  animation: wdBubbleFloat 6.5s infinite ease-in-out alternate-reverse;
+  opacity: 0.65;
+}
+@keyframes wdBubbleFloat {
+  0% { transform: translateY(0) scale(0.96); }
+  50% { transform: translateY(-6px) scale(1.04); }
+  100% { transform: translateY(2px) scale(0.98); }
+}
+
+/* ── 1. COMPACT TOP NAVIGATOR ── */
 .wd-top-nav {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 12px; position: relative; z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px;
 }
 .wd-back-btn {
-  background: #ffffff; border: 2.5px solid #78350f; border-radius: 12px;
-  width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
-  color: #78350f; font-size: 18px; text-decoration: none;
-  box-shadow: 0 3px 0 #78350f; transition: transform 0.1s;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1.5px solid #ffffff;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--reef-ink);
+  font-size: 17px;
+  text-decoration: none;
+  box-shadow: 0 3px 8px rgba(30, 27, 46, 0.05), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95);
+  transition: transform 0.12s ease;
 }
-.wd-back-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #78350f; }
-.wd-title-pill {
-  background: #ffffff; border: 2.5px solid #78350f; border-radius: 14px;
-  padding: 6px 14px; font-size: 13px; font-weight: 900; color: #78350f;
-  box-shadow: 0 3px 0 #78350f; display: flex; align-items: center; gap: 6px;
+.wd-back-btn:active { transform: scale(0.92); }
+
+.wd-nav-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1.5px solid #ffffff;
+  border-radius: 14px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  box-shadow: 0 2px 8px rgba(30, 27, 46, 0.04);
 }
 
-/* Mascot Dialogue / Notification Box */
-.wd-notice-box {
-  display: flex; align-items: center; gap: 10px;
-  background: rgba(255,255,255,0.96); border: 2.5px solid #78350f;
-  border-radius: 16px; padding: 10px 12px; box-shadow: 0 3px 0 #78350f;
-  position: relative; z-index: 2;
+.wd-fast-pill {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border: 1.5px solid #ffffff;
+  color: #065f46;
+  font-weight: 900;
+  font-size: 11px;
+  padding: 6px 11px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.18), inset 1px 1px 2px #ffffff;
 }
-.wd-notice-avatar {
-  width: 44px; height: 44px; flex-shrink: 0;
-  animation: buzzyBob 3s ease-in-out infinite;
+
+/* ── 2. COMPACT NOTICE / STATUS BANNER ── */
+.wd-notice-clay {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1.5px solid #ffffff;
+  border-radius: 16px;
+  padding: 9px 12px;
+  box-shadow: 0 3px 10px rgba(30, 27, 46, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 9px;
 }
-.wd-notice-avatar img { width: 100%; height: 100%; object-fit: contain; }
-@keyframes buzzyBob {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-3px) rotate(3deg); }
+.wd-notice-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  border: 1px solid #ffffff;
+}
+.wd-notice-icon.emerald {
+  background: linear-gradient(135deg, #d1fae5 0%, #10b981 100%);
+  color: #ffffff;
+}
+.wd-notice-icon.danger {
+  background: linear-gradient(135deg, #fecdd3 0%, #f43f5e 100%);
+  color: #ffffff;
+}
+.wd-notice-icon.amber {
+  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 100%);
+  color: #78350f;
 }
 .wd-notice-text {
-  font-size: 11px; font-weight: 800; color: #78350f; line-height: 1.35;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--reef-ink);
+  line-height: 1.35;
+  flex: 1;
 }
 
-/* ── BODY ── */
-.wd-body {
-  padding: 16px 14px 100px;
+/* ── 3. SALDO SIAP TARIK (HERO VAULT CARD) ── */
+.wd-vault-card {
+  padding: 16px 16px 14px;
+}
+.wd-vault-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.wd-vault-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--reef-muted);
+}
+.wd-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 9.5px;
+  font-weight: 900;
+  color: #065f46;
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.12);
+}
+.wd-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: wdDotPulse 1.6s infinite;
+}
+@keyframes wdDotPulse {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.2); box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* ── SALDO SIAP TARIK CARD ── */
-.wd-balance-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 40%, #fef3c7 100%);
-  border: 3.5px solid #78350f;
-  border-radius: 20px;
-  box-shadow: 0 6px 0 #78350f, 0 12px 24px rgba(120,53,15,0.15);
-  padding: 16px;
-  margin-bottom: 20px;
-  position: relative;
-  overflow: hidden;
+.wd-vault-main {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 27px;
+  font-weight: 900;
+  color: #065f46;
+  line-height: 1.15;
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
 }
-.wd-bal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px;
+.wd-vault-main .rp {
+  font-size: 16px;
+  font-weight: 900;
+  color: #10b981;
 }
-.wd-bal-tag {
-  display: inline-flex; align-items: center; gap: 4px;
-  background: #fde68a; border: 1.5px solid #78350f;
-  padding: 2px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 900;
-  color: #78350f; text-transform: uppercase;
-}
-.wd-bal-status {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: #ecfdf5; border: 1.5px solid #10b981;
-  padding: 2.5px 8px; border-radius: 10px; font-size: 9.5px; font-weight: 900; color: #059669;
-}
-.wd-bal-status .pulse-dot {
-  width: 6px; height: 6px; background: #10b981; border-radius: 50%;
-  animation: pulseGreen 1.5s infinite;
-}
-@keyframes pulseGreen {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
-  70% { transform: scale(1.1); box-shadow: 0 0 0 5px rgba(16,185,129,0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0); }
-}
-.wd-bal-main {
-  font-size: 28px; font-weight: 900; color: #78350f; line-height: 1.15;
-  margin-bottom: 4px; font-family: 'Nunito', sans-serif;
-  display: flex; align-items: baseline; gap: 4px;
-}
-.wd-bal-main .curr { font-size: 17px; color: #d97706; }
-.wd-bal-sub {
-  font-size: 10.5px; font-weight: 800; color: #92400e;
+.wd-vault-limits {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--reef-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* ── NOMINAL SELECTION SECTION ── */
-.wd-section-hdr {
-  display: flex; align-items: center; justify-content: space-between;
+/* ── 4. NOMINAL SELECTION (COMPACT 3-COL GRID) ── */
+.wd-card-section {
+  padding: 14px 14px 16px;
+}
+.wd-section-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 10px;
 }
-.wd-sh-title {
-  font-size: 13.5px; font-weight: 900; color: #78350f;
-  display: flex; align-items: center; gap: 6px;
-}
-.wd-sh-badge {
-  background: #fef3c7; color: #b45309; font-size: 10px; font-weight: 900;
-  padding: 3px 8px; border-radius: 8px; border: 1.5px solid #78350f;
-}
-
-/* 2-column tactile chips */
 .wd-amt-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 12px;
 }
 .wd-amt-btn {
-  background: #ffffff; border: 2.5px solid #78350f; border-radius: 16px;
-  padding: 14px 10px; text-align: center; font-size: 15px; font-weight: 900;
-  color: #78350f; box-shadow: 0 4px 0 #78350f; cursor: pointer;
-  transition: transform 0.1s, background 0.15s, color 0.15s;
-  outline: none; font-family: 'Nunito', sans-serif;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid #ffffff;
+  border-radius: 13px;
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(30, 27, 46, 0.04), inset 1px 1px 2px #ffffff;
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  outline: none;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
 }
-.wd-amt-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #78350f; }
+.wd-amt-btn:hover {
+  transform: translateY(-1px);
+  background: #f0fdf4;
+}
+.wd-amt-btn:active {
+  transform: scale(0.94);
+}
 .wd-amt-btn.active {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border-color: #064e3b; color: #ffffff; box-shadow: 0 4px 0 #064e3b;
-  text-shadow: 0 1px 1px #064e3b;
+  border-color: #ffffff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35), inset 1px 1px 2px rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
 }
 
-/* ── REKENING TUJUAN CARD ── */
-.wd-bank-target-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
-  border: 2.5px solid #78350f; border-radius: 18px; padding: 14px 16px;
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 20px; box-shadow: 0 4px 0 #78350f; cursor: pointer;
-  transition: transform 0.1s;
+/* ── 5. REKENING TUJUAN CARD (COMPACT) ── */
+.wd-bank-card {
+  background: #ffffff;
+  border: 1.5px solid #ffffff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(30, 27, 46, 0.04);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+  user-select: none;
+  text-decoration: none;
 }
-.wd-bank-target-card:active { transform: translateY(2px); box-shadow: 0 2px 0 #78350f; }
-.wd-btc-left { display: flex; align-items: center; gap: 10px; }
-.wd-btc-icon {
-  width: 40px; height: 40px; border-radius: 12px; background: #fef3c7;
-  border: 2px solid #78350f; display: flex; align-items: center; justify-content: center;
+.wd-bank-card:active {
+  transform: scale(0.98);
+}
+.wd-bank-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wd-bank-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
-.wd-btc-icon img { width: 26px; height: 26px; object-fit: contain; }
-.wd-btc-details { line-height: 1.25; }
-.wd-btc-bank { font-size: 13px; font-weight: 900; color: #78350f; }
-.wd-btc-acc { font-family: monospace; font-size: 12px; font-weight: 900; color: #b45309; }
-.wd-btc-right {
-  display: flex; align-items: center; gap: 4px; font-size: 11px;
-  font-weight: 900; color: #d97706;
+.wd-bank-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.wd-bank-details {
+  line-height: 1.25;
+}
+.wd-bank-name {
+  font-size: 12.5px;
+  font-weight: 900;
+  color: var(--reef-ink);
+}
+.wd-bank-acc {
+  font-size: 11px;
+  font-weight: 700;
+  color: #059669;
+  font-family: monospace;
+}
+.wd-bank-right {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--reef-coral-500);
 }
 
 /* Bank Inputs if not linked */
-.wd-input-grp { margin-bottom: 12px; }
+.wd-input-grp { margin-bottom: 8px; }
+.wd-input-grp:last-child { margin-bottom: 0; }
 .wd-input-grp label {
-  display: block; font-size: 11.5px; font-weight: 900; color: #78350f; margin-bottom: 6px;
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--reef-ink);
+  margin-bottom: 4px;
 }
 .wd-input-grp input {
-  width: 100%; padding: 12px 14px; border-radius: 14px; border: 2.5px solid #78350f;
-  background: #ffffff; font-weight: 800; font-size: 13px; color: #78350f;
-  box-shadow: 0 3px 0 #78350f; outline: none; font-family: 'Nunito', sans-serif;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1.5px solid #fed7aa;
+  background: #ffffff;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--reef-ink);
+  outline: none;
+  font-family: inherit;
   box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.wd-input-grp input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
-/* ── SUBMIT BUTTON ── */
+/* ── 6. TACTILE 3D SUBMIT BUTTON ── */
 .wd-submit-btn {
-  width: 100%; padding: 15px; border-radius: 20px; font-size: 16px; font-weight: 900;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  border: 3px solid #064e3b; background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #fff; box-shadow: 0 5px 0 #064e3b; text-shadow: 0 1.5px 0 #064e3b;
-  cursor: pointer; font-family: 'Nunito', sans-serif; transition: transform 0.1s;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 16px;
+  font-size: 13.5px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px solid #ffffff;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 5px 14px rgba(16, 185, 129, 0.35), 0 3px 0 #047857, inset 1px 1px 2px rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  user-select: none;
 }
-.wd-submit-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #064e3b; }
+.wd-submit-btn:hover {
+  filter: brightness(1.03);
+}
+.wd-submit-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3), 0 0 0 #047857;
+}
 .wd-submit-btn:disabled {
-  background: #e2e8f0; border-color: #78350f; color: #64748b;
-  box-shadow: 0 4px 0 #78350f; cursor: not-allowed; text-shadow: none;
+  background: #e2e8f0;
+  color: #94a3b8;
+  border-color: #cbd5e1;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Upgrade CTA Button */
-.wd-upgrade-cta {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  margin-top: 10px; width: 100%; padding: 14px; border-radius: 20px;
-  font-size: 14px; font-weight: 900; color: #78350f; text-decoration: none;
-  background: linear-gradient(135deg, #fde047 0%, #f59e0b 100%);
-  border: 3px solid #78350f; box-shadow: 0 5px 0 #78350f;
-  box-sizing: border-box; transition: transform 0.1s;
+.wd-upgrade-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 16px;
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #78350f;
+  text-decoration: none;
+  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 100%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.28), 0 2px 0 #b45309;
+  box-sizing: border-box;
+  transition: transform 0.1s;
 }
-.wd-upgrade-cta:active { transform: translateY(3px); box-shadow: 0 2px 0 #78350f; }
+.wd-upgrade-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #b45309;
+}
 
-/* ── CONFIRMATION MODAL ── */
+/* ── 7. COMPACT RIWAYAT PENARIKAN ── */
+.wd-hist-wrap {
+  margin-top: 4px;
+}
+.wd-hist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+.wd-hist-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.wd-hist-link {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--reef-coral-500);
+  text-decoration: none;
+}
+.wd-hist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.wd-hist-item {
+  background: #ffffff;
+  border: 1.5px solid #ffffff;
+  border-radius: 14px;
+  padding: 9px 12px;
+  box-shadow: 0 2px 6px rgba(30, 27, 46, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wd-hist-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wd-hist-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wd-hist-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  border: 1px solid #ffffff;
+}
+.wd-hist-amt {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  line-height: 1.2;
+}
+.wd-hist-date {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--reef-muted);
+}
+.wd-badge {
+  font-size: 9px;
+  font-weight: 900;
+  padding: 3px 7px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+.wd-badge.pending   { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.wd-badge.approved  { background: #dcfce7; color: #14532d; border-color: #bbf7d0; }
+.wd-badge.rejected  { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.wd-badge.hold      { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.wd-badge.refunded  { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+
+.wd-hist-note {
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.wd-hist-note.rejected { background: #fff1f2; border: 1px dashed #f43f5e; color: #9f1239; }
+.wd-hist-note.hold     { background: #f8fafc; border: 1px dashed #94a3b8; color: #334155; }
+.wd-hist-note.info     { background: #f0fdf4; border: 1px dashed #86efac; color: #166534; }
+
+/* ── 8. CONFIRMATION MODAL (CLAYMORPHIC) ── */
 .cg-modal {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-  z-index: 99999; align-items: center; justify-content: center; padding: 16px;
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
   backdrop-filter: blur(4px);
 }
 .cg-modal-box {
-  background: #ffffff; width: 100%; max-width: 340px; border-radius: 24px;
-  border: 3.5px solid #78350f; box-shadow: 0 8px 0 #78350f; overflow: hidden;
-  animation: modalPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background: var(--reef-card);
+  width: 100%;
+  max-width: 330px;
+  border-radius: 22px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: cgModalPop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-@keyframes modalPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes cgModalPop {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
 .cg-modal-hdr {
-  background: linear-gradient(135deg, #f59e0b, #d97706); padding: 14px;
-  text-align: center; color: #ffffff; font-weight: 900; font-size: 15px;
-  border-bottom: 2.5px solid #78350f; text-shadow: 0 1px 2px #78350f;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  padding: 12px;
+  text-align: center;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 13.5px;
+  border-bottom: 1.5px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .cg-modal-bd {
-  padding: 20px 16px; text-align: center; color: #78350f; font-weight: 800; font-size: 13px;
+  padding: 18px 16px 14px;
+  text-align: center;
 }
 .cg-modal-actions {
-  display: flex; gap: 10px; padding: 0 16px 20px;
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 18px;
 }
 .cg-btn-cancel {
-  flex: 1; padding: 12px; background: #f1f5f9; border: 2.5px solid #78350f;
-  border-radius: 14px; font-weight: 900; color: #64748b; font-size: 13px;
-  box-shadow: 0 3px 0 #78350f; cursor: pointer;
+  flex: 1;
+  padding: 10px;
+  background: #ffffff;
+  border: 1.5px solid #ffffff;
+  border-radius: 12px;
+  font-weight: 800;
+  color: var(--reef-muted);
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgba(30, 27, 46, 0.05);
+  cursor: pointer;
 }
 .cg-btn-confirm {
-  flex: 1.5; padding: 12px; background: linear-gradient(135deg, #10b981, #059669);
-  border: 2.5px solid #064e3b; border-radius: 14px; font-weight: 900; color: #ffffff;
-  box-shadow: 0 3px 0 #064e3b; font-size: 13px; cursor: pointer;
-}
-
-/* ── HISTORY ── */
-.hist-wrap {
-  margin-top: 24px; border-top: 2.5px dashed #fde68a; padding-top: 18px;
-}
-.hist-head {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
-}
-.hist-head h3 {
-  font-size: 13.5px; font-weight: 900; color: #78350f; margin: 0;
-  display: flex; align-items: center; gap: 6px;
-}
-.hist-head a {
-  font-size: 11px; font-weight: 900; color: #78350f; text-decoration: none;
-  background: #fde68a; padding: 5px 12px; border-radius: 10px; border: 2px solid #78350f;
-  box-shadow: 0 2px 0 #78350f;
-}
-.hist-list { display: flex; flex-direction: column; gap: 10px; }
-.hist-card {
-  background: #ffffff; border: 2.5px solid #78350f; border-radius: 16px;
-  padding: 12px; box-shadow: 0 3px 0 #78350f; display: flex; flex-direction: column; gap: 8px;
-}
-.hist-card-main {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-}
-.hist-card-icon {
-  width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0; border: 2px solid #78350f;
-}
-.hist-card-body { flex: 1; min-width: 0; }
-.hist-card-amt { font-size: 14.5px; font-weight: 900; color: #78350f; line-height: 1.2; }
-.hist-card-date { font-size: 10px; font-weight: 800; color: #92400e; margin-top: 2px; }
-.hist-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.hist-badge {
-  font-size: 9.5px; font-weight: 900; padding: 3px 8px; border-radius: 8px;
-  text-transform: uppercase; border: 1.5px solid;
-}
-.wd-badge.pending   { background: #fef3c7; color: #78350f; border-color: #f59e0b; }
-.wd-badge.approved  { background: #dcfce7; color: #14532d; border-color: #16a34a; }
-.wd-badge.rejected  { background: #fee2e2; color: #7f1d1d; border-color: #dc2626; }
-.wd-badge.hold      { background: #f1f5f9; color: #475569; border-color: #94a3b8; }
-.wd-badge.refunded  { background: #e0f2fe; color: #0369a1; border-color: #38bdf8; }
-
-.hist-card-reason {
-  border-radius: 10px; padding: 8px 10px; font-size: 11px; font-weight: 700;
-  display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;
-}
-.hist-card-reason.rejected {
-  background: #fff1f2; border: 1.5px dashed #f43f5e; color: #9f1239;
-}
-.hist-card-reason.hold {
-  background: #f8fafc; border: 1.5px dashed #94a3b8; color: #334155;
-}
-.hist-card-reason.info {
-  background: #f0fdf4; border: 1.5px dashed #86efac; color: #166534;
-}
-.hist-card-reason-lbl {
-  font-size: 9.5px; font-weight: 900; text-transform: uppercase; display: block; margin-bottom: 2px;
+  flex: 1.4;
+  padding: 10px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: 1.5px solid #ffffff;
+  border-radius: 12px;
+  font-weight: 900;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+  font-size: 12px;
+  cursor: pointer;
 }
 </style>
 
-<div class="wd-page-wrap">
-  <!-- TOP HERO BANNER -->
-  <div class="wd-top-banner">
-    <div class="wd-top-nav">
-      <a href="/home" class="wd-back-btn" title="Kembali ke Beranda">
-        <i class="ph-bold ph-caret-left"></i>
-      </a>
-      <div class="wd-title-pill">
-        <i class="ph-fill ph-arrow-up-right" style="color:#059669;"></i>
-        <span>Tarik Saldo Cuan</span>
-      </div>
-      <div style="width:38px;"></div> <!-- Spacer -->
-    </div>
+<div class="wd-reef-stage">
 
-    <!-- Notification or Mascot dialogue -->
-    <?php if ($wd_estimation && $wd_locked): ?>
-      <div class="wd-notice-box" style="background:#fef2f2; border-color:#dc2626; box-shadow:0 3px 0 #991b1b;">
-        <div style="font-size:20px;">🔒</div>
-        <div class="wd-notice-text" style="color:#7f1d1d;"><?= strip_tags($wd_estimation) ?></div>
-      </div>
-    <?php elseif ($has_pending_wd): ?>
-      <div class="wd-notice-box">
-        <div style="font-size:20px;">🔔</div>
-        <div class="wd-notice-text">Penarikan kamu sedang diproses tim verifikasi (estimasi 1-24 jam).</div>
-      </div>
-    <?php elseif (!empty($wds) && strtolower($wds[0]['status']) === 'rejected' && strtotime($wds[0]['created_at']) > strtotime('-2 days')): ?>
-      <div class="wd-notice-box" style="background:#fff1f2; border-color:#e11d48; box-shadow:0 3px 0 #9f1239;">
-        <div style="font-size:22px;color:#e11d48;display:flex;align-items:center;"><i class="ph-bold ph-warning-circle"></i></div>
-        <div class="wd-notice-text" style="color:#9f1239;font-size:12px;line-height:1.4;">
-          <strong>Penarikan Terakhir Ditolak</strong> (Saldo telah dikembalikan):<br>
-          <span style="font-weight:700;color:#e11d48;">Alasan: <?= htmlspecialchars($wds[0]['admin_note'] ?: 'Data rekening belum sesuai') ?></span>
-        </div>
-      </div>
-    <?php elseif ($flash): ?>
-      <div class="wd-notice-box" style="<?= $flashType==='error' ? 'background:#fef2f2; border-color:#dc2626; box-shadow:0 3px 0 #991b1b;' : 'background:#ecfdf5; border-color:#16a34a; box-shadow:0 3px 0 #14532d;' ?>">
-        <div style="font-size:20px;"><?= $flashType==='error' ? '❌' : '✨' ?></div>
-        <div class="wd-notice-text" style="<?= $flashType==='error' ? 'color:#7f1d1d;' : 'color:#065f46;' ?>"><?= htmlspecialchars($flash) ?></div>
-      </div>
-    <?php else: ?>
-      <div class="wd-notice-box">
-        <div class="wd-notice-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;border-radius:12px;color:#fff;font-size:20px;">
-          <i class="ph-fill ph-wallet"></i>
-        </div>
-        <div class="wd-notice-text">
-          Pilih nominal lalu cairkan saldo hasil nonton video &amp; aktivitas cuanmu ke rekening atau e-wallet!
-        </div>
-      </div>
-    <?php endif; ?>
+  <!-- ── 1. COMPACT TOP NAVIGATOR ── -->
+  <div class="wd-top-nav">
+    <a href="/home" class="wd-back-btn" title="Kembali ke Beranda">
+      <i class="ph-bold ph-caret-left"></i>
+    </a>
+    <div class="wd-nav-title">
+      <i class="ph-fill ph-hand-coins" style="color:#10b981;"></i>
+      <span>Tarik Saldo Cuan</span>
+    </div>
+    <div class="wd-fast-pill">
+      <i class="ph-bold ph-lightning"></i>
+      <span>Cair 1-10 Menit</span>
+    </div>
   </div>
 
-  <!-- BODY -->
-  <div class="wd-body">
-    <!-- SALDO SIAP TARIK (HERO CARD) -->
-    <div class="wd-balance-card">
-      <div class="wd-bal-header">
-        <span class="wd-bal-tag"><i class="ph-fill ph-wallet" style="color:#d97706;"></i> Saldo Siap Tarik (WD)</span>
-        <span class="wd-bal-status">
-          <span class="pulse-dot"></span>
-          <span>Siap Cair 24 Jam</span>
-        </span>
+  <!-- ── 2. COMPACT NOTICE / STATUS ── -->
+  <?php if ($wd_estimation && $wd_locked): ?>
+    <div class="wd-notice-clay" style="background:#fff1f2;border-color:#fecdd3;">
+      <div class="wd-notice-icon danger">
+        <i class="ph-bold ph-lock-key"></i>
       </div>
-      <div class="wd-bal-main">
-        <span class="curr">Rp</span>
-        <span><?= number_format((float)$user['balance_wd'], 0, ',', '.') ?></span>
-      </div>
-      <div class="wd-bal-sub">
-        Minimal penarikan: <?= format_rp($min_withdraw) ?><?= $max_withdraw > 0 ? ' · Maksimal: ' . format_rp($max_withdraw) : '' ?>
+      <div class="wd-notice-text" style="color:#9f1239;">
+        <?= strip_tags($wd_estimation) ?>
       </div>
     </div>
+  <?php elseif ($has_pending_wd): ?>
+    <div class="wd-notice-clay" style="background:#fffbeb;border-color:#fde68a;">
+      <div class="wd-notice-icon amber">
+        <i class="ph-bold ph-hourglass-medium"></i>
+      </div>
+      <div class="wd-notice-text" style="color:#92400e;">
+        Penarikanmu sedang diproses oleh tim verifikasi kasir.
+      </div>
+    </div>
+  <?php elseif (!empty($wds) && strtolower($wds[0]['status']) === 'rejected' && strtotime($wds[0]['created_at']) > strtotime('-2 days')): ?>
+    <div class="wd-notice-clay" style="background:#fff1f2;border-color:#fecdd3;">
+      <div class="wd-notice-icon danger">
+        <i class="ph-bold ph-warning-circle"></i>
+      </div>
+      <div class="wd-notice-text" style="color:#9f1239;">
+        <strong>Penarikan Ditolak:</strong> Saldo kembali. Alasan: <?= htmlspecialchars($wds[0]['admin_note'] ?: 'Rekening tidak valid') ?>
+      </div>
+    </div>
+  <?php elseif ($flash): ?>
+    <div class="wd-notice-clay" style="<?= $flashType==='error' ? 'background:#fff1f2;border-color:#fecdd3;' : 'background:#ecfdf5;border-color:#a7f3d0;' ?>">
+      <div class="wd-notice-icon <?= $flashType==='error' ? 'danger' : 'emerald' ?>">
+        <i class="ph-bold <?= $flashType==='error' ? 'ph-x' : 'ph-check' ?>"></i>
+      </div>
+      <div class="wd-notice-text" style="<?= $flashType==='error' ? 'color:#9f1239;' : 'color:#065f46;' ?>">
+        <?= htmlspecialchars($flash) ?>
+      </div>
+    </div>
+  <?php endif; ?>
 
-    <!-- WITHDRAW FORM -->
-    <form method="POST" id="wd-form">
-      <?= csrf_field() ?>
-      <input type="hidden" name="form_token" value="<?= htmlspecialchars($_form_token_wd) ?>">
-      <input type="hidden" name="amount" id="selected-amount" value="" required>
+  <!-- ── 3. SALDO SIAP TARIK (THE OCEAN VAULT CARD) ── -->
+  <div class="wd-clay wd-vault-card">
+    <div class="wd-bubble wd-bubble--1"></div>
+    <div class="wd-bubble wd-bubble--2"></div>
 
-      <div class="wd-section-hdr">
-        <div class="wd-sh-title">
-          <i class="ph-fill ph-coins" style="color:#d97706;"></i>
-          <span>Pilih Nominal Penarikan</span>
-        </div>
-        <div class="wd-sh-badge">Cair Cepat</div>
+    <div class="wd-vault-top">
+      <span class="wd-vault-tag">
+        <i class="ph-fill ph-wallet" style="color:#10b981;font-size:14px;"></i>
+        <span>Saldo Siap Cair</span>
+      </span>
+      <span class="wd-live-badge">
+        <span class="wd-pulse-dot"></span>
+        <span>Siap 24 Jam</span>
+      </span>
+    </div>
+
+    <div class="wd-vault-main">
+      <span class="rp">Rp</span>
+      <span><?= number_format((float)$user['balance_wd'], 0, ',', '.') ?></span>
+    </div>
+
+    <div class="wd-vault-limits">
+      <span>Min: <?= format_rp($min_withdraw) ?></span>
+      <?php if ($max_withdraw > 0): ?>
+        <span>&bull;</span>
+        <span>Maks: <?= format_rp($max_withdraw) ?></span>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <!-- ── 4. WITHDRAW FORM ── -->
+  <form method="POST" id="wd-form" style="display:flex;flex-direction:column;gap:10px;">
+    <?= csrf_field() ?>
+    <input type="hidden" name="form_token" value="<?= htmlspecialchars($_form_token_wd) ?>">
+    <input type="hidden" name="amount" id="selected-amount" value="" required>
+
+    <!-- PILIH NOMINAL CARD -->
+    <div class="wd-clay wd-card-section">
+      <div class="wd-section-title">
+        <i class="ph-fill ph-coins" style="color:#f59e0b;font-size:15px;"></i>
+        <span>Pilih Nominal Pencairan</span>
       </div>
 
-      <!-- AMOUNT GRID -->
       <div class="wd-amt-grid">
         <?php 
         $rendered = 0;
@@ -642,44 +958,42 @@ require dirname(__DIR__) . '/partials/header.php';
         <?php $rendered++; endforeach; ?>
 
         <?php if ($rendered == 0): ?>
-          <div style="grid-column: 1/-1; background:#fffbeb; border:2px solid #78350f; border-radius:16px; padding:16px; text-align:center; font-weight:800; color:#b45309; box-shadow:0 3px 0 #78350f;">
+          <div style="grid-column: 1/-1; background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:12px; text-align:center; font-weight:800; font-size:11px; color:#b45309;">
             Belum ada opsi penarikan yang tersedia untuk saat ini.
           </div>
         <?php endif; ?>
       </div>
 
-      <!-- REKENING TUJUAN CARD -->
-      <div class="wd-section-hdr">
-        <div class="wd-sh-title">
-          <i class="ph-fill ph-bank" style="color:#d97706;"></i>
-          <span>Rekening / E-Wallet Tujuan</span>
-        </div>
+      <!-- REKENING / E-WALLET TUJUAN -->
+      <div class="wd-section-title" style="margin-top:6px;margin-bottom:8px;">
+        <i class="ph-fill ph-bank" style="color:#0ea5e9;font-size:15px;"></i>
+        <span>Tujuan Rekening / E-Wallet</span>
       </div>
 
       <?php if ($has_bank): ?>
-        <div class="wd-bank-target-card" onclick="window.location.href='/edit-rekening'" title="Klik untuk mengganti rekening">
-          <div class="wd-btc-left">
-            <div class="wd-btc-icon">
+        <a href="/edit-rekening" class="wd-bank-card" title="Klik untuk mengganti rekening">
+          <div class="wd-bank-left">
+            <div class="wd-bank-icon">
               <?php 
               $user_wl = $channel_logos[strtolower($user['bank_name'] ?? '')] ?? null; 
               if ($user_wl): ?>
                 <img src="/assets/banks/<?= htmlspecialchars($user_wl) ?>" alt="<?= htmlspecialchars($user['bank_name']) ?>">
               <?php else: ?>
-                <i class="ph-fill ph-bank" style="font-size:20px; color:#d97706;"></i>
+                <i class="ph-fill ph-bank" style="font-size:18px; color:#10b981;"></i>
               <?php endif; ?>
             </div>
-            <div class="wd-btc-details">
-              <div class="wd-btc-bank"><?= htmlspecialchars($user['bank_name']) ?></div>
-              <div class="wd-btc-acc"><?= htmlspecialchars(mask_account($user['account_number'] ?? '')) ?> · <?= htmlspecialchars($user['account_name'] ?? '') ?></div>
+            <div class="wd-bank-details">
+              <div class="wd-bank-name"><?= htmlspecialchars($user['bank_name']) ?></div>
+              <div class="wd-bank-acc"><?= htmlspecialchars(mask_account($user['account_number'] ?? '')) ?> &bull; <?= htmlspecialchars($user['account_name'] ?? '') ?></div>
             </div>
           </div>
-          <div class="wd-btc-right">
+          <div class="wd-bank-right">
             <span>Ubah</span>
             <i class="ph-bold ph-caret-right"></i>
           </div>
-        </div>
+        </a>
       <?php else: ?>
-        <div style="background:#ffffff; border:2.5px solid #78350f; border-radius:18px; padding:14px; margin-bottom:20px; box-shadow:0 4px 0 #78350f;">
+        <div style="background:#ffffff; border-radius:14px; padding:10px 12px; border:1px solid #fed7aa;">
           <div class="wd-input-grp">
             <label>Pilih Bank / E-Wallet</label>
             <input type="text" name="bank_name" value="<?= $is_free_level ? 'DANA' : '' ?>" <?= $is_free_level ? 'readonly' : 'placeholder="BCA, DANA, OVO, BRI..." required' ?>>
@@ -689,147 +1003,153 @@ require dirname(__DIR__) . '/partials/header.php';
             <input type="text" name="account_number" placeholder="Contoh: 081234567890" required>
           </div>
           <div class="wd-input-grp">
-            <label>Nama Pemilik (Sesuai Buku Tabungan / Akun)</label>
+            <label>Nama Pemilik Rekening</label>
             <input type="text" name="account_name" placeholder="Nama Lengkap Pemilik" required>
           </div>
         </div>
       <?php endif; ?>
-
-      <!-- SUBMIT BUTTON -->
-      <?php if ($free_wd_limit_reached): ?>
-        <button type="button" class="wd-submit-btn" disabled>Tarik (Batas Limit Habis)</button>
-      <?php elseif ($free_wrong_bank): ?>
-        <button type="button" class="wd-submit-btn" disabled>Hanya DANA untuk Level <?= htmlspecialchars($user_mem['name']) ?></button>
-      <?php elseif ($wd_locked): ?>
-        <button type="button" class="wd-submit-btn" disabled>Penarikan Sedang Terkunci</button>
-      <?php elseif ($level_blocked): ?>
-        <?php if ((float)$user['balance_wd'] < 50000): ?>
-          <button type="button" class="wd-submit-btn" disabled>Minimal Tarik Rp 50.000</button>
-        <?php else: ?>
-          <button type="button" class="wd-submit-btn" disabled>Butuh Upgrade Level</button>
-          <a href="/upgrade" class="wd-upgrade-cta">
-            <i class="ph-fill ph-crown"></i>
-            <span>Upgrade Level Sekarang untuk Tarik Dana →</span>
-          </a>
-        <?php endif; ?>
-      <?php elseif ($free_age_blocked): ?>
-        <button type="button" class="wd-submit-btn" disabled>Akun Baru Min. 1 Hari</button>
-      <?php elseif (!$user['can_withdraw']): ?>
-        <button type="button" class="wd-submit-btn" disabled>Akses Penarikan Dibatasi</button>
-      <?php elseif ($has_pending_bank): ?>
-        <button type="button" class="wd-submit-btn" disabled>Sedang Verifikasi Rekening</button>
-      <?php elseif ($has_pending_wd): ?>
-        <button type="button" class="wd-submit-btn" disabled>Ada Penarikan Sedang Diproses</button>
-      <?php elseif ((float)$user['balance_wd'] < $min_withdraw): ?>
-        <button type="button" class="wd-submit-btn" disabled>Saldo Belum Mencukupi</button>
-      <?php else: ?>
-        <button type="submit" id="wd-submit-btn" class="wd-submit-btn">
-          <i class="ph-fill ph-paper-plane-tilt" style="font-size:20px;"></i>
-          <span>Tarik Saldo Sekarang</span>
-        </button>
-      <?php endif; ?>
-
-    </form>
-
-    <!-- ── RIWAYAT PENARIKAN TERAKHIR ── -->
-    <?php if (!empty($wds)): ?>
-    <div class="hist-wrap">
-      <div class="hist-head">
-        <h3><i class="ph-fill ph-clock-counter-clockwise" style="color:#d97706;"></i> Riwayat Penarikan Terakhir</h3>
-        <a href="/history?tab=withdraw">Lihat Semua →</a>
-      </div>
-      <div class="hist-list">
-        <?php foreach ($wds as $w): ?>
-          <?php
-          $st = strtolower($w['status']);
-          $bclass = 'hold';
-          $stLabel = ucfirst($st);
-          $iconI = 'ph-arrow-u-up-left';
-          $iconStyle = 'background:#f1f5f9;color:#475569;';
-
-          if ($st === 'pending') { 
-              $bclass = 'pending'; 
-              $stLabel = 'Diproses'; 
-              $iconI = 'ph-clock';
-              $iconStyle = 'background:#fef3c7;color:#d97706;';
-          } elseif ($st === 'approved' || $st === 'confirmed') { 
-              $bclass = 'approved'; 
-              $stLabel = 'Sukses'; 
-              $iconI = 'ph-check';
-              $iconStyle = 'background:#dcfce7;color:#15803d;';
-          } elseif ($st === 'rejected') { 
-              $bclass = 'rejected'; 
-              $stLabel = 'Ditolak'; 
-              $iconI = 'ph-x';
-              $iconStyle = 'background:#fee2e2;color:#dc2626;';
-          } elseif ($st === 'hold') {
-              $bclass = 'hold';
-              $stLabel = 'Ditahan';
-              $iconI = 'ph-pause';
-              $iconStyle = 'background:#f1f5f9;color:#64748b;';
-          } elseif ($st === 'refunded') {
-              $bclass = 'refunded';
-              $stLabel = 'Dikembalikan';
-              $iconI = 'ph-arrow-u-up-left';
-              $iconStyle = 'background:#e0f2fe;color:#0284c7;';
-          }
-          ?>
-          <div class="hist-card">
-            <div class="hist-card-main">
-              <div class="hist-card-icon" style="<?= $iconStyle ?>border-color:#78350f;">
-                <i class="ph-bold <?= $iconI ?>"></i>
-              </div>
-              <div class="hist-card-body">
-                <div class="hist-card-amt"><?= format_rp((float)$w['amount']) ?></div>
-                <div class="hist-card-date"><?= htmlspecialchars($w['bank_name']) ?> · <?= date('d M Y, H:i', strtotime($w['created_at'])) ?> WIB</div>
-              </div>
-              <div class="hist-card-right">
-                <span class="hist-badge wd-badge <?= $bclass ?>"><?= $stLabel ?></span>
-              </div>
-            </div>
-
-            <?php if (!empty($w['admin_note'])): ?>
-              <div class="hist-card-reason <?= $st === 'rejected' ? 'rejected' : ($st === 'hold' ? 'hold' : 'info') ?>">
-                <i class="ph-bold <?= $st === 'rejected' ? 'ph-warning-circle' : 'ph-info' ?>" style="font-size:15px;flex-shrink:0;margin-top:1px;"></i>
-                <div style="flex:1;">
-                  <span class="hist-card-reason-lbl">
-                    <?= $st === 'rejected' ? 'Alasan Penolakan:' : ($st === 'hold' ? 'Catatan Hold:' : 'Catatan Admin:') ?>
-                  </span>
-                  <div><?= htmlspecialchars((string)$w['admin_note']) ?></div>
-                </div>
-              </div>
-            <?php endif; ?>
-          </div>
-        <?php endforeach; ?>
-      </div>
     </div>
+
+    <!-- ── 5. SUBMIT ACTION BUTTON ── -->
+    <?php if ($free_wd_limit_reached): ?>
+      <button type="button" class="wd-submit-btn" disabled>Batas Limit WD Tercapai</button>
+    <?php elseif ($free_wrong_bank): ?>
+      <button type="button" class="wd-submit-btn" disabled>Hanya DANA untuk Level <?= htmlspecialchars($user_mem['name']) ?></button>
+    <?php elseif ($wd_locked): ?>
+      <button type="button" class="wd-submit-btn" disabled>Penarikan Sedang Terkunci</button>
+    <?php elseif ($level_blocked): ?>
+      <?php if ((float)$user['balance_wd'] < 50000): ?>
+        <button type="button" class="wd-submit-btn" disabled>Minimal Tarik Rp 50.000</button>
+      <?php else: ?>
+        <button type="button" class="wd-submit-btn" disabled>Butuh Upgrade Level</button>
+        <a href="/upgrade" class="wd-upgrade-btn">
+          <i class="ph-fill ph-crown"></i>
+          <span>Upgrade Level untuk Buka Penarikan &rarr;</span>
+        </a>
+      <?php endif; ?>
+    <?php elseif ($free_age_blocked): ?>
+      <button type="button" class="wd-submit-btn" disabled>Akun Baru (Min. Umur 1 Hari)</button>
+    <?php elseif (!$user['can_withdraw']): ?>
+      <button type="button" class="wd-submit-btn" disabled>Akses Penarikan Dibatasi</button>
+    <?php elseif ($has_pending_bank): ?>
+      <button type="button" class="wd-submit-btn" disabled>Sedang Verifikasi Rekening</button>
+    <?php elseif ($has_pending_wd): ?>
+      <button type="button" class="wd-submit-btn" disabled>Ada Penarikan Sedang Diproses</button>
+    <?php elseif ((float)$user['balance_wd'] < $min_withdraw): ?>
+      <button type="button" class="wd-submit-btn" disabled>Saldo Belum Mencukupi</button>
+    <?php else: ?>
+      <button type="submit" id="wd-submit-btn" class="wd-submit-btn">
+        <i class="ph-fill ph-paper-plane-tilt" style="font-size:18px;"></i>
+        <span>Tarik Saldo Sekarang</span>
+      </button>
     <?php endif; ?>
 
+  </form>
+
+  <!-- ── 6. COMPACT RIWAYAT PENARIKAN TERAKHIR ── -->
+  <?php if (!empty($wds)): ?>
+  <div class="wd-hist-wrap">
+    <div class="wd-hist-header">
+      <div class="wd-hist-title">
+        <i class="ph-fill ph-clock-counter-clockwise" style="color:#0ea5e9;"></i>
+        <span>Riwayat Penarikan</span>
+      </div>
+      <a href="/history?tab=withdraw" class="wd-hist-link">Lihat Semua &rarr;</a>
+    </div>
+
+    <div class="wd-hist-list">
+      <?php foreach ($wds as $w): ?>
+        <?php
+        $st = strtolower($w['status']);
+        $bclass = 'hold';
+        $stLabel = ucfirst($st);
+        $iconI = 'ph-arrow-u-up-left';
+        $iconStyle = 'background:#f1f5f9;color:#475569;';
+
+        if ($st === 'pending') { 
+            $bclass = 'pending'; 
+            $stLabel = 'Diproses'; 
+            $iconI = 'ph-clock';
+            $iconStyle = 'background:#fef3c7;color:#d97706;';
+        } elseif ($st === 'approved' || $st === 'confirmed') { 
+            $bclass = 'approved'; 
+            $stLabel = 'Sukses'; 
+            $iconI = 'ph-check';
+            $iconStyle = 'background:#dcfce7;color:#15803d;';
+        } elseif ($st === 'rejected') { 
+            $bclass = 'rejected'; 
+            $stLabel = 'Ditolak'; 
+            $iconI = 'ph-x';
+            $iconStyle = 'background:#fee2e2;color:#dc2626;';
+        } elseif ($st === 'hold') {
+            $bclass = 'hold';
+            $stLabel = 'Ditahan';
+            $iconI = 'ph-pause';
+            $iconStyle = 'background:#f1f5f9;color:#64748b;';
+        } elseif ($st === 'refunded') {
+            $bclass = 'refunded';
+            $stLabel = 'Dikembalikan';
+            $iconI = 'ph-arrow-u-up-left';
+            $iconStyle = 'background:#e0f2fe;color:#0284c7;';
+        }
+        ?>
+        <div class="wd-hist-item">
+          <div class="wd-hist-main">
+            <div class="wd-hist-left">
+              <div class="wd-hist-icon" style="<?= $iconStyle ?>">
+                <i class="ph-bold <?= $iconI ?>"></i>
+              </div>
+              <div>
+                <div class="wd-hist-amt"><?= format_rp((float)$w['amount']) ?></div>
+                <div class="wd-hist-date"><?= htmlspecialchars($w['bank_name']) ?> &bull; <?= date('d M Y, H:i', strtotime($w['created_at'])) ?> WIB</div>
+              </div>
+            </div>
+            <div>
+              <span class="wd-badge <?= $bclass ?>"><?= $stLabel ?></span>
+            </div>
+          </div>
+
+          <?php if (!empty($w['admin_note'])): ?>
+            <div class="wd-hist-note <?= $st === 'rejected' ? 'rejected' : ($st === 'hold' ? 'hold' : 'info') ?>">
+              <i class="ph-bold <?= $st === 'rejected' ? 'ph-warning-circle' : 'ph-info' ?>" style="font-size:14px;flex-shrink:0;margin-top:1px;"></i>
+              <div>
+                <strong><?= $st === 'rejected' ? 'Alasan Penolakan:' : ($st === 'hold' ? 'Catatan Hold:' : 'Catatan Admin:') ?></strong>
+                <?= htmlspecialchars((string)$w['admin_note']) ?>
+              </div>
+            </div>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+    </div>
   </div>
+  <?php endif; ?>
+
 </div>
 
-<!-- CONFIRMATION MODAL -->
+<!-- ── 7. CONFIRMATION MODAL (CLAYMORPHIC) ── -->
 <div id="cg-modal" class="cg-modal">
   <div class="cg-modal-box">
     <div class="cg-modal-hdr">
-      <i class="ph-fill ph-shield-check"></i> Konfirmasi Penarikan Saldo
+      <i class="ph-fill ph-shield-check"></i>
+      <span>Konfirmasi Penarikan Saldo</span>
     </div>
     <div class="cg-modal-bd">
-      <div style="font-size:12px;font-weight:800;color:#9a3412;margin-bottom:6px;">Nominal yang Akan Dicairkan:</div>
-      <div id="cg-modal-amt" style="font-size:26px;font-weight:900;color:#78350f;margin-bottom:12px;letter-spacing:-0.5px;"></div>
+      <div style="font-size:11px;font-weight:800;color:var(--reef-muted);margin-bottom:4px;">Nominal yang Akan Dicairkan:</div>
+      <div id="cg-modal-amt" style="font-size:24px;font-weight:900;color:#065f46;margin-bottom:12px;letter-spacing:-0.5px;"></div>
+      
       <?php if (!$has_bank): ?>
-      <div style="font-size:11px;font-weight:800;color:#b91c1c;background:#fee2e2;padding:8px 10px;border-radius:12px;border:1.5px solid #dc2626;">
-        ⚠️ Pastikan nomor rekening dan nama Anda sudah benar!
+      <div style="font-size:11px;font-weight:800;color:#9f1239;background:#fff1f2;padding:8px 10px;border-radius:12px;border:1px solid #fecdd3;">
+        Pastikan nomor rekening dan nama pemilik sudah benar!
       </div>
       <?php else: ?>
-      <div style="font-size:11px;font-weight:800;color:#065f46;background:#dcfce7;padding:8px 10px;border-radius:12px;border:1.5px solid #10b981;">
-        Dana akan ditransfer langsung ke rekening terdaftar: <strong><?= htmlspecialchars($user['bank_name']) ?> (<?= htmlspecialchars(mask_account($user['account_number'] ?? '')) ?>)</strong>
+      <div style="font-size:11px;font-weight:700;color:#065f46;background:#d1fae5;padding:8px 10px;border-radius:12px;border:1px solid #a7f3d0;">
+        Ditransfer langsung ke rekening: <strong><?= htmlspecialchars($user['bank_name']) ?> (<?= htmlspecialchars(mask_account($user['account_number'] ?? '')) ?>)</strong>
       </div>
       <?php endif; ?>
     </div>
     <div class="cg-modal-actions">
       <button type="button" class="cg-btn-cancel" onclick="document.getElementById('cg-modal').style.display='none'">Batal</button>
-      <button type="button" class="cg-btn-confirm" onclick="confirmCGWd()">Gas Tarik!</button>
+      <button type="button" class="cg-btn-confirm" onclick="confirmCGWd()">Ya, Cairkan!</button>
     </div>
   </div>
 </div>
