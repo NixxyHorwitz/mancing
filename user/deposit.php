@@ -18,12 +18,16 @@ $u_start = max(1, min($u_min, $u_max));
 $u_cap   = max(1, $u_min, $u_max);
 
 /**
- * Kode unik terkecil (mulai +1) yang belum dipakai deposit pending dengan nominal dasar yang sama.
- * Callback QRIS mencocokkan deposit pending berdasarkan nominal persis, jadi nominal pending harus unik.
+ * Kode unik terkecil (mulai +1) yang belum dipakai untuk nominal dasar yang sama.
+ * Nominal dianggap terpakai bila masih pending ATAU dibuat dalam 3 jam terakhir (status apa pun,
+ * termasuk yang sudah expired/dibatalkan), supaya pembayaran telat tidak tertukar ke deposit lain.
  * Bila semua kode sampai batas maks terpakai, lanjut naik sampai ketemu yang kosong.
  */
+const DEPO_UNIQUE_LOCK_HOURS = 3;
 function depo_next_unique_code(PDO $pdo, int $base, int $start, int $cap): int {
-    $s = $pdo->prepare("SELECT DISTINCT CAST(amount AS UNSIGNED) FROM deposits WHERE status = 'pending' AND amount > ? AND amount <= ?");
+    $s = $pdo->prepare("SELECT DISTINCT CAST(amount AS UNSIGNED) FROM deposits
+                        WHERE (status = 'pending' OR created_at >= DATE_SUB(NOW(), INTERVAL " . DEPO_UNIQUE_LOCK_HOURS . " HOUR))
+                          AND amount > ? AND amount <= ?");
     $s->execute([$base, $base + $cap + 1000]);
     $used = array_flip(array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN)));
     for ($c = $start; $c < $cap + 1000; $c++) {

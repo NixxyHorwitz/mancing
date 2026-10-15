@@ -239,6 +239,11 @@ if (isset($update['callback_query'])) {
             $row->execute([$id]); $row = $row->fetch();
             if (!$row) {
                 answer_cb($token, $cb_id, '⚠️ Deposit tidak ditemukan.');
+            } elseif ($row['status'] === 'rejected' && (string)$row['admin_note'] === DEPO_EXPIRED_NOTE) {
+                // Expired otomatis (3 jam): tetap sediakan tombol Acc Expired
+                [$msg, $kb] = depo_expired_tg($row);
+                edit_msg($token, $chat_id, $msg_id, $msg, $kb);
+                answer_cb($token, $cb_id, '⌛ Deposit ini sudah expired (tidak dibayar ' . DEPO_EXPIRE_HOURS . ' jam).');
             } elseif ($row['status'] !== 'pending') {
                 if ($row['status'] === 'confirmed') {
                     $msg = "✅ <b>DEPOSIT QRIS BERHASIL (CONFIRMED)</b>\n";
