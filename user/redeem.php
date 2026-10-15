@@ -143,277 +143,462 @@ $pageTitle  = 'Redeem Code  ';
 $activePage = 'redeem';
 require dirname(__DIR__) . '/partials/header.php';
 ?>
-<style>
-/* ══════════════════════════════════════════════
-   REDEEM PAGE — CASUAL GAME STYLE (SETEMA WD)
-   ══════════════════════════════════════════════ */
-html body { background: #f97316 !important; background-image: none !important; margin: 0; padding: 0; font-family: 'Nunito', sans-serif; }
 
-.rdm-container {
+<style>
+/* ══════════════════════════════════════════════════════════════
+   TREASURE ISLAND REDEEM VAULT — PETI HADIAH SAMUDRA
+   Tema: Living Coral Reef Fantasy & 3D Tactile Claymorphism
+   ══════════════════════════════════════════════════════════════ */
+
+.rdm-reef-stage {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 6px 12px 34px;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
-/* ── BLUE TOP BANNER (sama seperti WD) ── */
-.wd-top {
-  background: #38bdf8;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
-  background-size: 40px 20px;
-  background-position: 0 0, 20px 10px;
+/* Claymorphism Base */
+.rdm-clay {
+  border: 2px solid #ffffff;
+  border-radius: 20px;
+  background: var(--reef-card);
+  box-shadow: var(--reef-clay-shadow);
   position: relative;
-  padding: 16px 14px 48px;
-  border-bottom: 3px solid #0284c7;
   overflow: hidden;
 }
 
-.wd-top-bar {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.wd-back-btn {
-  width: 32px; height: 32px;
-  background: #fde047;
-  border: none;
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  color: #ca8a04; font-size: 16px;
-  box-shadow: 0 3px 0 #a16207;
-  text-decoration: none;
-  flex-shrink: 0;
-  transition: transform 0.1s;
-}
-.wd-back-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #a16207; }
-
-.wd-notice-pill {
-  flex: 1;
-  background: #fef08a;
-  border: 2.5px solid #ca8a04;
-  border-radius: 20px;
-  padding: 8px 12px 8px 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 0 #a16207;
-}
-.wd-notice-icon { font-size: 20px; flex-shrink: 0; }
-.wd-notice-txt { font-size: 11px; font-weight: 800; color: #854d0e; line-height: 1.2; }
-
-/* GIF mascot floating dari hero ke body */
-.rdm-gif-mascot {
+/* Ambient Marine Floating Bubbles */
+.rdm-bubble {
   position: absolute;
-  bottom: -28px;
-  right: 14px;
-  z-index: 10;
-}
-.rdm-gif-mascot img {
-  width: 100px;
-  height: auto;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
-  display: block;
-}
-
-/* ── ORANGE BODY (sama seperti WD) ── */
-.wd-body {
-  flex: 1;
-  background: #f97316;
-  padding: 20px 14px 100px;
-  position: relative;
-}
-.wd-body::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(circle, rgba(255,255,255,0.08) 10%, transparent 10%),
-              radial-gradient(circle, rgba(255,255,255,0.08) 10%, transparent 10%);
-  background-size: 50px 50px;
-  background-position: 0 0, 25px 25px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95) 0%, rgba(103, 232, 249, 0.35) 60%, rgba(244, 63, 94, 0.15) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: inset 1px 1px 2px #ffffff, 0 2px 6px rgba(8, 145, 178, 0.15);
   pointer-events: none;
+  z-index: 0;
+}
+.rdm-bubble--1 {
+  width: 18px;
+  height: 18px;
+  top: 12px;
+  right: 18px;
+  animation: rdmBubbleFloat 5.2s infinite ease-in-out alternate;
+}
+.rdm-bubble--2 {
+  width: 26px;
+  height: 26px;
+  bottom: 14px;
+  right: 14px;
+  animation: rdmBubbleFloat 6.8s infinite ease-in-out alternate-reverse;
+  opacity: 0.65;
+}
+@keyframes rdmBubbleFloat {
+  0% { transform: translateY(0) scale(0.95); }
+  50% { transform: translateY(-7px) scale(1.05); }
+  100% { transform: translateY(2px) scale(0.98); }
 }
 
-/* ── SECTION HEADER ── */
-.wd-section-hdr {
+/* ── 1. COMPACT TOP NAVIGATOR ── */
+.rdm-top-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  position: relative; z-index: 2;
+  gap: 8px;
+  padding: 2px 2px;
 }
-.wd-sh-title { font-size: 15px; font-weight: 900; color: #7c2d12; }
+.rdm-back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1.5px solid #ffffff;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--reef-ink);
+  font-size: 17px;
+  text-decoration: none;
+  box-shadow: 0 3px 8px rgba(30, 27, 46, 0.05), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95);
+  transition: transform 0.12s ease;
+}
+.rdm-back-btn:active { transform: scale(0.92); }
 
-/* ── INPUT CODE (style bento seperti wallet row) ── */
-.rdm-code-box {
-  background: #fffbeb;
-  border: 2.5px solid #b45309;
-  border-radius: 20px;
-  padding: 14px;
-  margin-bottom: 20px;
-  position: relative; z-index: 2;
-  box-shadow: 0 4px 0 #b45309;
+.rdm-nav-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1.5px solid #ffffff;
+  border-radius: 14px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  box-shadow: 0 2px 8px rgba(30, 27, 46, 0.04);
+}
+
+.rdm-secret-badge {
+  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 100%);
+  border: 1.5px solid #ffffff;
+  color: #78350f;
+  font-weight: 900;
+  font-size: 11px;
+  padding: 6px 11px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.22), inset 1px 1px 2px #ffffff;
+}
+
+/* Flash Notice Box */
+.rdm-flash-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border-radius: 14px;
+  font-size: 11.5px;
+  font-weight: 800;
+  border: 1.5px solid #ffffff;
+}
+.rdm-flash-box.error {
+  background: #ffe4e6;
+  color: #9f1239;
+  border-color: #fecdd3;
+}
+.rdm-flash-box.success {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+/* ── 2. THE TREASURE CHEST VAULT CARD ── */
+.rdm-vault-card {
+  padding: 20px 18px 22px;
+  text-align: center;
+}
+.rdm-chest-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
+  border: 2px solid #ffffff;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.3), inset 1px 1px 3px rgba(255, 255, 255, 0.8);
+}
+.rdm-vault-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  margin-bottom: 3px;
+}
+.rdm-vault-sub {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--reef-muted);
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+/* Input Code Box */
+.rdm-input-wrap {
+  margin-bottom: 12px;
 }
 .rdm-code-input {
   width: 100%;
-  background: #fff;
-  border: 2px solid #fde68a;
-  border-radius: 14px;
-  padding: 14px;
-  font-size: 20px; font-weight: 900;
-  color: #7c2d12;
-  font-family: 'Nunito', sans-serif;
+  background: #ffffff;
+  border: 2px solid #fed7aa;
+  border-radius: 16px;
+  padding: 13px 14px;
+  font-size: 19px;
+  font-weight: 900;
+  color: #ea580c;
+  font-family: inherit;
   text-transform: uppercase;
-  letter-spacing: 4px;
+  letter-spacing: 3.5px;
   text-align: center;
   outline: none;
-  transition: border-color 0.2s;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
-  margin-bottom: 12px;
+  transition: all 0.18s ease;
+  box-shadow: inset 1px 2px 5px rgba(30, 27, 46, 0.04);
+  box-sizing: border-box;
 }
-.rdm-code-input:focus { border-color: #f97316; }
-.rdm-code-input::placeholder { color: #fcd34d; font-weight: 800; letter-spacing: 2px; }
+.rdm-code-input:focus {
+  border-color: var(--reef-coral-500);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.16);
+}
+.rdm-code-input::placeholder {
+  color: #cbd5e1;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
 
-/* ── SUBMIT BUTTON (persis sama kayak wd-submit-btn) ── */
-.wd-submit-btn {
+/* 3D Tactile Submit Button */
+.btn-rdm-submit {
   width: 100%;
-  background: linear-gradient(180deg, #f8fafc, #e2e8f0);
-  border: 3px solid #cbd5e1;
-  border-radius: 30px;
-  padding: 16px;
-  font-size: 18px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 2px solid #ffffff;
+  border-radius: 16px;
+  padding: 13px 16px;
+  font-size: 13.5px;
   font-weight: 900;
-  color: #15803d;
-  text-shadow: 0 1px 0 #fff;
-  box-shadow: 0 6px 0 #94a3b8, inset 0 2px 4px rgba(255,255,255,1);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   cursor: pointer;
-  transition: transform 0.1s;
-  position: relative;
-  z-index: 2;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35), 0 3px 0 #047857, inset 1px 1px 2px rgba(255, 255, 255, 0.6);
+  transition: all 0.15s ease;
+  font-family: inherit;
+  user-select: none;
 }
-.wd-submit-btn::before {
-  content:''; position:absolute; top:4px; left:50%; transform:translateX(-50%);
-  width: 90%; height: 8px; background: rgba(255,255,255,0.8); border-radius:10px;
+.btn-rdm-submit:hover { filter: brightness(1.03); }
+.btn-rdm-submit:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3), 0 0 0 #047857;
 }
-.wd-submit-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #94a3b8; }
-.wd-submit-btn:disabled { background: #cbd5e1; border-color:#94a3b8; color:#334155; box-shadow:none; transform:none; }
+.btn-rdm-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
 
-/* ── INFO BOX (bento krem) ── */
-.rdm-info-box {
-  background: #fffbeb;
-  border: 2.5px solid #b45309;
-  border-radius: 20px;
-  padding: 14px;
-  position: relative; z-index: 2;
-  box-shadow: 0 4px 0 #b45309;
+/* ── 3. THE MARINE GUIDE TABLET ── */
+.rdm-guide-card {
+  padding: 14px 16px;
 }
-.rdm-info-title {
-  font-size: 13px; font-weight: 900;
-  color: #7c2d12;
-  margin-bottom: 10px;
-  display: flex; align-items: center; gap: 6px;
+.rdm-guide-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--reef-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
 }
-.rdm-info-title i { font-size: 18px; color: #b45309; }
-.rdm-info-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.rdm-info-list li {
-  display: flex; align-items: flex-start; gap: 8px;
-  font-size: 11px; font-weight: 800;
-  color: #78350f;
-  line-height: 1.5;
-  background: rgba(253,230,138,0.4);
+.rdm-guide-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rdm-guide-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--reef-muted);
+  line-height: 1.4;
+}
+.rdm-guide-item i {
+  color: #10b981;
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.rdm-guide-item strong {
+  color: var(--reef-ink);
+}
+
+/* ── 4. CONFIRMATION MODAL (CLAYMORPHIC) ── */
+.cg-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+.cg-modal-box {
+  background: var(--reef-card);
+  width: 100%;
+  max-width: 320px;
+  border-radius: 22px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: cgModalPop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes cgModalPop {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.cg-modal-hdr {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  padding: 12px;
+  text-align: center;
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 13.5px;
+  border-bottom: 1.5px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.cg-modal-bd {
+  padding: 16px 16px 14px;
+}
+.cg-modal-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cg-modal-list li {
+  background: #ffffff;
+  border: 1px solid #a7f3d0;
   border-radius: 10px;
-  padding: 7px 10px;
-  border: 1.5px solid rgba(202,138,4,0.25);
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #065f46;
+  text-align: center;
 }
-.rdm-info-list li i { color: #d97706; font-size: 14px; flex-shrink: 0; margin-top: 1px; }
-
-/* ── FLASH NOTICE ── */
-.wd-notice-pill.flash-pill {
-  margin-bottom: 0;
+.cg-modal-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+.cg-btn-cancel {
   flex: 1;
+  padding: 10px;
+  background: #ffffff;
+  border: 1.5px solid #ffffff;
+  border-radius: 12px;
+  font-weight: 800;
+  color: var(--reef-muted);
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgba(30, 27, 46, 0.05);
+  cursor: pointer;
+  text-align: center;
 }
-
-/* ── MODAL (persis seperti WD cg-modal) ── */
-.cg-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(3px); }
-.cg-modal-box { background:#fffbeb; width:100%; max-width:320px; border-radius:24px; border:3px solid #b45309; box-shadow:0 8px 0 #7c2d12; overflow:hidden; animation:popIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275); }
-.cg-modal-hdr { background:linear-gradient(135deg, #fde047, #f59e0b); padding:14px; text-align:center; color:#7c2d12; font-weight:900; font-size:14px; border-bottom:2.5px solid #d97706; }
-.cg-modal-bd { padding:20px; }
-.cg-modal-list { list-style:none; margin:0 0 14px; padding:0; display:flex; flex-direction:column; gap:6px; }
-.cg-modal-list li { background:#fef08a; border:1.5px solid #d97706; border-radius:10px; padding:8px 12px; font-size:13px; font-weight:900; color:#7c2d12; }
-.cg-modal-actions { display:flex; gap:10px; }
-.cg-btn-cancel { flex:1; padding:12px; background:#f1f5f9; border:2.5px solid #cbd5e1; border-radius:12px; font-weight:900; color:#64748b; font-size:12px; box-shadow:0 4px 0 #94a3b8; cursor:pointer; }
-.cg-btn-confirm { flex:1.5; padding:12px; background:#4ade80; border:2.5px solid #166534; border-radius:12px; font-weight:900; color:#fff; box-shadow:0 4px 0 #166534; font-size:12px; cursor:pointer; }
-.cg-btn-confirm:active { transform:translateY(3px); box-shadow:0 1px 0 #166534; }
-.cg-btn-cancel:active { transform:translateY(3px); box-shadow:0 1px 0 #94a3b8; }
-@keyframes popIn { from{transform:scale(0.8);opacity:0;} to{transform:scale(1);opacity:1;} }
+.cg-btn-confirm {
+  flex: 1.4;
+  padding: 10px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: 1.5px solid #ffffff;
+  border-radius: 12px;
+  font-weight: 900;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
 </style>
 
-<div class="rdm-container">
-  <!-- TOP BANNER (persis seperti WD) -->
-  <div class="wd-top">
-    <div class="wd-top-bar">
-      <a href="/home" class="wd-back-btn"><i class="ph-bold ph-arrow-left"></i></a>
+<div class="rdm-reef-stage">
 
-      <?php if ($flash): ?>
-        <div class="wd-notice-pill" style="<?= $flashType==='error' ? 'background:#fef2f2; border-color:#dc2626; box-shadow:0 4px 0 #991b1b;' : 'background:#f0fdf4; border-color:#16a34a; box-shadow:0 4px 0 #14532d;' ?>">
-          <div class="wd-notice-icon"><?= $flashType==='error' ? '❌' : '🎉' ?></div>
-          <div class="wd-notice-txt" style="<?= $flashType==='error' ? 'color:#7f1d1d' : 'color:#14532d' ?>"><?= htmlspecialchars($flash) ?></div>
-        </div>
-      <?php else: ?>
-        <div class="wd-notice-pill">
-          <div class="wd-notice-icon">🎁</div>
-          <div class="wd-notice-txt">Tukarkan kode hadiah dan dapatkan reward melimpah!</div>
-        </div>
-      <?php endif; ?>
+  <!-- ── 1. COMPACT TOP NAVIGATOR ── -->
+  <div class="rdm-top-nav">
+    <a href="/home" class="rdm-back-btn" title="Kembali ke Beranda">
+      <i class="ph-bold ph-caret-left"></i>
+    </a>
+    <div class="rdm-nav-title">
+      <i class="ph-fill ph-gift" style="color:var(--reef-coral-500);"></i>
+      <span>Peti Hadiah Samudra</span>
     </div>
-
-    <!-- GIF Mascot floating di pojok -->
-    <div class="rdm-gif-mascot">
-      <img src="/assets/ccg.gif" alt="Buaya Kado">
+    <div class="rdm-secret-badge">
+      <i class="ph-bold ph-key"></i>
+      <span>Voucher Kupon</span>
     </div>
   </div>
 
-  <!-- ORANGE BODY -->
-  <div class="wd-body">
-    <!-- SECTION HEADER -->
-    <div class="wd-section-hdr">
-      <div class="wd-sh-title">Masukkan Kode</div>
+  <?php if ($flash): ?>
+    <div class="rdm-flash-box <?= $flashType === 'error' ? 'error' : 'success' ?>">
+      <i class="ph-bold <?= $flashType === 'error' ? 'ph-warning-circle' : 'ph-sparkle' ?>" style="font-size:16px;"></i>
+      <span><?= htmlspecialchars($flash) ?></span>
+    </div>
+  <?php endif; ?>
+
+  <!-- ── 2. THE TREASURE CHEST VAULT CARD ── -->
+  <div class="rdm-clay rdm-vault-card">
+    <div class="rdm-bubble rdm-bubble--1"></div>
+    <div class="rdm-bubble rdm-bubble--2"></div>
+
+    <div class="rdm-chest-icon">
+      <i class="ph-fill ph-treasure-chest"></i>
+    </div>
+    <div class="rdm-vault-title">Tukarkan Kode Voucher Samudra</div>
+    <div class="rdm-vault-sub">
+      Masukkan kode hadiah resmi untuk membuka saldo penarikan, saldo beli, atau upgrade membership gratis!
     </div>
 
-    <!-- INPUT CODE BOX -->
-    <div class="rdm-code-box">
-      <form id="form-claim" method="POST" onsubmit="checkRedeem(event)">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="claim">
-        <input class="rdm-code-input" type="text" name="code" placeholder="KODE HADIAH" autocomplete="off" required>
-        <button type="submit" id="btn-check" class="wd-submit-btn">Cek &amp; Klaim</button>
-      </form>
-    </div>
+    <form id="form-claim" method="POST" onsubmit="checkRedeem(event)">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="claim">
 
-    <!-- INFO BOX -->
-    <div class="rdm-info-box">
-      <div class="rdm-info-title"><i class="ph-fill ph-lightbulb"></i> Info Kode Redeem</div>
-      <ul class="rdm-info-list">
-        <li><i class="ph-bold ph-check-circle"></i> Kode tidak case-sensitive, huruf besar/kecil otomatis disesuaikan.</li>
-        <li><i class="ph-bold ph-check-circle"></i> Satu akun hanya bisa klaim setiap kode sebanyak <strong>1x</strong> saja.</li>
-        <li><i class="ph-bold ph-check-circle"></i> Reward bisa berupa <strong>Saldo WD, Saldo Beli, atau Level Membership</strong>.</li>
-      </ul>
-    </div>
+      <div class="rdm-input-wrap">
+        <input class="rdm-code-input" type="text" name="code" placeholder="KODE HADIAH" autocomplete="off" required maxlength="50">
+      </div>
+
+      <button type="submit" id="btn-check" class="btn-rdm-submit">
+        <i class="ph-bold ph-sparkle"></i>
+        <span>Cek &amp; Buka Peti Hadiah</span>
+      </button>
+    </form>
   </div>
+
+  <!-- ── 3. THE MARINE GUIDE TABLET ── -->
+  <div class="rdm-clay rdm-guide-card">
+    <div class="rdm-guide-title">
+      <i class="ph-fill ph-lightbulb" style="color:#f59e0b;font-size:16px;"></i>
+      <span>Petunjuk Kode Voucher</span>
+    </div>
+    <ul class="rdm-guide-list">
+      <li class="rdm-guide-item">
+        <i class="ph-bold ph-check-circle"></i>
+        <div>Kode tidak sensitif huruf besar/kecil (otomatis disesuaikan).</div>
+      </li>
+      <li class="rdm-guide-item">
+        <i class="ph-bold ph-check-circle"></i>
+        <div>Setiap kode hadiah hanya dapat diklaim <strong>1 kali</strong> per akun.</div>
+      </li>
+      <li class="rdm-guide-item">
+        <i class="ph-bold ph-check-circle"></i>
+        <div>Reward dapat berupa <strong>Saldo Penarikan, Saldo Beli, atau Durasi Membership VIP</strong>.</div>
+      </li>
+    </ul>
+  </div>
+
 </div>
 
-<!-- MODAL KONFIRMASI (sama persis seperti WD) -->
+<!-- ── 4. CONFIRMATION MODAL (CLAYMORPHIC) ── -->
 <div class="cg-modal" id="brutal-confirm">
   <div class="cg-modal-box">
-    <div class="cg-modal-hdr">🎉 Konfirmasi Klaim Hadiah</div>
+    <div class="cg-modal-hdr">
+      <i class="ph-fill ph-gift"></i>
+      <span>Peti Hadiah Ditemukan!</span>
+    </div>
     <div class="cg-modal-bd">
-      <div style="font-size:12px;font-weight:800;color:#7c2d12;margin-bottom:10px;text-align:center;">Kode ini berisi reward berikut:</div>
+      <div style="font-size:11px;font-weight:800;color:var(--reef-muted);margin-bottom:8px;text-align:center;">Kode ini memuat hadiah berikut:</div>
       <ul class="cg-modal-list" id="brutal-confirm-list"></ul>
-      <div style="font-size:11px;font-weight:800;color:#9a3412;text-align:center;margin-bottom:14px;">Yakin ingin klaim sekarang?</div>
-      <div class="cg-modal-actions">
-        <div onclick="document.getElementById('brutal-confirm').style.display='none'" class="cg-btn-cancel">Batal</div>
-        <div onclick="confirmBrutalClaim()" class="cg-btn-confirm">Klaim Sekarang!</div>
-      </div>
+      <div style="font-size:11px;font-weight:800;color:var(--reef-ink);text-align:center;margin-bottom:6px;">Buka dan klaim hadiah ini sekarang?</div>
+    </div>
+    <div class="cg-modal-actions">
+      <button type="button" onclick="document.getElementById('brutal-confirm').style.display='none'" class="cg-btn-cancel">Batal</button>
+      <button type="button" onclick="confirmBrutalClaim()" class="cg-btn-confirm">Buka Sekarang!</button>
     </div>
   </div>
 </div>
@@ -431,7 +616,7 @@ function checkRedeem(e) {
   const code = form.querySelector('input[name="code"]').value;
   const btn  = document.getElementById('btn-check');
   btn.disabled = true;
-  btn.textContent = 'Mengecek...';
+  btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Memeriksa Peti...';
 
   fetch('', {
     method: 'POST',
@@ -441,19 +626,20 @@ function checkRedeem(e) {
   .then(r => r.json())
   .then(res => {
     btn.disabled = false;
-    btn.textContent = 'Cek & Klaim';
+    btn.innerHTML = '<i class="ph-bold ph-sparkle"></i> Cek & Buka Peti Hadiah';
     if (res.error) {
       if (typeof nToast !== 'undefined') nToast(res.error, 'error');
+      else alert(res.error);
     } else {
       const list = document.getElementById('brutal-confirm-list');
-      list.innerHTML = res.details.map(d => `<li>${d}</li>`).join('');
+      list.innerHTML = res.details.map(d => `<li>🎁 ${d}</li>`).join('');
       tempForm = form;
       document.getElementById('brutal-confirm').style.display = 'flex';
     }
   })
   .catch(() => {
     btn.disabled = false;
-    btn.textContent = 'Cek & Klaim';
+    btn.innerHTML = '<i class="ph-bold ph-sparkle"></i> Cek & Buka Peti Hadiah';
     if (typeof nToast !== 'undefined') nToast('Terjadi kesalahan jaringan.', 'error');
   });
 }

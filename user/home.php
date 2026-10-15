@@ -28,8 +28,11 @@ if (!$is_guest) {
     $user = $uStmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// ── KONFIGURASI HOME CMS ──
-$cms = home_cms_config($pdo);
+// ── KONFIGURASI HOME CMS (console/home_cms.php) ──
+$cms     = home_cms_config($pdo);
+$H       = $cms['hero'];
+$fish_on = !empty($cms['fishing_engine']['enabled']);
+$cms_txt = static fn(string $t): string => str_replace('{username}', (string)($GLOBALS['user']['username'] ?? 'Kapten'), $t);
 
 // ── TUGAS UTAMA: DATA NONTON VIDEO ──
 $watch_limit = user_watch_limit($pdo, $user);
@@ -96,7 +99,7 @@ if (!$is_guest && !empty($cms['continue_watching']['enabled'])) {
 
 // Notifikasi Preview
 $notif_preview = [];
-if (!$is_guest) {
+if (!$is_guest && !empty($cms['notif_inbox']['enabled'])) {
     try {
         $uid = $user['id'];
         $np = $pdo->prepare("
@@ -1041,6 +1044,72 @@ require dirname(__DIR__) . '/partials/header.php';
   .reef-token-label { font-size: 9px; }
   .clay-token-icon { width: 34px; height: 34px; }
 }
+/* ══ Komponen yang dikendalikan CMS (console/home_cms.php) ══ */
+.fantasy-portals-grid.is-single { grid-template-columns: 1fr; }
+.portal-subtext { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.portal-heading { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.portal-cta-badge span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.portal-sparkle-tag { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cms-deck-title { margin: 0 4px 6px; font-size: 11px; font-weight: 900; color: var(--reef-muted); text-transform: uppercase; letter-spacing: 0.5px; position: relative; z-index: 1; }
+.reef-tokens-grid { row-gap: 8px; }
+.cms-mascot { display: flex; align-items: flex-start; gap: 8px; padding: 0 2px; }
+.cms-mascot-ava { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 40% 35%, #fff, #cffafe); border: 2px solid #fff; box-shadow: 0 5px 12px rgba(8, 145, 178, 0.2); }
+.cms-mascot-ava img { width: 34px; height: 34px; object-fit: contain; }
+.cms-mascot-bubble { position: relative; flex: 1; padding: 8px 11px; border: 2px solid #fff; border-radius: 4px 16px 16px 16px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); font-size: 11.5px; font-weight: 800; line-height: 1.45; color: var(--reef-ink); }
+.cms-strip { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; border: 2px solid #fff; border-radius: 18px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); text-align: left; cursor: pointer; font-family: inherit; color: var(--reef-ink); }
+.cms-strip > i { flex-shrink: 0; color: var(--reef-muted); font-size: 14px; }
+.cms-strip-ic { width: 34px; height: 34px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 17px; color: #fff; box-shadow: inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5), inset -2px -2px 4px rgba(0, 0, 0, 0.14); }
+.cms-strip--tour .cms-strip-ic { background: linear-gradient(145deg, #67e8f9, #0891b2); }
+.cms-strip--ref .cms-strip-ic { background: linear-gradient(145deg, #fda4af, #e11d48); }
+.cms-strip-tx { flex: 1; min-width: 0; }
+.cms-strip-tx b { display: block; font-size: 12px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cms-strip-tx small { display: block; font-size: 10px; font-weight: 700; color: var(--reef-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cms-ref-code { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 1.5px; color: #be123c; }
+.cms-ref-copy { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 6px 11px; border: 2px solid #fff; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 10.5px; font-weight: 900; color: #fff; background: linear-gradient(145deg, #fb7185, #e11d48); box-shadow: 0 4px 10px rgba(225, 29, 72, 0.28); }
+.cms-inbox { display: flex; flex-direction: column; border: 2px solid #fff; border-radius: 18px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); overflow: hidden; }
+.cms-inbox-row { display: flex; align-items: center; gap: 9px; padding: 7px 10px; text-decoration: none; color: var(--reef-ink); }
+.cms-inbox-row + .cms-inbox-row { border-top: 1.5px dashed rgba(251, 146, 60, 0.22); }
+.cms-inbox-ic { width: 30px; height: 30px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; background: linear-gradient(145deg, #fcd34d, #f59e0b); }
+.cms-inbox-tx { flex: 1; min-width: 0; }
+.cms-inbox-tx b { display: block; font-size: 11.5px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cms-inbox-tx small { display: block; font-size: 10px; font-weight: 700; color: var(--reef-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cms-inbox-go { color: var(--reef-muted); }
+.cms-banners { display: flex; flex-direction: column; gap: 7px; }
+.cms-bnr { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 10px; border: 2px solid #fff; border-radius: 18px; text-align: left; text-decoration: none; cursor: pointer; font-family: inherit; color: #fff; box-shadow: 0 8px 18px rgba(30, 27, 46, 0.14), inset 2px 2px 4px rgba(255, 255, 255, 0.3); }
+.cms-bnr--survey { background: linear-gradient(135deg, #059669, #34d399); }
+.cms-bnr--threads { background: linear-gradient(135deg, #18181b, #3f3f46); }
+.cms-bnr--promo { background: linear-gradient(135deg, #7c3aed, #c084fc); }
+.cms-bnr-ic { width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 19px; background: rgba(255, 255, 255, 0.2); border: 1.5px solid rgba(255, 255, 255, 0.5); }
+.cms-bnr-tx { flex: 1; min-width: 0; }
+.cms-bnr-kicker { display: block; font-style: normal; font-size: 8.5px; font-weight: 900; letter-spacing: 0.6px; color: #fde68a; }
+.cms-bnr-tx b { display: block; font-size: 12px; font-weight: 900; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cms-bnr-tx small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 1px; font-size: 9.5px; font-weight: 700; opacity: 0.92; line-height: 1.3; }
+.cms-bnr-side { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.cms-bnr-side em { font-style: normal; padding: 1px 7px; border-radius: 999px; font-size: 9px; font-weight: 900; background: #fde68a; color: #78350f; white-space: nowrap; }
+.cms-bnr-cta { padding: 4px 10px; border-radius: 999px; font-size: 10.5px; font-weight: 900; background: #fff; color: var(--reef-ink); white-space: nowrap; }
+.cms-cw-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.cms-cw { display: flex; align-items: center; gap: 9px; padding: 6px; border: 2px solid #fff; border-radius: 16px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); text-decoration: none; color: var(--reef-ink); }
+.cms-cw-thumb { position: relative; width: 76px; height: 44px; flex-shrink: 0; border-radius: 11px; overflow: hidden; }
+.cms-cw-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cms-cw-thumb i { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; background: rgba(8, 51, 68, 0.25); }
+.cms-cw-tx { flex: 1; min-width: 0; }
+.cms-cw-tx b { display: block; font-size: 11.5px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cms-cw-bar { display: block; height: 5px; margin: 4px 0 2px; border-radius: 999px; background: rgba(8, 145, 178, 0.15); overflow: hidden; }
+.cms-cw-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #22d3ee, #34d399); }
+.cms-cw-tx small { font-size: 9.5px; font-weight: 800; color: var(--reef-muted); }
+.cms-sec-desc { margin: 2px 4px 0; font-size: 10.5px; font-weight: 700; color: var(--reef-muted); }
+.cms-tips { display: flex; align-items: flex-start; gap: 9px; padding: 9px 11px; border: 2px solid #fff; border-radius: 18px; background: linear-gradient(145deg, #fffbeb, #fef3c7); box-shadow: var(--reef-clay-shadow); font-size: 11px; font-weight: 700; color: #78350f; line-height: 1.45; }
+.cms-tips b { display: block; font-size: 11.5px; font-weight: 900; }
+.cms-tips-ic { width: 30px; height: 30px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; background: linear-gradient(145deg, #fcd34d, #f59e0b); }
+.cms-float { position: fixed; right: 14px; bottom: calc(164px + env(safe-area-inset-bottom)); z-index: 900; display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 5px; max-width: 150px; border: 2px solid #fff; border-radius: 999px; cursor: pointer; font-family: inherit; color: #fff; text-align: left; background: linear-gradient(145deg, #fb7185, #e11d48); box-shadow: 0 10px 22px rgba(225, 29, 72, 0.35), inset 2px 2px 4px rgba(255, 255, 255, 0.35); animation: cmsFloat 3s ease-in-out infinite; }
+.cms-float > i { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; background: rgba(255, 255, 255, 0.22); }
+.cms-float b { display: block; font-size: 11px; font-weight: 900; line-height: 1.1; }
+.cms-float small { display: block; font-size: 9.5px; font-weight: 800; opacity: 0.92; }
+.cms-float em { position: absolute; top: -7px; right: -4px; padding: 0 6px; border-radius: 999px; font-style: normal; font-size: 8.5px; font-weight: 900; background: #fde68a; color: #78350f; border: 1.5px solid #fff; }
+@keyframes cmsFloat { 50% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .cms-float { animation: none !important; }
+}
 @media (prefers-reduced-motion: reduce) {
   .sea-bubble, .kelp-blade, .fish-swim, .pearl-glow, .starfish-wiggle,
   .fish-jump-a, .fish-jump-b, .jelly-bob, .sparkle-bubble, .vault-live-dot, .clay-token-icon.t-vip::after {
@@ -1062,6 +1131,7 @@ require dirname(__DIR__) . '/partials/header.php';
   </div>
 
   <!-- ── 1. VAULT SALDO (PANEL SUNSET REEF + TILE AKSI) ── -->
+  <?php if ($H['show_user_bar'] || $H['show_balance_card'] || $H['show_quick_actions']): ?>
   <div class="clay-vault-card" id="tour-balance-box">
     <div id="cuan-ss-target">
       <div class="vault-hero">
@@ -1134,6 +1204,7 @@ require dirname(__DIR__) . '/partials/header.php';
           </g>
         </svg>
 
+        <?php if ($H['show_user_bar']): ?>
         <div class="vault-hero-top">
           <div class="vault-greet">
             <div class="vault-clay-avatar">
@@ -1150,11 +1221,15 @@ require dirname(__DIR__) . '/partials/header.php';
               </div>
             </div>
           </div>
+          <?php if ($H['show_today_stats']): ?>
           <span class="vault-today-chip">
             <i class="ph-bold ph-trend-up"></i> +Rp <?= number_format($today_watch_earned, 0, ',', '.') ?>
           </span>
+          <?php endif; ?>
         </div>
+        <?php endif; ?>
 
+        <?php if ($H['show_balance_card']): ?>
         <div class="vault-balance-showcase">
           <div class="vault-balance-tag">
             <span class="vault-live-dot"></span> Saldo Siap Tarik
@@ -1162,17 +1237,23 @@ require dirname(__DIR__) . '/partials/header.php';
           <div class="vault-balance-main-num">
             <span class="rp-prefix">Rp</span><?= number_format((float)($user['balance_wd'] ?? 0), 0, ',', '.') ?>
           </div>
+          <?php if ($H['show_today_stats']): ?>
           <div class="vault-stats-ribbon">
             <span class="vault-stat-capsule">
               <i class="ph-bold ph-wallet"></i> Kas <strong>Rp <?= number_format((float)($user['balance_dep'] ?? 0), 0, ',', '.') ?></strong>
             </span>
+            <?php if ($fish_on): ?>
             <span class="vault-stat-capsule">
               <i class="ph-fill ph-fish"></i> <strong><?= (int)($user['fishing_baits'] ?? 0) ?></strong> Umpan
             </span>
+            <?php endif; ?>
           </div>
+          <?php endif; ?>
         </div>
+        <?php endif; ?>
       </div>
 
+      <?php if ($H['show_quick_actions']): ?>
       <div class="vault-actions-cluster">
         <a href="/withdraw" class="clay-btn clay-btn--primary" id="tour-btn-withdraw">
           <span class="clay-btn-ico"><i class="ph-bold ph-arrow-up-right"></i></span> Tarik
@@ -1184,19 +1265,64 @@ require dirname(__DIR__) . '/partials/header.php';
           <span class="clay-btn-ico"><i class="ph-bold ph-clock-counter-clockwise"></i></span> Riwayat
         </a>
       </div>
+      <?php endif; ?>
     </div>
   </div>
+  <?php endif; ?>
+
+  <!-- ── 1b. MASKOT, INBOX, TOUR & REFERRAL (dari CMS) ── -->
+  <?php if ($H['show_mascot'] && trim((string)$H['mascot_text']) !== ''): ?>
+  <div class="cms-mascot">
+    <span class="cms-mascot-ava"><img src="/assets/img/fish/bagus.png" alt="" width="34" height="34"></span>
+    <div class="cms-mascot-bubble"><?= htmlspecialchars($cms_txt((string)$H['mascot_text'])) ?></div>
+  </div>
+  <?php endif; ?>
+
+  <?php if (!empty($cms['notif_inbox']['enabled']) && $notif_preview): ?>
+  <div class="cms-inbox">
+    <?php foreach ($notif_preview as $nf): ?>
+    <a href="/notifications" class="cms-inbox-row">
+      <span class="cms-inbox-ic"><i class="ph-fill ph-bell-ringing"></i></span>
+      <span class="cms-inbox-tx"><b><?= htmlspecialchars((string)($nf['title'] ?? 'Pengumuman')) ?></b><small><?= htmlspecialchars(mb_strimwidth(strip_tags((string)($nf['message'] ?? $nf['body'] ?? '')), 0, 70, '…')) ?></small></span>
+      <i class="ph-bold ph-caret-right cms-inbox-go"></i>
+    </a>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+
+  <?php if (!empty($cms['tour']['show_banner'])): ?>
+  <button type="button" class="cms-strip cms-strip--tour" onclick="openTourSelectModal()">
+    <span class="cms-strip-ic"><i class="ph-fill ph-compass"></i></span>
+    <span class="cms-strip-tx"><b><?= htmlspecialchars((string)$cms['tour']['title']) ?></b><small><?= htmlspecialchars((string)$cms['tour']['desc']) ?></small></span>
+    <i class="ph-bold ph-caret-right"></i>
+  </button>
+  <?php endif; ?>
+
+  <?php if ($H['show_ref_strip'] && !$is_guest && $ref_code !== '-'): ?>
+  <div class="cms-strip cms-strip--ref">
+    <span class="cms-strip-ic"><i class="ph-fill ph-ticket"></i></span>
+    <span class="cms-strip-tx"><small>Kode undanganmu</small><b class="cms-ref-code"><?= htmlspecialchars($ref_code) ?></b></span>
+    <button type="button" class="cms-ref-copy" onclick="nToast.copy(<?= htmlspecialchars(json_encode($ref_url), ENT_QUOTES) ?>, 'Link undangan')"><i class="ph-bold ph-copy"></i> Salin</button>
+  </div>
+  <?php endif; ?>
 
   <!-- ── 2. DUA PORTAL BIOTA (KOLAM MANCING & BIOSKOP SAMUDRA) ── -->
-  <div class="fantasy-portals-grid">
+  <?php
+    $FS = $cms['fishing_spotlight'];
+    $show_fish_portal  = $fish_on && !empty($FS['enabled']);
+    $show_watch_portal = !empty($H['show_watch_cta']);
+  ?>
+  <?php if ($show_fish_portal || $show_watch_portal): ?>
+  <div class="fantasy-portals-grid <?= $show_fish_portal && $show_watch_portal ? '' : 'is-single' ?>">
+    <?php if ($show_fish_portal): ?>
     <!-- Portal 1: Mancing Cuan — ikan badut & yellow tang melompat di atas karang -->
-    <a href="/minigame" class="fantasy-portal-card portal-card--fish" id="tour-sidejob-card">
+    <a href="<?= htmlspecialchars((string)($FS['url'] ?: '/minigame')) ?>" class="fantasy-portal-card portal-card--fish" id="tour-sidejob-card">
       <div>
         <div class="portal-top-bar">
           <div class="portal-clay-icon portal-clay-icon--fish">
             <i class="ph-fill ph-fish-simple"></i>
           </div>
-          <span class="portal-sparkle-tag"><i class="ph-fill ph-sparkle"></i> Kolam Cuan</span>
+          <span class="portal-sparkle-tag"><i class="ph-fill ph-sparkle"></i> <?= htmlspecialchars((string)($FS['badge'] ?: 'Kolam Cuan')) ?></span>
         </div>
         <div class="portal-scene portal-scene--reef" aria-hidden="true">
           <svg viewBox="0 0 180 74" preserveAspectRatio="xMidYMax slice" fill="none">
@@ -1259,20 +1385,22 @@ require dirname(__DIR__) . '/partials/header.php';
             </g>
           </svg>
         </div>
-        <div class="portal-heading">Mancing Cuan</div>
-        <div class="portal-subtext">Pancing Ikan Emas Samudra</div>
+        <div class="portal-heading"><?= htmlspecialchars((string)($FS['title'] ?: 'Mancing Cuan')) ?></div>
+        <div class="portal-subtext"><?= htmlspecialchars((string)($FS['desc'] ?: 'Pancing Ikan Emas Samudra')) ?></div>
       </div>
       <div>
         <div class="portal-bait-line">
           <i class="ph-fill ph-bug"></i> <?= (int)($user['fishing_baits'] ?? 0) ?> Umpan Tersedia
         </div>
         <div class="portal-cta-badge">
-          <span>Lempar Kail</span>
+          <span><?= htmlspecialchars((string)($FS['cta'] ?: 'Lempar Kail')) ?></span>
           <i class="ph-bold ph-arrow-right"></i>
         </div>
       </div>
     </a>
+    <?php endif; ?>
 
+    <?php if ($show_watch_portal): ?>
     <!-- Portal 2: Tonton Video — ubur-ubur magis bercahaya -->
     <a href="/videos" class="fantasy-portal-card portal-card--watch" id="tour-video-mission">
       <div>
@@ -1357,75 +1485,112 @@ require dirname(__DIR__) . '/partials/header.php';
           </svg>
         </div>
         <div class="portal-heading">Tonton Video</div>
-        <div class="portal-subtext"><?= $watch_today ?> / <?= $watch_limit ?> Video Tuntas</div>
+        <div class="portal-subtext"><?= $H['show_watch_mission'] ? $watch_today . ' / ' . $watch_limit . ' Video Tuntas' : 'Nonton & dapat saldo' ?></div>
       </div>
       <div>
+        <?php if ($H['show_watch_mission']): ?>
         <div class="portal-wave-progress">
           <div class="portal-wave-fill" style="width: <?= $watch_pct ?>%;"></div>
         </div>
+        <?php endif; ?>
         <div class="portal-cta-badge" id="tour-btn-watch">
-          <span>Panen Cuan</span>
+          <span><?= htmlspecialchars((string)($H['watch_cta_text'] ?: 'Panen Cuan')) ?></span>
           <i class="ph-bold ph-arrow-right"></i>
         </div>
       </div>
     </a>
+    <?php endif; ?>
   </div>
+  <?php endif; ?>
 
-  <!-- ── 3. TOKEN LAYANAN KARANG (5 CLAY TOKENS) ── -->
+  <!-- ── 3. MENU CEPAT (Bento tiles dari CMS) ── -->
+  <?php
+    $tiles = array_values(array_filter((array)($cms['bento']['tiles'] ?? []), function ($t) use ($fish_on) {
+        return !empty($t['enabled']) && ($fish_on || ($t['id'] ?? '') !== 'fishing');
+    }));
+  ?>
+  <?php if (!empty($cms['bento']['show_section']) && $tiles): ?>
   <div class="reef-services-deck" id="tour-bento-grid">
-    <div class="reef-tokens-grid">
-      <!-- 1. Check-in Harian (Kerang Ajaib) -->
-      <button type="button" class="reef-token-btn" onclick="openCheckinModal()" title="Klaim Hadiah Login Harian">
-        <div class="clay-token-icon t-checkin">
-          <i class="ph-fill ph-gift"></i>
-          <?php if (!$has_checked_in_today && !$is_guest): ?><span class="token-ping"></span><?php endif; ?>
-        </div>
-        <span class="reef-token-label"><?= $has_checked_in_today ? 'Absen' : 'Klaim' ?></span>
-      </button>
-
-      <!-- 2. Event Threads -->
-      <button type="button" class="reef-token-btn" id="tour-threads-promo-card" onclick="openThreadsPromoModal()" title="Event Threads Rp 75K">
-        <div class="clay-token-icon t-threads">
-          <i class="ph-bold ph-threads-logo"></i>
-        </div>
-        <span class="reef-token-label">Threads</span>
-      </button>
-
-      <!-- 3. Survei Berhadiah -->
-      <a href="/survey" class="reef-token-btn" title="Isi Survei Berhadiah">
-        <div class="clay-token-icon t-survey">
-          <i class="ph-bold ph-clipboard-text"></i>
-        </div>
-        <span class="reef-token-label">Survei</span>
-      </a>
-
-      <!-- 4. Ajak Kru Samudra -->
-      <a href="/referral" class="reef-token-btn" title="Undang Teman & Raih Komisi">
-        <div class="clay-token-icon t-invite">
-          <i class="ph-bold ph-users-three"></i>
-        </div>
-        <span class="reef-token-label">Ajak Kru</span>
-      </a>
-
-      <!-- 5. VIP Kapal -->
-      <a href="/upgrade" class="reef-token-btn" title="Upgrade Kapal VIP">
-        <div class="clay-token-icon t-vip">
-          <i class="ph-bold ph-crown-simple"></i>
-        </div>
-        <span class="reef-token-label">Kapal VIP</span>
-      </a>
+    <?php if (trim((string)$cms['bento']['title']) !== ''): ?><div class="cms-deck-title"><?= htmlspecialchars((string)$cms['bento']['title']) ?></div><?php endif; ?>
+    <div class="reef-tokens-grid" style="grid-template-columns: repeat(<?= min(5, max(3, count($tiles) > 5 ? 4 : count($tiles))) ?>, 1fr)">
+      <?php foreach ($tiles as $t):
+        $tid = (string)($t['id'] ?? '');
+        $ico = '<div class="clay-token-icon" style="background:' . htmlspecialchars((string)$t['bg'], ENT_QUOTES) . ';color:#fff"><i class="ph-fill ' . htmlspecialchars((string)$t['icon']) . '"></i>'
+             . ($tid === 'checkin' && !$has_checked_in_today && !$is_guest ? '<span class="token-ping"></span>' : '') . '</div>';
+        $lbl = '<span class="reef-token-label">' . htmlspecialchars($tid === 'checkin' && $has_checked_in_today ? 'Absen ✓' : (string)$t['label']) . '</span>';
+      ?>
+        <?php if ($tid === 'checkin'): ?>
+          <button type="button" class="reef-token-btn" onclick="openCheckinModal()"><?= $ico . $lbl ?></button>
+        <?php elseif ($tid === 'threads'): ?>
+          <button type="button" class="reef-token-btn" id="tour-threads-promo-card" onclick="openThreadsPromoModal()"><?= $ico . $lbl ?></button>
+        <?php else: ?>
+          <a href="<?= htmlspecialchars((string)$t['url']) ?>" class="reef-token-btn"><?= $ico . $lbl ?></a>
+        <?php endif; ?>
+      <?php endforeach; ?>
     </div>
   </div>
+  <?php endif; ?>
+
+  <!-- ── 3b. BANNER (Survei, Promo Hub, Threads) dari CMS ── -->
+  <?php $SB = $cms['survey_banner']; $PB = $cms['promo_banner']; $TC = $cms['threads_card']; ?>
+  <?php if (!empty($SB['enabled']) || !empty($PB['enabled']) || !empty($TC['enabled'])): ?>
+  <div class="cms-banners">
+    <?php if (!empty($SB['enabled'])): ?>
+    <a href="/survey" class="cms-bnr cms-bnr--survey">
+      <span class="cms-bnr-ic"><i class="ph-fill ph-clipboard-text"></i></span>
+      <span class="cms-bnr-tx"><b><?= htmlspecialchars((string)$SB['title']) ?></b><small><?= htmlspecialchars((string)$SB['desc']) ?></small></span>
+      <span class="cms-bnr-side"><?php if ($SB['badge']): ?><em><?= htmlspecialchars((string)$SB['badge']) ?></em><?php endif; ?><span class="cms-bnr-cta"><?= htmlspecialchars((string)($SB['cta'] ?: 'Buka')) ?></span></span>
+    </a>
+    <?php endif; ?>
+    <?php if (!empty($TC['enabled'])): ?>
+    <button type="button" class="cms-bnr cms-bnr--threads" onclick="openThreadsPromoModal()">
+      <span class="cms-bnr-ic"><i class="ph-bold ph-threads-logo"></i></span>
+      <span class="cms-bnr-tx"><?php if ($TC['badge_event']): ?><i class="cms-bnr-kicker"><?= htmlspecialchars((string)$TC['badge_event']) ?></i><?php endif; ?><b><?= htmlspecialchars((string)$TC['title']) ?></b><small><?= htmlspecialchars((string)$TC['desc']) ?></small></span>
+      <span class="cms-bnr-side"><?php if ($TC['badge_cuan']): ?><em><?= htmlspecialchars((string)$TC['badge_cuan']) ?></em><?php endif; ?><span class="cms-bnr-cta">Ikut</span></span>
+    </button>
+    <?php endif; ?>
+    <?php if (!empty($PB['enabled'])): ?>
+    <button type="button" class="cms-bnr cms-bnr--promo" onclick="openPromoHubModal()">
+      <span class="cms-bnr-ic"><i class="ph-fill ph-megaphone"></i></span>
+      <span class="cms-bnr-tx"><b><?= htmlspecialchars((string)$PB['title']) ?></b><small><?= htmlspecialchars((string)$PB['desc']) ?></small></span>
+      <span class="cms-bnr-side"><?php if ($PB['badge']): ?><em><?= htmlspecialchars((string)$PB['badge']) ?></em><?php endif; ?><span class="cms-bnr-cta"><?= htmlspecialchars((string)($PB['cta'] ?: 'Mulai')) ?></span></span>
+    </button>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
+
+  <!-- ── 3c. LANJUTKAN MENONTON (CMS) ── -->
+  <?php if (!empty($cms['continue_watching']['enabled']) && $continue_watching_home): ?>
+  <div>
+    <div class="fantasy-section-head">
+      <div class="fsh-title"><span class="fsh-title-icon" style="background:linear-gradient(145deg,#67e8f9,#0891b2)"><i class="ph-fill ph-play"></i></span> <?= htmlspecialchars((string)$cms['continue_watching']['title']) ?></div>
+    </div>
+    <div class="cms-cw-list">
+      <?php foreach ($continue_watching_home as $cw):
+        $cwDur = max(1, (int)($cw['watch_duration'] ?: $cw['duration'] ?: 1));
+        $cwPct = min(100, (int)round(((float)$cw['seconds_watched'] / $cwDur) * 100));
+      ?>
+      <a href="/watch/<?= (int)$cw['id'] ?>" class="cms-cw">
+        <span class="cms-cw-thumb"><img src="<?= htmlspecialchars(yt_thumb($cw['youtube_id'])) ?>" alt="" loading="lazy"><i class="ph-fill ph-play-circle"></i></span>
+        <span class="cms-cw-tx"><b><?= htmlspecialchars((string)$cw['title']) ?></b>
+          <span class="cms-cw-bar"><i style="width:<?= $cwPct ?>%"></i></span>
+          <small><?= $cwPct ?>% · +<?= format_rp((float)$cw['reward_amount']) ?></small></span>
+      </a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <!-- ── 4. REKOMENDASI VIDEO CUAN ── -->
   <?php if (!empty($cms['featured_videos']['enabled']) && !empty($featured_videos)): ?>
   <div>
     <div class="fantasy-section-head">
       <div class="fsh-title">
-        <span class="fsh-title-icon"><i class="ph-fill ph-sparkle"></i></span> Rekomendasi Video Cuan
+        <span class="fsh-title-icon"><i class="ph-fill ph-sparkle"></i></span> <?= htmlspecialchars((string)($cms['featured_videos']['title'] ?: 'Rekomendasi Video Cuan')) ?>
       </div>
       <a href="/videos" class="fsh-link">Lihat Semua &rarr;</a>
     </div>
+    <?php if (trim((string)$cms['featured_videos']['desc']) !== ''): ?><div class="cms-sec-desc"><?= htmlspecialchars((string)$cms['featured_videos']['desc']) ?></div><?php endif; ?>
 
     <div class="fantasy-video-grid" style="margin-top:10px;">
       <?php foreach ($featured_videos as $fv): ?>
@@ -1452,7 +1617,22 @@ require dirname(__DIR__) . '/partials/header.php';
   </div>
   <?php endif; ?>
 
+  <?php if (!empty($cms['tips']['enabled']) && trim((string)$cms['tips']['text']) !== ''): ?>
+  <div class="cms-tips">
+    <span class="cms-tips-ic"><i class="ph-fill ph-lightbulb"></i></span>
+    <span><b><?= htmlspecialchars((string)$cms['tips']['title']) ?></b><?= htmlspecialchars($cms_txt((string)$cms['tips']['text'])) ?></span>
+  </div>
+  <?php endif; ?>
+
 </div>
+
+<?php if (!empty($cms['floating_promo']['enabled'])): $FP = $cms['floating_promo']; ?>
+<button type="button" class="cms-float" onclick="openPromoHubModal()" aria-label="<?= htmlspecialchars((string)$FP['title']) ?>">
+  <?php if ($FP['badge']): ?><em><?= htmlspecialchars((string)$FP['badge']) ?></em><?php endif; ?>
+  <i class="ph-fill ph-gift"></i>
+  <span><b><?= htmlspecialchars((string)$FP['title']) ?></b><small><?= htmlspecialchars((string)$FP['sub']) ?></small></span>
+</button>
+<?php endif; ?>
 
 <!-- Toast element -->
 <div id="cuan-toast" class="cuan-toast"></div>
