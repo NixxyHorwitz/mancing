@@ -44,238 +44,324 @@ $pageTitle  = 'Notifikasi & Pengumuman';
 $activePage = 'notifications';
 require dirname(__DIR__) . '/partials/header.php';
 
-// Konfigurasi tipe notifikasi (Phosphor Icons murni, ZERO Emojis!)
+// Konfigurasi tipe notifikasi bahari (Living Coral Reef Palette)
 $type_cfg = [
     'info'     => [
         'icon'   => '<i class="ph-fill ph-info"></i>',
-        'label'  => 'Info',
-        'color'  => '#0369a1',
-        'badge'  => '#e0f2fe',
-        'border' => '#7dd3fc',
-        'icon_bg'=> 'linear-gradient(135deg, #0284c7, #0369a1)'
+        'label'  => 'Info Samudra',
+        'color'  => '#0891b2',
+        'badge'  => '#cffafe',
+        'border' => '#a5f3fc',
+        'icon_bg'=> 'linear-gradient(135deg, #06b6d4, #0891b2)'
     ],
     'success'  => [
         'icon'   => '<i class="ph-fill ph-check-circle"></i>',
-        'label'  => 'Sukses',
-        'color'  => '#047857',
+        'label'  => 'Hasil Cuan',
+        'color'  => '#059669',
         'badge'  => '#d1fae5',
-        'border' => '#6ee7b7',
+        'border' => '#a7f3d0',
         'icon_bg'=> 'linear-gradient(135deg, #10b981, #059669)'
     ],
     'warning'  => [
         'icon'   => '<i class="ph-fill ph-warning"></i>',
         'label'  => 'Perhatian',
-        'color'  => '#b45309',
+        'color'  => '#d97706',
         'badge'  => '#fef3c7',
-        'border' => '#fcd34d',
+        'border' => '#fde68a',
         'icon_bg'=> 'linear-gradient(135deg, #f59e0b, #d97706)'
     ],
     'alert'    => [
         'icon'   => '<i class="ph-fill ph-warning-octagon"></i>',
         'label'  => 'Penting',
-        'color'  => '#b91c1c',
-        'badge'  => '#fee2e2',
-        'border' => '#fca5a5',
-        'icon_bg'=> 'linear-gradient(135deg, #ef4444, #dc2626)'
+        'color'  => '#e11d48',
+        'badge'  => '#ffe4e6',
+        'border' => '#fecdd3',
+        'icon_bg'=> 'linear-gradient(135deg, #fb7185, #f43f5e)'
     ],
     'congrats' => [
         'icon'   => '<i class="ph-fill ph-sparkle"></i>',
-        'label'  => 'Spesial',
-        'color'  => '#7e22ce',
-        'badge'  => '#f3e8ff',
-        'border' => '#d8b4fe',
-        'icon_bg'=> 'linear-gradient(135deg, #a855f7, #7e22ce)'
+        'label'  => 'Hadiah Spesial',
+        'color'  => '#7c3aed',
+        'badge'  => '#ede9fe',
+        'border' => '#ddd6fe',
+        'icon_bg'=> 'linear-gradient(135deg, #a855f7, #7c3aed)'
     ],
 ];
 ?>
 
 <style>
-/* ══════════════════════════════════════════════════════════
-   NOTIFIKASI & PENGUMUMAN — AMBER HONEY THEME
-   Zero Emojis • Segmented Tabs • Micro-interactions
-   ══════════════════════════════════════════════════════════ */
-body {
-  background: #fef8ee !important;
-  color: #1e293b;
-  font-family: 'Nunito', sans-serif;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
+/* ══════════════════════════════════════════════════════════════
+   OCEAN SIGNAL LOG — NOTIFIKASI & WARTA SAMUDRA
+   Tema: Living Coral Reef Fantasy & 3D Tactile Claymorphism
+   ══════════════════════════════════════════════════════════════ */
+
+.ntf-reef-stage {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 6px 12px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
-/* ── TOP BANNER ── */
-.ntf-top-banner {
-  background: linear-gradient(180deg, #78350f 0%, #92400e 35%, #b45309 70%, #d97706 100%);
-  padding: 16px 14px 22px;
-  border-bottom: 3.5px solid #78350f;
+/* Claymorphism Base */
+.ntf-clay {
+  border: 2px solid #ffffff;
+  border-radius: 20px;
+  background: var(--reef-card);
+  box-shadow: var(--reef-clay-shadow);
   position: relative;
-  text-align: center;
   overflow: hidden;
 }
-.ntf-top-banner::before {
-  content: '';
+
+/* Ambient Marine Floating Bubbles */
+.ntf-bubble {
   position: absolute;
-  inset: 0;
-  background-image: radial-gradient(#fbbf24 1px, transparent 1px);
-  background-size: 16px 16px;
-  opacity: 0.2;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95) 0%, rgba(103, 232, 249, 0.35) 60%, rgba(244, 63, 94, 0.15) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: inset 1px 1px 2px #ffffff, 0 2px 6px rgba(8, 145, 178, 0.15);
   pointer-events: none;
+  z-index: 0;
 }
-.ntf-top-title {
-  position: relative;
-  font-size: 20px;
+.ntf-bubble--1 {
+  width: 16px;
+  height: 16px;
+  top: 10px;
+  right: 18px;
+  animation: ntfBubbleFloat 5.2s infinite ease-in-out alternate;
+}
+.ntf-bubble--2 {
+  width: 24px;
+  height: 24px;
+  bottom: 12px;
+  right: 14px;
+  animation: ntfBubbleFloat 6.8s infinite ease-in-out alternate-reverse;
+  opacity: 0.65;
+}
+@keyframes ntfBubbleFloat {
+  0% { transform: translateY(0) scale(0.95); }
+  50% { transform: translateY(-6px) scale(1.05); }
+  100% { transform: translateY(2px) scale(0.98); }
+}
+
+/* ── 1. COMPACT TOP NAVIGATOR ── */
+.ntf-top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px;
+}
+.ntf-back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1.5px solid #ffffff;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--reef-ink);
+  font-size: 17px;
+  text-decoration: none;
+  box-shadow: 0 3px 8px rgba(30, 27, 46, 0.05), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95);
+  transition: transform 0.12s ease;
+}
+.ntf-back-btn:active { transform: scale(0.92); }
+
+.ntf-nav-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1.5px solid #ffffff;
+  border-radius: 14px;
+  padding: 6px 14px;
+  font-size: 13px;
   font-weight: 900;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  margin-bottom: 2px;
+  color: var(--reef-ink);
+  box-shadow: 0 2px 8px rgba(30, 27, 46, 0.04);
+}
+
+.ntf-unread-pill {
+  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 100%);
+  border: 1.5px solid #ffffff;
+  color: #78350f;
+  font-weight: 900;
+  font-size: 11px;
+  padding: 6px 11px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.22), inset 1px 1px 2px #ffffff;
+}
+
+/* ── 2. OCEAN SIGNAL TOWER (HEADER BANNER CARD) ── */
+.ntf-signal-card {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ntf-signal-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ntf-signal-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 3px 10px rgba(244, 63, 94, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  color: #ffffff;
+  font-size: 20px;
+  flex-shrink: 0;
 }
-.ntf-top-sub {
-  position: relative;
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #fef3c7;
+.ntf-signal-info {
+  line-height: 1.25;
+}
+.ntf-signal-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--reef-ink);
+}
+.ntf-signal-sub {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--reef-muted);
 }
 
-.ntf-top-action {
-  position: relative;
-  z-index: 2;
-  margin-top: 10px;
+.btn-mark-all-read {
+  background: #ffffff;
+  border: 1.5px solid #ffffff;
+  border-radius: 12px;
+  padding: 6px 11px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--reef-coral-500);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid #fff;
-  border-radius: 12px;
-  padding: 6px 12px;
-  font-size: 11px;
-  font-weight: 900;
-  color: #fff;
+  gap: 4px;
   cursor: pointer;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 0 rgba(0,0,0,0.2);
-  transition: transform 0.1s;
+  box-shadow: 0 2px 6px rgba(30, 27, 46, 0.05);
+  transition: transform 0.12s ease;
+  user-select: none;
+  flex-shrink: 0;
 }
-.ntf-top-action:active {
-  transform: translateY(2px);
-  box-shadow: none;
-}
+.btn-mark-all-read:active { transform: scale(0.95); }
 
-/* ── BODY WRAPPER ── */
-.ntf-page-wrap {
-  padding: 14px 14px 100px;
-  position: relative;
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-/* ── SEGMENTED FILTER TABS ── */
-.ntf-tabs {
+/* ── 3. SEGMENTED FILTER TABS ── */
+.ntf-tabs-deck {
   display: flex;
-  background: #ffffff;
-  border: 2.5px solid #78350f;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1.5px solid #ffffff;
   border-radius: 16px;
   padding: 4px;
-  box-shadow: 0 4px 0 #78350f;
-  margin-bottom: 16px;
   gap: 4px;
+  box-shadow: 0 3px 10px rgba(30, 27, 46, 0.04);
 }
-.ntf-tab-btn {
+.ntf-tab-item {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
-  border-radius: 11px;
+  padding: 8px 10px;
+  border-radius: 12px;
   border: none;
   background: transparent;
-  font-size: 12px;
-  font-weight: 900;
-  color: #78350f;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--reef-muted);
   cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'Nunito', sans-serif;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  user-select: none;
 }
-.ntf-tab-btn.active {
-  background: linear-gradient(180deg, #f59e0b, #d97706);
-  color: #fff;
-  box-shadow: 0 2px 0 #78350f;
-  text-shadow: 0 1px 2px #78350f;
+.ntf-tab-item.active {
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(244, 63, 94, 0.28);
+  font-weight: 900;
 }
 .ntf-tab-badge {
-  font-size: 10px;
-  padding: 1px 6px;
+  font-size: 9.5px;
+  padding: 1.5px 6px;
   border-radius: 8px;
-  background: rgba(120, 53, 15, 0.12);
-  color: #78350f;
-  font-weight: 900;
+  background: #f1f5f9;
+  color: var(--reef-ink);
+  font-weight: 800;
 }
-.ntf-tab-btn.active .ntf-tab-badge {
+.ntf-tab-item.active .ntf-tab-badge {
   background: rgba(255, 255, 255, 0.3);
-  color: #fff;
+  color: #ffffff;
 }
 
-/* ── NOTIFICATION CARDS LIST ── */
+/* ── 4. NOTIFICATION CARDS LIST ── */
 .ntf-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 .ntf-item {
   background: #ffffff;
-  border: 2.5px solid #78350f;
-  border-radius: 18px;
-  padding: 12px 14px;
-  box-shadow: 0 4px 0 #78350f;
+  border: 1.5px solid #ffffff;
+  border-radius: 16px;
+  padding: 11px 12px;
+  box-shadow: 0 2px 8px rgba(30, 27, 46, 0.04);
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: flex-start;
-  transition: transform 0.15s, opacity 0.2s;
+  transition: transform 0.12s ease, opacity 0.2s ease;
   position: relative;
+  overflow: hidden;
 }
 .ntf-item:active {
   transform: scale(0.99);
 }
 
-/* Unread Specific Visual Accent */
+/* Unread Accent (Living Coral Pulse) */
 .ntf-item.unread {
-  background: #ffffff;
-  border-color: #d97706;
-  box-shadow: 0 4px 0 #78350f, 0 0 12px rgba(245, 158, 11, 0.15);
-  border-left: 5px solid #d97706;
+  background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%);
+  border-left: 4px solid var(--reef-coral-500);
+  box-shadow: 0 4px 14px rgba(244, 63, 94, 0.12);
 }
 
-/* Read Specific Visual Accent */
+/* Read Accent (Clean Ocean Softness) */
 .ntf-item.read {
-  background: #fdfaf6;
-  border-color: #cbd5e1;
-  box-shadow: 0 3px 0 #cbd5e1;
-  opacity: 0.82;
+  background: rgba(255, 255, 255, 0.85);
+  opacity: 0.86;
 }
 
-/* Type Icon Box */
+/* Icon Box */
 .ntf-ico-box {
-  width: 38px;
-  height: 38px;
-  border-radius: 13px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  color: #fff;
-  border: 2px solid #78350f;
-  box-shadow: 0 2px 0 #78350f;
+  font-size: 18px;
+  color: #ffffff;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
 }
 .ntf-item.read .ntf-ico-box {
-  border-color: #94a3b8;
-  box-shadow: 0 2px 0 #94a3b8;
-  background: #cbd5e1 !important;
-  color: #64748b;
+  background: #e2e8f0 !important;
+  color: #64748b !important;
+  box-shadow: none;
 }
 
 /* Content Area */
@@ -288,216 +374,226 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .ntf-badge-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 .ntf-type-tag {
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 900;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 6px;
-  border: 1.5px solid;
+  border: 1px solid;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
-.ntf-unread-indicator {
-  width: 8px;
-  height: 8px;
-  background: #ef4444;
+.ntf-unread-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--reef-coral-500);
   border-radius: 50%;
-  border: 1.5px solid #fff;
-  box-shadow: 0 0 6px #ef4444;
-  animation: pulse-dot 1.5s infinite;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7);
+  animation: ntfPulseDot 1.6s infinite;
+  flex-shrink: 0;
 }
-@keyframes pulse-dot {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.3); opacity: 0.8; }
+@keyframes ntfPulseDot {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 5px rgba(244, 63, 94, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
 }
 
 .ntf-time-stamp {
   font-size: 9.5px;
-  font-weight: 800;
-  color: #94a3b8;
+  font-weight: 700;
+  color: var(--reef-muted);
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
 .ntf-title {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--reef-ink);
   line-height: 1.35;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .ntf-message {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
-  color: #475569;
+  color: var(--reef-muted);
   line-height: 1.45;
 }
 
-/* CTA Action Button */
+/* Action Link */
 .ntf-action-link {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 8px;
-  font-size: 11px;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 10.5px;
   font-weight: 900;
-  color: #fff;
+  color: #ffffff;
   text-decoration: none;
-  background: linear-gradient(180deg, #f59e0b, #d97706);
-  border: 1.5px solid #78350f;
-  border-radius: 10px;
-  padding: 5px 12px;
-  box-shadow: 0 2px 0 #78350f;
-  text-shadow: 0 1px 2px #78350f;
-  transition: transform 0.1s;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 1px solid #ffffff;
+  border-radius: 8px;
+  padding: 4px 9px;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+  transition: transform 0.1s ease;
 }
-.ntf-action-link:active {
-  transform: translateY(2px);
-  box-shadow: none;
-}
+.ntf-action-link:active { transform: scale(0.95); }
 
 /* Single Mark As Read Button */
 .btn-mark-single {
-  background: #f8fafc;
-  border: 2px solid #cbd5e1;
-  color: #64748b;
+  background: #ffffff;
+  border: 1.5px solid #ffffff;
+  color: var(--reef-muted);
   border-radius: 10px;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
-  box-shadow: 0 2px 0 #cbd5e1;
-  transition: all 0.1s;
+  box-shadow: 0 2px 6px rgba(30, 27, 46, 0.05);
+  transition: all 0.12s ease;
   flex-shrink: 0;
 }
 .btn-mark-single:hover {
   background: #ecfdf5;
   color: #059669;
-  border-color: #10b981;
 }
-.btn-mark-single:active {
-  transform: translateY(2px);
-  box-shadow: none;
-}
+.btn-mark-single:active { transform: scale(0.92); }
 
-/* ── EMPTY STATE ── */
-.ntf-empty-box {
+/* ── 5. EMPTY STATE (CLAYMORPHIC) ── */
+.ntf-empty-card {
   text-align: center;
-  padding: 36px 20px;
-  background: #ffffff;
-  border: 2.5px dashed #d97706;
-  border-radius: 22px;
-  box-shadow: 0 4px 0 #78350f;
-  margin-top: 10px;
+  padding: 30px 18px;
+  margin-top: 4px;
 }
 .ntf-empty-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 20px;
-  background: #fef3c7;
-  border: 2px solid #d97706;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border: 2px solid #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
-  color: #d97706;
-  margin: 0 auto 12px;
+  font-size: 28px;
+  color: #065f46;
+  margin: 0 auto 10px;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.18);
 }
 .ntf-empty-title {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 900;
-  color: #78350f;
-  margin-bottom: 4px;
+  color: var(--reef-ink);
+  margin-bottom: 3px;
 }
 .ntf-empty-sub {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
-  color: #94a3b8;
-  line-height: 1.45;
-  margin-bottom: 16px;
+  color: var(--reef-muted);
+  line-height: 1.4;
+  margin-bottom: 14px;
 }
-.btn-back-home {
+.btn-marine-home {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 18px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #f59e0b, #d97706);
-  border: 2px solid #78350f;
-  box-shadow: 0 3px 0 #78350f;
-  color: #fff;
-  font-size: 12px;
+  gap: 5px;
+  padding: 9px 15px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.25);
+  color: #ffffff;
+  font-size: 11.5px;
   font-weight: 900;
   text-decoration: none;
-  text-shadow: 0 1px 2px #78350f;
+  transition: transform 0.12s ease;
 }
-.btn-back-home:active {
-  transform: translateY(2px);
-  box-shadow: none;
-}
+.btn-marine-home:active { transform: scale(0.96); }
 </style>
 
-<!-- TOP BANNER -->
-<div class="ntf-top-banner">
-  <div class="ntf-top-title">
-    <i class="ph-bold ph-bell-ringing" style="color:#fde047;"></i>
-    <span>Notifikasi & Info</span>
+<div class="ntf-reef-stage">
+
+  <!-- ── 1. COMPACT TOP NAVIGATOR ── -->
+  <div class="ntf-top-nav">
+    <a href="/home" class="ntf-back-btn" title="Kembali ke Beranda">
+      <i class="ph-bold ph-caret-left"></i>
+    </a>
+    <div class="ntf-nav-title">
+      <i class="ph-fill ph-bell-simple-ringing" style="color:var(--reef-coral-500);"></i>
+      <span>Warta Samudra</span>
+    </div>
+    <div class="ntf-unread-pill">
+      <i class="ph-bold ph-envelope-simple-open"></i>
+      <span id="unread-pill-txt"><?= $unread_count ?> Baru</span>
+    </div>
   </div>
-  <div class="ntf-top-sub" id="banner-sub-text">
+
+  <!-- ── 2. OCEAN SIGNAL TOWER (HEADER BANNER) ── -->
+  <div class="ntf-clay ntf-signal-card">
+    <div class="ntf-bubble ntf-bubble--1"></div>
+    <div class="ntf-bubble ntf-bubble--2"></div>
+
+    <div class="ntf-signal-left">
+      <div class="ntf-signal-avatar">
+        <i class="ph-fill ph-broadcast"></i>
+      </div>
+      <div class="ntf-signal-info">
+        <div class="ntf-signal-title">Pusat Sinyal & Pengumuman</div>
+        <div class="ntf-signal-sub" id="banner-sub-text">
+          <?php if ($unread_count > 0): ?>
+            Ada <strong id="unread-count-banner"><?= $unread_count ?></strong> pesan yang belum dibaca
+          <?php else: ?>
+            Seluruh pesan telah dibaca
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+
     <?php if ($unread_count > 0): ?>
-      Kamu punya <strong id="unread-count-banner"><?= $unread_count ?></strong> pesan baru
-    <?php else: ?>
-      Semua pesan sudah dibaca
+      <button type="button" class="btn-mark-all-read" id="btn-mark-all" onclick="markAllRead()" title="Tandai semua sudah dibaca">
+        <i class="ph-bold ph-checks"></i>
+        <span>Baca Semua</span>
+      </button>
     <?php endif; ?>
   </div>
 
-  <?php if ($unread_count > 0): ?>
-    <button type="button" class="ntf-top-action" id="btn-mark-all" onclick="markAllRead()">
-      <i class="ph-bold ph-checks"></i>
-      <span>Tandai Semua Dibaca</span>
-    </button>
-  <?php endif; ?>
-</div>
-
-<div class="ntf-page-wrap">
-
-  <!-- SEGMENTED FILTER TABS -->
-  <div class="ntf-tabs">
-    <button type="button" class="ntf-tab-btn active" id="tab-all" onclick="filterNotifs('all')">
+  <!-- ── 3. SEGMENTED FILTER TABS ── -->
+  <div class="ntf-tabs-deck">
+    <button type="button" class="ntf-tab-item active" id="tab-all" onclick="filterNotifs('all')">
       <i class="ph-bold ph-tray"></i>
-      <span>Semua</span>
+      <span>Semua Warta</span>
       <span class="ntf-tab-badge" id="badge-all-count"><?= count($notifications) ?></span>
     </button>
 
-    <button type="button" class="ntf-tab-btn" id="tab-unread" onclick="filterNotifs('unread')">
+    <button type="button" class="ntf-tab-item" id="tab-unread" onclick="filterNotifs('unread')">
       <i class="ph-bold ph-bell-simple-ringing"></i>
       <span>Belum Dibaca</span>
       <span class="ntf-tab-badge" id="badge-unread-count"><?= $unread_count ?></span>
     </button>
   </div>
 
-  <!-- NOTIFICATIONS LIST -->
+  <!-- ── 4. NOTIFICATION CARDS LIST ── -->
   <?php if (empty($notifications)): ?>
-    <div class="ntf-empty-box">
+    <div class="ntf-clay ntf-empty-card">
       <div class="ntf-empty-icon">
         <i class="ph-fill ph-bell-slash"></i>
       </div>
-      <div class="ntf-empty-title">Kotak Pesan Bersih</div>
+      <div class="ntf-empty-title">Kotak Warta Bersih</div>
       <div class="ntf-empty-sub">
-        Belum ada informasi atau pengumuman terbaru untuk akunmu saat ini.
+        Belum ada pengumuman atau warta samudra baru untuk akunmu saat ini.
       </div>
-      <a href="/home" class="btn-back-home">
+      <a href="/home" class="btn-marine-home">
         <i class="ph-bold ph-house"></i>
         <span>Kembali ke Beranda</span>
       </a>
@@ -523,7 +619,7 @@ body {
             <div class="ntf-header-meta">
               <div class="ntf-badge-group">
                 <?php if (!$is_read): ?>
-                  <span class="ntf-unread-indicator" title="Belum Dibaca"></span>
+                  <span class="ntf-unread-dot" title="Belum Dibaca"></span>
                 <?php endif; ?>
                 <span class="ntf-type-tag" style="color:<?= $cfg['color'] ?>; background:<?= $cfg['badge'] ?>; border-color:<?= $cfg['border'] ?>;">
                   <?= htmlspecialchars($cfg['label']) ?>
@@ -558,15 +654,15 @@ body {
     </div>
 
     <!-- Empty Filter Message (Hidden by default) -->
-    <div id="filter-empty-message" class="ntf-empty-box" style="display:none;">
-      <div class="ntf-empty-icon" style="background:#ecfdf5;border-color:#10b981;color:#059669;">
+    <div id="filter-empty-message" class="ntf-clay ntf-empty-card" style="display:none;">
+      <div class="ntf-empty-icon" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);color:#065f46;">
         <i class="ph-fill ph-checks"></i>
       </div>
       <div class="ntf-empty-title">Semua Pesan Sudah Dibaca!</div>
       <div class="ntf-empty-sub">
         Tidak ada pesan baru yang tertunda. Kamu selalu ter-update dengan kabar terbaru MancingCuan.
       </div>
-      <button type="button" onclick="filterNotifs('all')" class="btn-back-home" style="cursor:pointer;">
+      <button type="button" onclick="filterNotifs('all')" class="btn-marine-home" style="cursor:pointer;border:none;">
         <i class="ph-bold ph-tray"></i>
         <span>Tampilkan Semua Pesan</span>
       </button>
@@ -631,7 +727,7 @@ async function markRead(id, btn) {
       item.setAttribute('data-read', '1');
 
       // Hilangkan unread dot
-      const dot = item.querySelector('.ntf-unread-indicator');
+      const dot = item.querySelector('.ntf-unread-dot');
       if (dot) dot.remove();
 
       // Hilangkan tombol check
@@ -674,7 +770,7 @@ async function markAllRead() {
         item.classList.remove('unread');
         item.classList.add('read');
         item.setAttribute('data-read', '1');
-        const dot = item.querySelector('.ntf-unread-indicator');
+        const dot = item.querySelector('.ntf-unread-dot');
         if (dot) dot.remove();
         const btn = item.querySelector('.btn-mark-single');
         if (btn) btn.remove();
@@ -707,9 +803,12 @@ function updateUnreadCounter(explicitCount) {
   const countBanner = document.getElementById('unread-count-banner');
   if (countBanner) countBanner.innerText = count;
 
+  const pillTxt = document.getElementById('unread-pill-txt');
+  if (pillTxt) pillTxt.innerText = count + ' Baru';
+
   const subText = document.getElementById('banner-sub-text');
   if (subText && count <= 0) {
-    subText.innerHTML = 'Semua pesan sudah dibaca';
+    subText.innerHTML = 'Seluruh pesan telah dibaca';
     const btnAll = document.getElementById('btn-mark-all');
     if (btnAll) btnAll.remove();
   }
