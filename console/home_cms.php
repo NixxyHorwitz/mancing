@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 13. FISHING ENGINE SETTINGS
         $curConfig['fishing_engine']['enabled']          = isset($_POST['fishing_engine_enabled']);
         $curConfig['fishing_engine']['daily_free_baits'] = max(0, (int)($_POST['fishing_daily_free_baits'] ?? 3));
-        $curConfig['fishing_engine']['bait_per_video']   = max(0, (int)($_POST['fishing_bait_per_video'] ?? 1));
+        $curConfig['fishing_engine']['bait_per_video']   = max(0, (int)($_POST['fishing_bait_per_video'] ?? 0));
 
         home_cms_config_set($pdo, $curConfig);
 
@@ -755,7 +755,7 @@ require __DIR__ . '/partials/header.php';
               <div class="col-6">
                 <label class="small text-muted">Bonus Umpan per Video:</label>
                 <div class="input-group input-group-sm">
-                  <input type="number" name="fishing_bait_per_video" min="0" max="10" class="form-control bg-dark text-light border-secondary" value="<?= (int)($cms['fishing_engine']['bait_per_video'] ?? 1) ?>">
+                  <input type="number" name="fishing_bait_per_video" min="0" max="10" class="form-control bg-dark text-light border-secondary" value="<?= (int)($cms['fishing_engine']['bait_per_video'] ?? 0) ?>">
                   <span class="input-group-text bg-secondary text-light">Umpan</span>
                 </div>
                 <div class="form-text text-muted" style="font-size:10px;">Diberikan otomatis selesai tonton video.</div>

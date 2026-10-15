@@ -12,6 +12,7 @@ foreach ($pdo->query("SELECT * FROM missions WHERE is_active = 1 ORDER BY FIELD(
         'desc'     => (string)$r['description'],
         'target'   => max(1, (int)$r['target_value']),
         'reward'   => (float)$r['reward_amount'],
+        'bait'     => max(0, (int)($r['reward_bait'] ?? 0)),   // hadiah umpan pancing (opsional)
         'icon'     => (string)($r['icon'] ?: 'ph-target'),
     ];
 }
@@ -116,16 +117,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'claim
         }
         $pdo->prepare("INSERT INTO user_missions (user_id, mission_slug, progress, completed_at, claimed_at, period_key) VALUES (?, ?, ?, NOW(), NOW(), ?)")
             ->execute([$user['id'], $slug, $progress, $period]);
-        $pdo->prepare("UPDATE users SET balance_wd = balance_wd + ? WHERE id = ?")->execute([$mission['reward'], $user['id']]);
+        $pdo->prepare("UPDATE users SET balance_wd = balance_wd + ?, fishing_baits = fishing_baits + ? WHERE id = ?")
+            ->execute([$mission['reward'], $mission['bait'], $user['id']]);
         $pdo->commit();
 
+        $bait_txt = $mission['bait'] > 0 ? ' + ' . $mission['bait'] . ' umpan' : '';
         $tg  = "🎯 <b>MEMBER KLAIM MISI!</b>\n";
         $tg .= "Username: <code>" . htmlspecialchars((string)$user['username']) . "</code>\n";
         $tg .= "Misi: <b>" . htmlspecialchars($mission['title']) . "</b>\n";
-        $tg .= "Reward: " . format_rp($mission['reward']);
+        $tg .= "Reward: " . format_rp($mission['reward']) . $bait_txt;
         send_telegram_notif($pdo, $tg, [], 'misi');
 
-        echo json_encode(['ok' => true, 'msg' => 'Hadiah +' . format_rp($mission['reward']) . ' masuk ke Saldo Tarik!', 'reward' => $mission['reward']]);
+        $msg = $mission['reward'] > 0 ? 'Hadiah +' . format_rp($mission['reward']) . ' masuk ke Saldo Tarik' : 'Misi selesai';
+        echo json_encode(['ok' => true, 'msg' => $msg . ($mission['bait'] > 0 ? ' dan +' . $mission['bait'] . ' umpan pancing!' : '!'), 'reward' => $mission['reward']]);
     } catch (\Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         echo json_encode(['ok' => false, 'msg' => 'Gagal mengklaim, coba lagi.']);
@@ -252,7 +256,7 @@ require dirname(__DIR__) . '/partials/header.php';
       <div class="ms-row <?= $m['claimed'] ? 'is-claimed' : '' ?>" id="mr-<?= htmlspecialchars($m['slug']) ?>" data-reward="<?= (float)$m['reward'] ?>">
         <span class="ms-ic k-<?= $m['kind'] ?>"><i class="ph-fill <?= htmlspecialchars($m['icon']) ?>"></i></span>
         <div class="ms-body">
-          <div class="ms-title"><span><?= htmlspecialchars($m['title']) ?></span><em>+<?= format_rp($m['reward']) ?></em></div>
+          <div class="ms-title"><span><?= htmlspecialchars($m['title']) ?></span><em>+<?= format_rp($m['reward']) ?><?php if (!empty($m['bait'])): ?> · <i class="ph-fill ph-fish-simple"></i>+<?= (int)$m['bait'] ?> umpan<?php endif; ?></em></div>
           <div class="ms-bar"><i style="width:<?= $pct ?>%"></i></div>
           <div class="ms-meta"><span><?= htmlspecialchars($m['desc']) ?></span><b><?= $m['progress'] ?>/<?= $m['target'] ?></b></div>
         </div>

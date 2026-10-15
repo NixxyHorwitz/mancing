@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $new = [
         'enabled'          => isset($_POST['enabled']),
         'daily_free_baits' => max(0, min(100, (int)($_POST['daily_free_baits'] ?? 3))),
-        'bait_per_video'   => max(0, min(10, (int)($_POST['bait_per_video'] ?? 1))),
+        'bait_per_video'   => max(0, min(10, (int)($_POST['bait_per_video'] ?? 0))),
         'ember_3d'         => isset($_POST['ember_3d']),
         'lock_price'       => max(0, round((float)($_POST['lock_price'] ?? 2000))),
         'lock_free_trials' => max(0, min(100, (int)($_POST['lock_free_trials'] ?? 2))),
@@ -70,7 +70,7 @@ fs_styles();
         </div>
         <div class="col-6"><label class="c-label">Umpan gratis harian</label><input type="number" min="0" max="100" class="c-form-control" name="daily_free_baits" value="<?= (int)($fe['daily_free_baits'] ?? 3) ?>">
           <div class="fs-muted mt-1">Diisi ulang sekali sehari bila umpan pemain di bawah angka ini.</div></div>
-        <div class="col-6"><label class="c-label">Umpan per video ditonton</label><input type="number" min="0" max="10" class="c-form-control" name="bait_per_video" value="<?= (int)($fe['bait_per_video'] ?? 1) ?>"></div>
+        <div class="col-6"><label class="c-label">Umpan per video ditonton</label><input type="number" min="0" max="10" class="c-form-control" name="bait_per_video" value="<?= (int)($fe['bait_per_video'] ?? 0) ?>"></div>
         <div class="col-6"><label class="c-label">Harga Kunci Ikan (Rp, Saldo Beli)</label><input type="number" min="0" step="100" class="c-form-control" name="lock_price" value="<?= (float)($fe['lock_price'] ?? 2000) ?>">
           <div class="fs-muted mt-1">Ikan tidak bisa menjauh selama tarik-ulur. 0 = gratis.</div></div>
         <div class="col-12"><label class="c-label">Skala kesulitan tarik-ulur (semua ikan)</label>

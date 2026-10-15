@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->rollBack();
                 echo json_encode([
                     'ok' => false,
-                    'msg' => 'Umpan pancingmu habis! Tonton video atau beli paket umpan untuk melanjutkan.',
+                    'msg' => 'Umpan pancingmu habis! Selesaikan misi tonton video atau beli paket umpan untuk melanjutkan.',
                     'out_of_baits' => true
                 ]);
                 exit;
@@ -1405,7 +1405,7 @@ button { font-family: inherit; }
     <div class="pack-grid" id="pack-grid"></div>
     <div class="pack-desc" id="pack-desc">Pilih paket umpan di atas</div>
     <button type="button" class="btn-save" id="btn-buy" disabled><i class="ph-fill ph-shopping-bag"></i> Beli Paket</button>
-    <a href="/videos" class="shop-free"><span class="m-ico rb-super"><i class="ph-fill ph-film-strip"></i></span> Umpan gratis: +1 umpan tiap video ditonton sampai tuntas</a>
+    <a href="/missions" class="shop-free"><span class="m-ico rb-super"><i class="ph-fill ph-target"></i></span> Umpan gratis: +1 umpan tiap misi "Tonton 3 Video" selesai</a>
   </div>
 </div>
 
@@ -3629,7 +3629,7 @@ function resetToIdle() {
   $('btn-cast').classList.remove('held');
   updatePowerUI();
   UI.baits(G.baits);
-  UI.msg(G.baits > 0 ? 'Tahan tombol untuk mengisi tenaga, lepas untuk melempar kail.' : 'Umpan habis. Beli umpan atau tonton video untuk umpan gratis.');
+  UI.msg(G.baits > 0 ? 'Tahan tombol untuk mengisi tenaga, lepas untuk melempar kail.' : 'Umpan habis. Beli umpan atau klaim umpan gratis dari misi tonton video.');
 }
 
 function flyCoins(fromEl, toEl, n, done) {

@@ -306,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'claim
         $pdo->prepare("INSERT INTO watch_history (user_id,video_id,reward_given) VALUES (?,?,?)")
             ->execute([$user['id'], $vid_id, $reward]);
         $cms_cfg = home_cms_config($pdo);
-        $bait_bonus = !empty($cms_cfg['fishing_engine']['enabled']) ? max(0, (int)($cms_cfg['fishing_engine']['bait_per_video'] ?? 1)) : 0;
+        $bait_bonus = !empty($cms_cfg['fishing_engine']['enabled']) ? max(0, (int)($cms_cfg['fishing_engine']['bait_per_video'] ?? 0)) : 0;
 
         $pdo->prepare("UPDATE users SET balance_wd=balance_wd+?,total_earned=total_earned+?,fishing_baits=fishing_baits+? WHERE id=?")
             ->execute([$reward, $reward, $bait_bonus, $user['id']]);

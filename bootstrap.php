@@ -388,7 +388,7 @@ function home_cms_config(PDO $pdo): array {
         'fishing_engine' => [
             'enabled'          => true,
             'daily_free_baits' => 3,
-            'bait_per_video'   => 1,
+            'bait_per_video'   => 0,  // umpan gratis kini dari misi harian (Tonton 3 & 6 Video)
             'ember_3d'         => true,
             'lock_price'       => 2000,
             'lock_free_trials' => 2,
