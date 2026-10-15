@@ -75,7 +75,7 @@ $_final_og_desc  = setting($pdo, 'seo_og_description', $_seo_desc);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#78350f">
+<meta name="theme-color" content="#a5f3fc">
 <title><?= htmlspecialchars($_page_title) ?></title>
 <link rel="canonical" href="<?= htmlspecialchars($current_url) ?>">
 <meta name="description" content="<?= htmlspecialchars($_final_og_desc) ?>">
@@ -118,463 +118,211 @@ $_final_og_desc  = setting($pdo, 'seo_og_description', $_seo_desc);
 <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 
 <style>
-/* ══════════════════════════════════════════════════════════
-   MANCINGCUAN — CARDLESS THEMED LOGIN PAGE
-   Seamless Form • Themed Background • Zero Emojis
-   ══════════════════════════════════════════════════════════ */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
+/* ══ LOGIN — Living Coral Reef · compact clay ══ */
+:root {
+  --ink: #1e1b2e; --muted: #6b6478;
+  --lagoon: #22d3ee; --lagoon-d: #0891b2; --lagoon-dd: #0e7490;
+  --coral: #fb7185; --kelp: #10b981; --sun: #fbbf24;
 }
-
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; }
 body {
-  font-family: 'Nunito', sans-serif;
-  background-color: #fef8ee;
-  background-image: 
-    radial-gradient(circle at 15% 15%, rgba(251, 191, 36, 0.22) 0%, transparent 45%),
-    radial-gradient(circle at 85% 85%, rgba(217, 119, 6, 0.16) 0%, transparent 50%),
-    radial-gradient(rgba(217, 119, 6, 0.08) 1.5px, transparent 1.5px);
-  background-size: 100% 100%, 100% 100%, 18px 18px;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 36px 18px 24px;
-  color: #1e293b;
-  position: relative;
-  overflow-x: hidden;
+  font-family: 'Nunito', -apple-system, sans-serif; color: var(--ink);
+  min-height: 100vh; min-height: 100dvh; overflow-x: hidden; position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 64px 18px 120px;
+  background: linear-gradient(180deg, #a5f3fc 0%, #cffafe 22%, #ecfeff 52%, #fff7ed 82%, #ffedd5 100%);
 }
 
-/* ── TOP HONEY DRIP DECORATION ── */
-.honey-drip-top {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 60px;
-  pointer-events: none;
-  z-index: 1;
-}
-.honey-drip-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+/* ── Hiasan latar (semua pointer-events:none) ── */
+.sea { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.sea-rays { position: absolute; top: -10%; left: 50%; width: 140%; height: 75%; transform: translateX(-50%);
+  background: repeating-linear-gradient(100deg, rgba(255,255,255,0) 0 46px, rgba(255,255,255,.38) 46px 70px, rgba(255,255,255,0) 70px 128px);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 100%); mask-image: linear-gradient(180deg, #000 0%, transparent 100%);
+  animation: rays 9s ease-in-out infinite alternate; opacity: .7; }
+@keyframes rays { to { transform: translateX(-46%) skewX(-4deg); opacity: .45; } }
 
-/* ── FLOATING THEMED ASSETS ── */
-.decor-float {
-  position: fixed;
-  pointer-events: none;
-  z-index: 1;
-  user-select: none;
-}
-.decor-float img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.decor-tl {
-  top: 40px;
-  left: max(10px, calc(50% - 280px));
-  width: 68px;
-  height: 68px;
-  opacity: 0.85;
-  filter: drop-shadow(0 8px 16px rgba(120, 53, 15, 0.15));
-  animation: floatSlow 5s ease-in-out infinite;
-}
-.decor-br {
-  bottom: 35px;
-  right: max(10px, calc(50% - 280px));
-  width: 76px;
-  height: 76px;
-  opacity: 0.85;
-  filter: drop-shadow(0 8px 16px rgba(120, 53, 15, 0.15));
-  animation: floatSlower 6s ease-in-out infinite;
-}
-.decor-tr {
-  top: 80px;
-  right: max(15px, calc(50% - 250px));
-  width: 36px;
-  height: 36px;
-  opacity: 0.75;
-  animation: floatSlower 4.5s ease-in-out infinite;
-}
-.decor-bl {
-  bottom: 80px;
-  left: max(15px, calc(50% - 250px));
-  width: 40px;
-  height: 40px;
-  opacity: 0.75;
-  animation: floatSlow 5.5s ease-in-out infinite;
-}
+.sea-surface { position: absolute; top: 0; left: 0; width: 200%; height: 46px; animation: surf 14s linear infinite; }
+@keyframes surf { to { transform: translateX(-50%); } }
 
-@keyframes floatSlow {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(4deg); }
-}
-@keyframes floatSlower {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(12px) rotate(-4deg); }
-}
+.bub { position: absolute; bottom: -24px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #fff 0 18%, rgba(255,255,255,.35) 40%, rgba(34,211,238,.18) 100%);
+  border: 1px solid rgba(255,255,255,.9); animation: rise linear infinite; }
+@keyframes rise { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: .9; } 50% { transform: translate(10px, -50vh); } 100% { transform: translate(-6px, -105vh); opacity: 0; } }
 
-/* ── CARDLESS LOGIN WRAPPER ── */
-.login-wrapper {
-  width: 100%;
-  max-width: 360px;
-  position: relative;
-  z-index: 10;
-  margin: 0 auto;
-}
+.fish { position: absolute; width: 38px; height: 38px; animation: swim linear infinite; filter: drop-shadow(0 6px 8px rgba(8,145,178,.2)); }
+.fish img { width: 100%; height: 100%; object-fit: contain; animation: wiggle 1.6s ease-in-out infinite; }
+@keyframes swim { from { transform: translateX(-60px); } to { transform: translateX(calc(100vw + 60px)); } }
+@keyframes wiggle { 50% { transform: translateY(-4px) rotate(-4deg); } }
+.fish.rev { animation-name: swimRev; }
+.fish.rev img { transform: scaleX(-1); animation-name: wiggleRev; }
+@keyframes swimRev { from { transform: translateX(calc(100vw + 60px)); } to { transform: translateX(-60px); } }
+@keyframes wiggleRev { 0%, 100% { transform: scaleX(-1); } 50% { transform: scaleX(-1) translateY(-4px) rotate(-4deg); } }
 
-/* Hero Header */
-.login-hero {
-  text-align: center;
-  margin-bottom: 24px;
-}
-.mascot-wrap {
-  position: relative;
-  display: inline-block;
-  margin-bottom: 12px;
-}
-.mascot-badge {
-  width: 76px;
-  height: 76px;
-  border-radius: 24px;
-  background: #ffffff;
-  border: 3px solid #78350f;
-  box-shadow: 0 4px 0 #78350f, 0 10px 24px rgba(217, 119, 6, 0.28);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: buzzyBob 3s ease-in-out infinite;
-  margin: 0 auto;
-}
-.mascot-badge img {
-  width: 52px;
-  height: 52px;
-  object-fit: contain;
-}
-@keyframes buzzyBob {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-6px) rotate(3deg); }
-}
+.sand { position: absolute; left: 0; bottom: 0; width: 100%; height: 44px; }
+.reef { position: absolute; bottom: 10px; width: 150px; height: 115px; }
+.reef-l { left: max(-10px, calc(50% - 330px)); }
+.reef-r { right: max(-10px, calc(50% - 330px)); }
+.kelp { transform-origin: bottom center; transform-box: fill-box; animation: sway 4.5s ease-in-out infinite alternate; }
+.kelp.k2 { animation-duration: 5.5s; animation-delay: -2s; }
+.kelp.k3 { animation-duration: 3.8s; animation-delay: -1s; }
+@keyframes sway { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
 
-.login-title {
-  font-size: 24px;
-  font-weight: 900;
-  color: #78350f;
-  letter-spacing: -0.5px;
-  line-height: 1.15;
-  margin-bottom: 4px;
-  text-shadow: 0 1.5px 0 rgba(255, 255, 255, 0.8);
-}
-.login-sub {
-  font-size: 12px;
-  font-weight: 800;
-  color: #92400e;
-  line-height: 1.35;
-}
+/* ── Kartu ── */
+.card { position: relative; z-index: 2; width: 100%; max-width: 340px; padding: 46px 20px 18px;
+  border: 2px solid #fff; border-radius: 26px; background: linear-gradient(160deg, rgba(255,255,255,.96) 0%, rgba(255,247,237,.95) 62%, rgba(255,237,213,.95) 100%);
+  box-shadow: 0 18px 38px rgba(8,145,178,.16), 0 6px 14px rgba(244,63,94,.08), inset 3px 3px 6px #fff, inset -4px -4px 9px rgba(251,146,60,.14);
+  backdrop-filter: blur(6px); }
 
-/* Error Flash */
-.auth-err {
-  background: #fee2e2;
-  border: 2px solid #dc2626;
-  border-radius: 14px;
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 800;
-  color: #991b1b;
-  margin-bottom: 18px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 3px 0 #dc2626;
-  line-height: 1.35;
-}
+.logo { position: absolute; top: -38px; left: 50%; transform: translateX(-50%); width: 76px; height: 76px; border-radius: 24px;
+  background: linear-gradient(145deg, #fff, #ecfeff); border: 3px solid #fff; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 22px rgba(8,145,178,.25), inset 2px 2px 5px #fff, inset -3px -3px 7px rgba(34,211,238,.18); animation: bob 3.4s ease-in-out infinite; }
+.logo img { width: 54px; height: 54px; object-fit: contain; }
+.logo::before, .logo::after { content: ''; position: absolute; border-radius: 50%; border: 1.5px solid #fff; background: rgba(207,250,254,.8); }
+.logo::before { width: 12px; height: 12px; right: -14px; top: 6px; }
+.logo::after { width: 7px; height: 7px; right: -22px; top: -6px; }
+@keyframes bob { 50% { transform: translate(-50%, -5px); } }
 
-/* Form Fields */
-.login-form {
-  width: 100%;
-}
-.inp-group {
-  margin-bottom: 14px;
-}
-.inp-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 900;
-  color: #78350f;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-.inp-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #ffffff;
-  border: 2.5px solid #78350f;
-  border-radius: 16px;
-  padding: 0 14px;
-  height: 48px;
-  box-shadow: 0 3px 0 #78350f;
-  transition: all 0.15s ease;
-}
-.inp-wrap:focus-within {
-  border-color: #d97706;
-  box-shadow: 0 3.5px 0 #d97706, 0 0 12px rgba(245, 158, 11, 0.25);
-  transform: translateY(-1px);
-}
-.inp-icon {
-  font-size: 20px;
-  color: #b45309;
-  flex-shrink: 0;
-}
-.inp-field {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 800;
-  color: #0f172a;
-  width: 100%;
-}
-.inp-field::placeholder {
-  color: #94a3b8;
-  font-weight: 700;
-  font-size: 12.5px;
-}
-.eye-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: #94a3b8;
-  font-size: 19px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.1s;
-}
-.eye-btn:hover {
-  color: #78350f;
-}
+.hd { text-align: center; margin-bottom: 16px; }
+.hd h1 { font-size: 20px; font-weight: 900; letter-spacing: -.4px; line-height: 1.15; }
+.hd h1 span { background: linear-gradient(90deg, var(--lagoon-d), var(--kelp)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hd p { margin-top: 3px; font-size: 11.5px; font-weight: 800; color: var(--muted); }
 
-/* Submit CTA Button */
-.btn-login-submit {
-  width: 100%;
-  height: 50px;
-  border: 2.5px solid #78350f;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-  color: #ffffff;
-  font-size: 14.5px;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 4.5px 0 #78350f;
-  text-shadow: 0 1px 2px #78350f;
-  cursor: pointer;
-  font-family: inherit;
-  margin-top: 18px;
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-.btn-login-submit:active {
-  transform: translateY(3.5px);
-  box-shadow: 0 1px 0 #78350f;
-}
+.err { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 12px; padding: 8px 11px; border-radius: 13px;
+  background: #fff1f2; border: 1.5px solid #fecdd3; color: #9f1239; font-size: 11.5px; font-weight: 800; line-height: 1.35; animation: shake .35s; }
+.err i { font-size: 15px; flex-shrink: 0; }
+@keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 
-/* Register Link Box */
-.login-footer-links {
-  text-align: center;
-  margin-top: 16px;
-  font-size: 12px;
-  font-weight: 800;
-  color: #78350f;
-}
-.login-reg-link {
-  font-weight: 900;
-  color: #b45309;
-  text-decoration: underline;
-  margin-left: 4px;
-  transition: color 0.1s;
-}
-.login-reg-link:hover {
-  color: #78350f;
-}
+.fld { margin-bottom: 10px; }
+.fld label { display: block; margin: 0 0 4px 4px; font-size: 10.5px; font-weight: 900; color: var(--muted); }
+.box { display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 12px; border-radius: 15px; background: #fff; border: 2px solid #fff;
+  box-shadow: inset 2px 2px 5px rgba(30,27,46,.06), 0 2px 6px rgba(8,145,178,.07); transition: border-color .15s, box-shadow .15s; }
+.box:focus-within { border-color: var(--lagoon); box-shadow: 0 0 0 4px rgba(34,211,238,.18); }
+.box > i { font-size: 18px; color: var(--lagoon-d); flex-shrink: 0; }
+.box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 800 14px/1 'Nunito', sans-serif; color: var(--ink); }
+.box input::placeholder { color: #a8a3b3; font-weight: 700; font-size: 12.5px; }
+.eye { border: 0; background: none; padding: 4px; color: #a8a3b3; font-size: 18px; display: flex; cursor: pointer; }
+.eye:hover { color: var(--lagoon-d); }
 
-/* ── TRUST & REGULATION BOX (OJK & BAPPEBTI) ── */
-.auth-trust-box {
-  margin-top: 24px;
-  text-align: center;
-}
-.trust-lbl {
-  font-size: 11px;
-  font-weight: 900;
-  color: #78350f;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 9px;
-}
-.trust-logos {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 2px solid #78350f;
-  border-radius: 16px;
-  padding: 10px 16px;
-  box-shadow: 0 3px 0 #78350f;
-}
-.trust-logo--ojk {
-  height: 40px;
-  max-width: 120px;
-  object-fit: contain;
-  display: block;
-}
-.trust-logo--bap {
-  height: 32px;
-  max-width: 135px;
-  object-fit: contain;
-  display: block;
-}
-.trust-sep {
-  width: 1.5px;
-  height: 32px;
-  background: #cbd5e1;
-  flex-shrink: 0;
-}
+.go { width: 100%; height: 48px; margin-top: 6px; border: 2px solid #fff; border-radius: 16px; cursor: pointer;
+  background: linear-gradient(135deg, var(--lagoon) 0%, var(--lagoon-d) 100%); color: #fff; font: 900 14.5px/1 'Nunito', sans-serif;
+  display: flex; align-items: center; justify-content: center; gap: 7px; position: relative; overflow: hidden;
+  box-shadow: 0 8px 18px rgba(8,145,178,.32), 0 4px 0 var(--lagoon-dd), inset 1px 1px 3px rgba(255,255,255,.6); transition: transform .1s, box-shadow .1s; }
+.go::after { content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); animation: shine 3.6s ease-in-out infinite; }
+@keyframes shine { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+.go:active { transform: translateY(3px); box-shadow: 0 3px 8px rgba(8,145,178,.3), 0 1px 0 var(--lagoon-dd); }
+.go[disabled] { opacity: .75; cursor: wait; }
+
+.alt { margin-top: 13px; text-align: center; font-size: 12px; font-weight: 800; color: var(--muted); }
+.alt a { color: #e11d48; font-weight: 900; text-decoration: none; margin-left: 2px; }
+.alt a:hover { text-decoration: underline; }
+
+.trust { margin-top: 14px; padding-top: 12px; border-top: 1.5px dashed rgba(8,145,178,.2); display: flex; align-items: center; justify-content: center; gap: 10px; }
+.trust small { font-size: 9.5px; font-weight: 900; color: var(--muted); display: inline-flex; align-items: center; gap: 3px; }
+.trust small i { color: var(--kelp); font-size: 12px; }
+.trust img { height: 22px; max-width: 70px; object-fit: contain; }
+
+@media (max-height: 640px) { body { padding-top: 54px; padding-bottom: 90px; } .reef { width: 112px; height: 86px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
 </style>
 </head>
 <body>
 
-<!-- TOP HONEY DRIP DECORATION -->
-<div class="honey-drip-top">
-  <svg viewBox="0 0 1440 90" preserveAspectRatio="none" class="honey-drip-svg">
-    <path d="M0,0 L1440,0 L1440,25 Q1380,75 1320,35 Q1260,-5 1200,45 Q1140,95 1080,40 Q1020,-15 960,30 Q900,75 840,35 Q780,-5 720,55 Q660,115 600,45 Q540,-25 480,40 Q420,105 360,35 Q300,-35 240,50 Q180,135 120,40 Q60,-50 0,30 Z" fill="#d97706" opacity="0.12"></path>
-    <path d="M0,0 L1440,0 L1440,18 Q1380,60 1320,25 Q1260,-8 1200,35 Q1140,80 1080,30 Q1020,-18 960,20 Q900,60 840,25 Q780,-8 720,45 Q660,95 600,35 Q540,-25 480,30 Q420,90 360,25 Q300,-35 240,40 Q180,115 120,30 Q60,-55 0,22 Z" fill="#f59e0b" opacity="0.22"></path>
-    <path d="M0,0 L1440,0 L1440,12 Q1350,45 1260,16 Q1170,-12 1080,28 Q990,70 900,20 Q810,-28 720,28 Q630,85 540,24 Q450,-38 360,20 Q270,78 180,20 Q90,-38 0,16 Z" fill="#fbbf24" opacity="0.28"></path>
+<div class="sea" aria-hidden="true">
+  <div class="sea-rays"></div>
+  <svg class="sea-surface" viewBox="0 0 1440 46" preserveAspectRatio="none">
+    <path d="M0 0H1440V22Q1380 38 1320 22T1200 22T1080 22T960 22T840 22T720 22T600 22T480 22T360 22T240 22T120 22T0 22Z" fill="#fff" opacity=".55"/>
+    <path d="M0 0H1440V12Q1380 26 1320 12T1200 12T1080 12T960 12T840 12T720 12T600 12T480 12T360 12T240 12T120 12T0 12Z" fill="#fff" opacity=".7"/>
+  </svg>
+
+  <span class="bub" style="left:8%;width:10px;height:10px;animation-duration:11s"></span>
+  <span class="bub" style="left:22%;width:6px;height:6px;animation-duration:8s;animation-delay:-3s"></span>
+  <span class="bub" style="left:41%;width:8px;height:8px;animation-duration:13s;animation-delay:-7s"></span>
+  <span class="bub" style="left:63%;width:12px;height:12px;animation-duration:12s;animation-delay:-2s"></span>
+  <span class="bub" style="left:78%;width:7px;height:7px;animation-duration:9s;animation-delay:-5s"></span>
+  <span class="bub" style="left:91%;width:9px;height:9px;animation-duration:14s;animation-delay:-9s"></span>
+
+  <div class="fish" style="top:13%;animation-duration:24s;animation-delay:-6s"><img src="/assets/img/fish/biasa.png" alt=""></div>
+  <div class="fish rev" style="top:74%;width:30px;height:30px;animation-duration:30s;animation-delay:-14s"><img src="/assets/img/fish/langka.png" alt=""></div>
+
+  <svg class="sand" viewBox="0 0 600 40" preserveAspectRatio="none"><path d="M0 18Q75 4 150 14T300 12T450 10T600 14V40H0Z" fill="#fed7aa"/><path d="M0 28Q100 18 200 26T400 24T600 24V40H0Z" fill="#fdba74" opacity=".5"/></svg>
+  <svg class="reef reef-l" viewBox="0 0 170 130">
+    <path class="kelp" d="M30 130C22 104 42 92 32 70S40 36 32 14" stroke="#10b981" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path class="kelp k2" d="M48 130C56 110 40 98 50 80S44 56 52 42" stroke="#34d399" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <g class="kelp k3"><path d="M100 128C98 108 96 96 86 84C78 74 74 64 78 56C84 62 88 70 92 78C94 66 92 54 98 46C104 56 102 68 102 80C108 70 116 64 124 62C122 72 114 80 106 90C104 104 106 116 108 128Z" fill="#fb7185"/>
+      <circle cx="78" cy="55" r="5" fill="#fda4af"/><circle cx="98" cy="45" r="5" fill="#fda4af"/><circle cx="124" cy="61" r="5" fill="#fda4af"/></g>
+    <ellipse cx="140" cy="122" rx="14" ry="8" fill="#a8a29e"/><ellipse cx="136" cy="119" rx="5" ry="2.5" fill="#fff" opacity=".45"/>
+  </svg>
+  <svg class="reef reef-r" viewBox="0 0 170 130">
+    <g class="kelp k2"><path d="M70 128C70 112 66 100 58 90C52 82 48 72 52 64C58 70 62 78 66 86C68 74 66 60 72 52C78 62 76 74 76 86C82 76 92 70 100 70C98 80 88 88 80 98C78 110 80 120 82 128Z" fill="#c084fc"/>
+      <circle cx="52" cy="63" r="5" fill="#e9d5ff"/><circle cx="72" cy="51" r="5" fill="#e9d5ff"/><circle cx="100" cy="69" r="5" fill="#e9d5ff"/></g>
+    <path class="kelp" d="M140 130C132 106 150 92 140 70S148 40 140 20" stroke="#10b981" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M24 104l5 11l12 1l-9 8l3 12l-11 -6l-11 6l3 -12l-9 -8l12 -1z" fill="#fbbf24" transform="rotate(-12 24 116) translate(0 -6)"/>
+    <path d="M112 126a10 10 0 0 1 20 0z" fill="#fecdd3"/><path d="M117 126l5 -9l5 9" stroke="#fb7185" stroke-width="1.5" fill="none"/>
   </svg>
 </div>
 
-<!-- CARDLESS LOGIN WRAPPER -->
-<div class="login-wrapper">
+<main class="card">
+  <div class="logo"><img src="<?= htmlspecialchars($_site_logo) ?>" alt="<?= htmlspecialchars($_site_name) ?>"></div>
 
-  <!-- Hero Mascot Header -->
-  <div class="login-hero">
-    <div class="mascot-wrap">
-      <div class="mascot-badge">
-        <img src="<?= htmlspecialchars($_site_logo) ?>" alt="<?= htmlspecialchars($_site_name) ?>">
-      </div>
-    </div>
-    <h1 class="login-title">Masuk Akun <?= htmlspecialchars($_site_name) ?></h1>
-    <p class="login-sub">Tonton Video &amp; Raih Saldo Rupiah Setiap Hari</p>
+  <div class="hd">
+    <h1>Selamat datang di <span><?= htmlspecialchars($_site_name) ?></span></h1>
+    <p>Masuk untuk lanjut mancing &amp; panen cuan</p>
   </div>
 
   <?php if ($error): ?>
-    <div class="auth-err">
-      <i class="ph-bold ph-warning-circle" style="font-size:18px;flex-shrink:0;"></i>
-      <span><?= htmlspecialchars($error) ?></span>
-    </div>
+    <div class="err" role="alert"><i class="ph-fill ph-warning-circle"></i><span><?= htmlspecialchars($error) ?></span></div>
   <?php endif; ?>
 
-  <!-- Cardless Form -->
-  <form method="POST" class="login-form">
+  <form method="POST" id="login-form">
     <?= csrf_field() ?>
 
-    <!-- Username / Email Field -->
-    <div class="inp-group">
-      <label class="inp-label" for="login-input">Username atau Email</label>
-      <div class="inp-wrap">
-        <i class="ph-bold ph-user inp-icon"></i>
-        <input type="text"
-               id="login-input"
-               name="login"
-               class="inp-field"
-               value="<?= htmlspecialchars($_POST['login'] ?? '') ?>"
-               placeholder="Masukkan username atau email"
-               autocomplete="username"
-               required
-               autofocus>
+    <div class="fld">
+      <label for="login-input">Username / Email</label>
+      <div class="box">
+        <i class="ph-bold ph-user"></i>
+        <input type="text" id="login-input" name="login" value="<?= htmlspecialchars($_POST['login'] ?? '') ?>"
+               placeholder="nama kamu atau email" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
       </div>
     </div>
 
-    <!-- Password Field -->
-    <div class="inp-group">
-      <label class="inp-label" for="pwd-input">Kata Sandi</label>
-      <div class="inp-wrap">
-        <i class="ph-bold ph-lock-key inp-icon"></i>
-        <input type="password"
-               id="pwd-input"
-               name="password"
-               class="inp-field"
-               placeholder="Masukkan kata sandi"
-               autocomplete="current-password"
-               required>
-        <button type="button"
-                class="eye-btn"
-                onclick="togglePasswordVisibility()"
-                title="Lihat kata sandi">
+    <div class="fld">
+      <label for="pwd-input">Kata Sandi</label>
+      <div class="box">
+        <i class="ph-bold ph-lock-key"></i>
+        <input type="password" id="pwd-input" name="password" placeholder="••••••••" autocomplete="current-password" required>
+        <button type="button" class="eye" onclick="togglePasswordVisibility()" title="Lihat kata sandi" aria-label="Lihat kata sandi">
           <i class="ph-bold ph-eye" id="eye-icon"></i>
         </button>
       </div>
     </div>
 
-    <!-- Submit CTA Button -->
-    <button type="submit" class="btn-login-submit">
-      <span>Masuk Sekarang</span>
-      <i class="ph-bold ph-arrow-right"></i>
-    </button>
+    <button type="submit" class="go" id="login-btn"><span>Masuk</span><i class="ph-bold ph-arrow-right"></i></button>
   </form>
 
-  <!-- Register Link -->
-  <div class="login-footer-links">
-    <span>Belum punya akun?</span>
-    <a href="/register" class="login-reg-link">Daftar Akun Baru</a>
-  </div>
+  <div class="alt">Belum punya akun?<a href="/register">Daftar gratis</a></div>
 
-  <!-- ── LOGO DIAWASI OJK & BAPPEBTI ── -->
-  <div class="auth-trust-box">
-    <div class="trust-lbl">
-      <i class="ph-fill ph-shield-check" style="color:#059669;font-size:14px;"></i>
-      <span>Diawasi &amp; Terdaftar Resmi</span>
-    </div>
-    <div class="trust-logos">
-      <img src="/assets/ojkkk.png?v=3" alt="Otoritas Jasa Keuangan" class="trust-logo--ojk">
-      <div class="trust-sep"></div>
-      <img src="/assets/bap.png?v=3" alt="Bappebti" class="trust-logo--bap">
-    </div>
+  <div class="trust">
+    <small><i class="ph-fill ph-shield-check"></i>Terdaftar</small>
+    <img src="/assets/ojkkk.png?v=3" alt="Otoritas Jasa Keuangan">
+    <img src="/assets/bap.png?v=3" alt="Bappebti">
   </div>
-
-</div>
+</main>
 
 <script>
 function togglePasswordVisibility() {
   const inp = document.getElementById('pwd-input');
   const ico = document.getElementById('eye-icon');
   if (!inp || !ico) return;
-
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    ico.className = 'ph-bold ph-eye-slash';
-  } else {
-    inp.type = 'password';
-    ico.className = 'ph-bold ph-eye';
-  }
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  ico.className = show ? 'ph-bold ph-eye-slash' : 'ph-bold ph-eye';
 }
+document.getElementById('login-form').addEventListener('submit', function () {
+  const b = document.getElementById('login-btn');
+  setTimeout(() => { b.disabled = true; b.innerHTML = '<span>Memeriksa...</span>'; }, 0);
+});
 </script>
 </body>
 </html>

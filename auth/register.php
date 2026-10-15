@@ -21,52 +21,75 @@ $ip_key = 'reg_' . md5($client_ip);
 $attempts = (int)($_SESSION[$ip_key . '_attempts'] ?? 0);
 $lock_until = (int)($_SESSION[$ip_key . '_lock'] ?? 0);
 
-// Compact SVG Captcha Generator
+// ── Captcha "Laut Bersih": pilih semua ikan / semua sampah dari 6 kotak gambar ──
+// Jawaban disimpan di session (tidak pernah dikirim ke browser), gambar diacak ulang tiap permintaan.
+const REG_CAP_FISH = ['biasa', 'bagus', 'langka', 'super'];
+const REG_CAP_JUNK = ['junk-bag', 'junk-boot', 'junk-bottle', 'junk-can', 'junk-cup', 'junk-trashbag'];
+const REG_CAP_TTL  = 900;
+
 function generate_captcha_challenge(): array {
-    $n1 = rand(10, 35);
-    $n2 = rand(2, 12);
-    $op = (rand(0, 1) === 1) ? '+' : '-';
-    if ($op === '-' && $n1 < $n2) {
-        [$n1, $n2] = [$n2, $n1];
+    $mode    = random_int(0, 1) ? 'fish' : 'junk';
+    $targets = random_int(2, 3);
+    $fish = REG_CAP_FISH; shuffle($fish);
+    $junk = REG_CAP_JUNK; shuffle($junk);
+    $tiles = $mode === 'fish'
+        ? array_merge(array_slice($fish, 0, $targets), array_slice($junk, 0, 6 - $targets))
+        : array_merge(array_slice($junk, 0, $targets), array_slice($fish, 0, 6 - $targets));
+    shuffle($tiles);
+
+    $ans = [];
+    foreach ($tiles as $i => $t) {
+        if (($mode === 'junk') === str_starts_with($t, 'junk-')) $ans[] = $i;
     }
-    $ans = ($op === '+') ? ($n1 + $n2) : ($n1 - $n2);
-    
-    $payload = [
-        'ans' => $ans,
-        'ts'  => time(),
-        'n'   => bin2hex(random_bytes(6))
-    ];
-    $token = base64_encode(json_encode($payload));
-    $secret = 'MancingCuan_SecCap_' . date('Ymd');
-    $sig = hash_hmac('sha256', $token, $secret);
-    
-    $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 38" width="120" height="38" style="display:block;border-radius:10px;background:#fffbeb;border:2px solid #78350f;">'
-         . '<defs>'
-         . '<pattern id="hdots" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">'
-         . '<circle cx="4" cy="4" r="1.2" fill="#fde68a" opacity="0.6"/>'
-         . '</pattern>'
-         . '</defs>'
-         . '<rect width="100%" height="100%" fill="url(#hdots)"/>'
-         . '<path d="M 6 19 Q 32 4, 60 19 T 114 17" fill="none" stroke="#fcd34d" stroke-width="2" opacity="0.6"/>'
-         . '<path d="M 8 27 Q 38 35, 68 25 T 112 21" fill="none" stroke="#fbbf24" stroke-width="1.5" opacity="0.4"/>'
-         . '<text x="50%" y="62%" dominant-baseline="middle" text-anchor="middle" font-family="\'Nunito\', sans-serif" font-weight="900" font-size="16" fill="#78350f" letter-spacing="1">'
-         . "{$n1} {$op} {$n2} = ?"
-         . '</text>'
-         . '</svg>';
-         
+    $_SESSION['reg_cap'] = ['tiles' => $tiles, 'ans' => $ans, 'ts' => time(), 'v' => bin2hex(random_bytes(4))];
+
     return [
-        'svg'   => $svg,
-        'token' => $token,
-        'sig'   => $sig,
-        'ans'   => $ans
+        'prompt' => $mode === 'fish' ? 'Tangkap semua ikan' : 'Bersihkan semua sampah',
+        'icon'   => $mode === 'fish' ? 'ph-fish-simple' : 'ph-trash',
+        'v'      => $_SESSION['reg_cap']['v'],
     ];
+}
+
+/** Gambar satu kotak captcha: rotasi, skala, posisi & gelembung acak agar tidak bisa dicocokkan per-byte */
+function render_captcha_tile(int $i): void {
+    $cap = $_SESSION['reg_cap'] ?? null;
+    $name = $cap['tiles'][$i] ?? null;
+    header('Cache-Control: no-store, max-age=0');
+    $src = $name ? @imagecreatefrompng(dirname(__DIR__) . '/assets/img/fish/' . $name . '.png') : false;
+    if (!$src) { http_response_code(404); exit; }
+
+    $S = 96;
+    $im = imagecreatetruecolor($S, $S);
+    imagealphablending($im, true);
+    imagesavealpha($im, true);
+    $bgs = [[103, 232, 249], [94, 234, 212], [125, 211, 252], [196, 181, 253], [253, 164, 175], [253, 186, 116]];
+    [$r, $g, $b] = $bgs[random_int(0, count($bgs) - 1)];
+    imagefill($im, 0, 0, imagecolorallocate($im, $r + random_int(-6, 0), $g + random_int(-6, 0), $b + random_int(-6, 0)));
+    for ($k = random_int(3, 6); $k > 0; $k--) {
+        $d = random_int(4, 14);
+        imagefilledellipse($im, random_int(0, $S), random_int(0, $S), $d, $d, imagecolorallocatealpha($im, 255, 255, 255, random_int(40, 90)));
+    }
+    if (random_int(0, 1)) imageflip($src, IMG_FLIP_HORIZONTAL);
+    $rot = imagerotate($src, random_int(-28, 28), imagecolorallocatealpha($src, 0, 0, 0, 127));
+    imagesavealpha($rot, true);
+    $sz = random_int(62, 78);
+    $rw = imagesx($rot); $rh = imagesy($rot);
+    $dw = (int)round($sz * $rw / 128); $dh = (int)round($sz * $rh / 128);
+    imagecopyresampled($im, $rot, (int)(($S - $dw) / 2) + random_int(-6, 6), (int)(($S - $dh) / 2) + random_int(-6, 6), 0, 0, $dw, $dh, $rw, $rh);
+    header('Content-Type: image/png');
+    imagepng($im, null, 6);
+    exit;
+}
+
+// Gambar kotak captcha
+if (isset($_GET['cap_tile'])) {
+    render_captcha_tile(max(0, min(5, (int)$_GET['cap_tile'])));
 }
 
 // AJAX Refresh Captcha Endpoint
 if (isset($_GET['refresh_captcha'])) {
     header('Content-Type: application/json');
-    $c = generate_captcha_challenge();
-    echo json_encode(['ok' => true, 'svg' => $c['svg'], 'token' => $c['token'], 'sig' => $c['sig']]);
+    echo json_encode(['ok' => true] + generate_captcha_challenge());
     exit;
 }
 
@@ -108,39 +131,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         goto end_reg;
     }
 
-    // ── 3. CAPTCHA VALIDATION ──
-    $cap_answer = trim($_POST['captcha_answer'] ?? '');
-    $cap_token  = $_POST['captcha_token'] ?? '';
-    $cap_sig    = $_POST['captcha_sig'] ?? '';
-    
-    $secret = 'MancingCuan_SecCap_' . date('Ymd');
-    $calc_sig = hash_hmac('sha256', $cap_token, $secret);
-    if (!hash_equals($calc_sig, $cap_sig)) {
-        $secret_prev = 'MancingCuan_SecCap_' . date('Ymd', strtotime('-1 day'));
-        $calc_sig = hash_hmac('sha256', $cap_token, $secret_prev);
-    }
+    // ── 3. CAPTCHA VALIDATION (sekali pakai) ──
+    $cap = $_SESSION['reg_cap'] ?? null;
+    unset($_SESSION['reg_cap']);
+    $cap_pick = array_values(array_unique(array_map('intval', array_filter(explode(',', (string)($_POST['captcha_answer'] ?? '')), 'is_numeric'))));
+    sort($cap_pick);
 
-    if (!hash_equals($calc_sig, $cap_sig)) {
-        $error = 'Sesi keamanan kedaluwarsa. Silakan refresh soal hitungan!';
+    if (!$cap || !isset($cap['ans'], $cap['ts'])) {
+        $error = 'Sesi verifikasi kedaluwarsa. Silakan ulangi verifikasi gambar.';
         $error_fields[] = 'f_captcha';
         goto end_reg;
     }
 
-    $cap_data = json_decode(base64_decode($cap_token), true);
-    if (!$cap_data || !isset($cap_data['ans'], $cap_data['ts'])) {
-        $error = 'Token keamanan tidak valid.';
+    if ((time() - (int)$cap['ts']) > REG_CAP_TTL) {
+        $error = 'Waktu verifikasi habis. Silakan ulangi verifikasi gambar.';
         $error_fields[] = 'f_captcha';
         goto end_reg;
     }
 
-    if ((time() - $cap_data['ts']) > 900) {
-        $error = 'Waktu hitungan keamanan telah habis. Silakan refresh soal!';
-        $error_fields[] = 'f_captcha';
-        goto end_reg;
-    }
-
-    if ($cap_answer === '' || (int)$cap_answer !== (int)$cap_data['ans']) {
-        $error = 'Jawaban hitungan keamanan salah. Coba lagi!';
+    if (!$cap_pick || $cap_pick !== $cap['ans']) {
+        $error = 'Verifikasi gambar belum tepat. Coba lagi ya!';
         $error_fields[] = 'f_captcha';
         goto end_reg;
     }
@@ -458,7 +468,7 @@ $current_url = base_url('register' . (!empty($ref_from_url) ? '/' . urlencode($r
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#78350f">
+<meta name="theme-color" content="#67e8f9">
 <title><?= htmlspecialchars($_page_title) ?></title>
 <link rel="canonical" href="<?= htmlspecialchars($current_url) ?>">
 <meta name="description" content="<?= htmlspecialchars($_final_og_desc) ?>">
@@ -516,709 +526,431 @@ $current_url = base_url('register' . (!empty($ref_from_url) ? '/' . urlencode($r
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   MANCINGCUAN — CARDLESS COMPACT REGISTER (LIKE LOGIN PAGE)
-   Seamless Form • Themed Background • Zero Emojis
+   REGISTER — Deep Lagoon · Living Coral Reef · 3D Clay
+   Latar laut biru tegas (kontras), satu kartu clay putih,
+   ringkas: placeholder sebagai label, referral bisa dibuka.
    ══════════════════════════════════════════════════════════ */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
+:root {
+  --ink: #0f172a; --muted: #475569; --line: #e2e8f0;
+  --chip-sh: inset 1.5px 1.5px 3px rgba(255, 255, 255, .6), inset -1.5px -1.5px 3px rgba(0, 0, 0, .18);
 }
-
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; overflow-x: hidden; }
 body {
-  font-family: 'Nunito', sans-serif;
-  background-color: #fef8ee;
-  background-image: 
-    radial-gradient(circle at 15% 15%, rgba(251, 191, 36, 0.22) 0%, transparent 45%),
-    radial-gradient(circle at 85% 85%, rgba(217, 119, 6, 0.16) 0%, transparent 50%),
-    radial-gradient(rgba(217, 119, 6, 0.08) 1.5px, transparent 1.5px);
-  background-size: 100% 100%, 100% 100%, 18px 18px;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 30px 16px 20px;
-  color: #1e293b;
-  position: relative;
-  overflow-x: hidden;
+  font-family: 'Nunito', -apple-system, sans-serif; color: var(--ink); min-height: 100vh; min-height: 100dvh; -webkit-font-smoothing: antialiased;
+  background: linear-gradient(180deg, #22d3ee 0%, #06b6d4 18%, #0891b2 46%, #0e7490 74%, #155e75 100%) fixed;
 }
+i[class^="ph-"] { display: inline-flex; align-items: center; justify-content: center; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* ── TOP HONEY DRIP DECORATION ── */
-.honey-drip-top {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 60px;
-  pointer-events: none;
-  z-index: 1;
-}
-.honey-drip-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+/* ══ Dunia bawah laut (latar, tidak bisa diklik) ══ */
+.sea { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.rays { position: absolute; top: -10%; left: 50%; width: 160%; height: 80%; transform: translateX(-50%);
+  background: repeating-linear-gradient(100deg, transparent 0 46px, rgba(255, 255, 255, .16) 46px 74px, transparent 74px 130px);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent); mask-image: linear-gradient(180deg, #000, transparent); animation: rays 10s ease-in-out infinite alternate; }
+@keyframes rays { to { transform: translateX(-46%) skewX(-5deg); opacity: .6; } }
+.caustic { position: absolute; inset: -60px; opacity: .22;
+  background-image: radial-gradient(ellipse 40px 18px at 20px 20px, #fff 0, transparent 70%), radial-gradient(ellipse 26px 12px at 70px 60px, #fff 0, transparent 70%), radial-gradient(ellipse 30px 14px at 110px 24px, #a5f3fc 0, transparent 70%);
+  background-size: 140px 90px; animation: caustic 16s linear infinite;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 55%); mask-image: linear-gradient(180deg, #000 0%, transparent 55%); }
+@keyframes caustic { to { transform: translate(140px, 90px); } }
+.bub { position: absolute; bottom: -24px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .85);
+  background: radial-gradient(circle at 32% 30%, #fff 0 16%, rgba(255, 255, 255, .25) 42%, rgba(165, 243, 252, .12) 100%); animation: rise linear infinite; }
+@keyframes rise { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: .9; } 50% { transform: translate(10px, -50vh); } 100% { transform: translate(-8px, -108vh); opacity: 0; } }
+.fish { position: absolute; width: 36px; height: 36px; animation: swim linear infinite; filter: drop-shadow(0 6px 6px rgba(8, 51, 68, .35)); }
+.fish img { width: 100%; height: 100%; object-fit: contain; animation: wig 1.4s ease-in-out infinite; }
+.fish.rev { animation-name: swimR; }
+.fish.rev img { animation-name: wigR; }
+@keyframes swim { from { transform: translateX(-60px); } to { transform: translateX(calc(100vw + 60px)); } }
+@keyframes swimR { from { transform: translateX(calc(100vw + 60px)); } to { transform: translateX(-60px); } }
+@keyframes wig { 50% { transform: translateY(-4px) rotate(-5deg); } }
+@keyframes wigR { 0%, 100% { transform: scaleX(-1); } 50% { transform: scaleX(-1) translateY(-4px) rotate(-5deg); } }
+.jelly { position: absolute; top: 9%; width: 44px; animation: jelly 7s ease-in-out infinite; opacity: .9; }
+.jelly.j1 { right: max(8px, calc(50% - 300px)); }
+.jelly.j2 { left: max(6px, calc(50% - 290px)); top: 46%; width: 30px; animation-duration: 9s; animation-delay: -3s; opacity: .75; }
+.jelly .bell { transform-box: fill-box; transform-origin: 50% 100%; animation: pulse 1.8s ease-in-out infinite; }
+@keyframes jelly { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-26px); } }
+@keyframes pulse { 50% { transform: scale(1.08, .9); } }
+.floor { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; }
+.floor svg { position: absolute; bottom: 0; }
+.floor .sand { left: 0; width: 100%; height: 40px; }
+.floor .reef-l { left: max(-8px, calc(50% - 320px)); width: 150px; height: 118px; }
+.floor .reef-r { right: max(-8px, calc(50% - 320px)); width: 150px; height: 118px; }
+.sway { transform-box: fill-box; transform-origin: 50% 100%; animation: sway 4.6s ease-in-out infinite alternate; }
+.sway.d2 { animation-duration: 5.8s; animation-delay: -2s; }
+@keyframes sway { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
 
-/* ── FLOATING THEMED ASSETS ── */
-.decor-float {
-  position: fixed;
-  pointer-events: none;
-  z-index: 1;
-  user-select: none;
-}
-.decor-float img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.decor-tl {
-  top: 35px;
-  left: max(10px, calc(50% - 290px));
-  width: 65px;
-  height: 65px;
-  opacity: 0.85;
-  filter: drop-shadow(0 8px 16px rgba(120, 53, 15, 0.15));
-  animation: floatSlow 5s ease-in-out infinite;
-}
-.decor-br {
-  bottom: 30px;
-  right: max(10px, calc(50% - 290px));
-  width: 72px;
-  height: 72px;
-  opacity: 0.85;
-  filter: drop-shadow(0 8px 16px rgba(120, 53, 15, 0.15));
-  animation: floatSlower 6s ease-in-out infinite;
-}
-.decor-tr {
-  top: 75px;
-  right: max(15px, calc(50% - 260px));
-  width: 34px;
-  height: 34px;
-  opacity: 0.75;
-  animation: floatSlower 4.5s ease-in-out infinite;
-}
-.decor-bl {
-  bottom: 75px;
-  left: max(15px, calc(50% - 260px));
-  width: 38px;
-  height: 38px;
-  opacity: 0.75;
-  animation: floatSlow 5.5s ease-in-out infinite;
-}
+/* ══ Isi halaman ══ */
+.wrap { position: relative; z-index: 1; width: 100%; max-width: 420px; margin: 0 auto; padding: 10px 12px 132px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; }
+.glass { height: 34px; min-width: 34px; padding: 0 12px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  background: rgba(255, 255, 255, .2); border: 1.5px solid rgba(255, 255, 255, .55); color: #fff; font-size: 11.5px; font-weight: 900; text-decoration: none;
+  box-shadow: inset 1px 1px 2px rgba(255, 255, 255, .45), 0 4px 10px rgba(8, 51, 68, .18); backdrop-filter: blur(6px); }
+.glass.sq { padding: 0; font-size: 16px; }
+.glass:active { transform: scale(.94); }
 
-@keyframes floatSlow {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(4deg); }
-}
-@keyframes floatSlower {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(12px) rotate(-4deg); }
-}
+.head { display: flex; align-items: center; gap: 11px; margin: 12px 2px 12px; }
+.logo { width: 52px; height: 52px; border-radius: 17px; background: #fff; border: 2.5px solid #fff; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 20px rgba(8, 51, 68, .3), inset 2px 2px 4px #fff, inset -3px -3px 6px rgba(8, 145, 178, .2); animation: bob 3.4s ease-in-out infinite; }
+.logo img { width: 38px; height: 38px; object-fit: contain; }
+@keyframes bob { 50% { transform: translateY(-4px) rotate(-3deg); } }
+.head h1 { font-size: 21px; font-weight: 900; color: #fff; letter-spacing: -.5px; line-height: 1.1; text-shadow: 0 2px 8px rgba(8, 51, 68, .35); }
+.head p { margin-top: 3px; font-size: 11px; font-weight: 800; color: #cffafe; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.head p b { color: #fef08a; }
 
-/* ── CARDLESS REGISTER WRAPPER ── */
-.reg-wrapper {
-  width: 100%;
-  max-width: 440px;
-  position: relative;
-  z-index: 10;
-  margin: 0 auto;
-}
+/* Kartu clay putih */
+.card { position: relative; border-radius: 24px; border: 2px solid #fff; padding: 12px; background: linear-gradient(170deg, #ffffff 0%, #f8fdff 60%, #fff7ed 100%);
+  box-shadow: 0 22px 40px rgba(8, 51, 68, .35), 0 6px 0 rgba(255, 255, 255, .35), inset 3px 3px 6px #fff, inset -4px -4px 10px rgba(8, 145, 178, .10); }
+.card::before { content: ''; position: absolute; top: 6px; left: 18px; width: 38%; height: 8px; border-radius: 999px; background: linear-gradient(90deg, rgba(165, 243, 252, .6), transparent); }
 
-/* Hero Header */
-.reg-hero {
-  text-align: center;
-  margin-bottom: 16px;
-  position: relative;
-}
-.mascot-wrap {
-  position: relative;
-  display: inline-block;
-  margin-bottom: 8px;
-}
-.mascot-badge {
-  width: 62px;
-  height: 62px;
-  border-radius: 20px;
-  background: #ffffff;
-  border: 2.5px solid #78350f;
-  box-shadow: 0 3.5px 0 #78350f, 0 8px 20px rgba(217, 119, 6, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: buzzyBob 3s ease-in-out infinite;
-  margin: 0 auto;
-}
-.mascot-badge img {
-  width: 42px;
-  height: 42px;
-  object-fit: contain;
-}
-@keyframes buzzyBob {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-5px) rotate(3deg); }
-}
+.note { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 7px 9px; border-radius: 14px; background: #fff1f2; border: 1.5px solid #fecdd3;
+  font-size: 11.5px; font-weight: 800; color: #9f1239; line-height: 1.35; animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 
-.reg-title {
-  font-size: 21px;
-  font-weight: 900;
-  color: #78350f;
-  letter-spacing: -0.4px;
-  line-height: 1.15;
-  margin-bottom: 3px;
-  text-shadow: 0 1.5px 0 rgba(255, 255, 255, 0.8);
-}
-.reg-sub {
-  font-size: 11px;
-  font-weight: 800;
-  color: #92400e;
-  line-height: 1.3;
-}
+.sec + .sec { margin-top: 11px; padding-top: 11px; border-top: 2px dashed var(--line); }
+.sec-h { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sec-h h2 { flex: 1; font-size: 12.5px; font-weight: 900; letter-spacing: -.1px; color: var(--ink); }
+.pearl { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff;
+  box-shadow: 0 3px 6px var(--csh), var(--chip-sh); }
+.p-coral  { background: radial-gradient(circle at 32% 28%, #fecdd3, #f43f5e 70%); --csh: rgba(244, 63, 94, .4); }
+.p-kelp   { background: radial-gradient(circle at 32% 28%, #a7f3d0, #059669 70%); --csh: rgba(5, 150, 105, .4); }
+.p-violet { background: radial-gradient(circle at 32% 28%, #e9d5ff, #7c3aed 70%); --csh: rgba(124, 58, 237, .4); }
 
-/* Back/Close button */
-.reg-close-btn {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 32px;
-  height: 32px;
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #78350f;
-  font-size: 16px;
-  text-decoration: none;
-  box-shadow: 0 2px 0 #78350f;
-  transition: transform 0.1s;
-}
-.reg-close-btn:active {
-  transform: translateY(1.5px);
-  box-shadow: 0 0.5px 0 #78350f;
-}
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px; }
+.fld { min-width: 0; }
+.span-2 { grid-column: 1 / -1; }
 
-/* Error Flash */
-.auth-err {
-  background: #fee2e2;
-  border: 2px solid #dc2626;
-  border-radius: 12px;
-  padding: 8px 12px;
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #991b1b;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 2.5px 0 #dc2626;
-  line-height: 1.3;
-}
+.inp-wrap { display: flex; align-items: center; gap: 7px; height: 42px; padding: 0 9px 0 6px; border-radius: 14px; border: 1.5px solid #cbe9f2;
+  background: #f0f9ff; box-shadow: inset 2px 2px 5px rgba(8, 145, 178, .12), inset -2px -2px 4px #fff; transition: border-color .15s, box-shadow .15s, background .15s; }
+.inp-wrap:focus-within { border-color: #06b6d4; background: #fff; box-shadow: 0 0 0 3.5px rgba(6, 182, 212, .2); }
+.inp-wrap.bad { border-color: #f43f5e; background: #fff1f2; box-shadow: 0 0 0 3.5px rgba(244, 63, 94, .16); }
+.inp-icon { width: 28px; height: 28px; border-radius: 10px; flex-shrink: 0; font-size: 14px; color: #fff; box-shadow: 0 3px 6px var(--csh), var(--chip-sh); }
+.s-coral .inp-icon { background: linear-gradient(145deg, #fb7185, #e11d48); --csh: rgba(225, 29, 72, .32); }
+.s-kelp .inp-icon  { background: linear-gradient(145deg, #34d399, #047857); --csh: rgba(4, 120, 87, .3); }
+.inp-field { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 800 13px/1 'Nunito', sans-serif; color: var(--ink); }
+.inp-field::placeholder { color: #64748b; font-weight: 700; font-size: 12px; }
+select.inp-field { appearance: none; -webkit-appearance: none; cursor: pointer; }
+select.inp-field:invalid { color: #64748b; font-weight: 700; font-size: 12px; }
+.caret { color: #047857; font-size: 13px; flex-shrink: 0; }
+.inp-wrap--ref { background: #ecfdf5; border-color: #a7f3d0; }
+.eye-btn { border: 0; background: none; color: #64748b; font-size: 17px; display: flex; padding: 2px; cursor: pointer; }
+.eye-btn:hover { color: #e11d48; }
 
-/* ── 2-COLUMN COMPACT FORM GRID ── */
-.reg-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.span-2 {
-  grid-column: span 2;
-}
+.ref-toggle { margin-top: 7px; border: 0; background: none; padding: 2px 4px; font: 900 11px/1 'Nunito', sans-serif; color: #047857; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.ref-box[hidden] { display: none; }
+.ref-box { margin-top: 7px; }
 
-.inp-group {
-  display: flex;
-  flex-direction: column;
-}
-.inp-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 10px;
-  font-weight: 900;
-  color: #78350f;
-  margin-bottom: 3px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.inp-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 13px;
-  padding: 0 10px;
-  height: 40px;
-  box-shadow: 0 2.5px 0 #78350f;
-  transition: all 0.15s ease;
-  position: relative;
-}
-.inp-wrap:focus-within {
-  border-color: #d97706;
-  box-shadow: 0 3px 0 #d97706, 0 0 10px rgba(245, 158, 11, 0.22);
-  transform: translateY(-1px);
-}
-.inp-wrap--ref {
-  background: #f0fdf4;
-  border-color: #059669;
-  box-shadow: 0 2.5px 0 #059669;
-}
-.inp-icon {
-  font-size: 17px;
-  color: #b45309;
-  flex-shrink: 0;
-}
-.inp-field {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 800;
-  color: #0f172a;
-  width: 100%;
-  min-width: 0;
-}
-.inp-field::placeholder {
-  color: #94a3b8;
-  font-weight: 700;
-  font-size: 11.5px;
-}
-select.inp-field {
-  cursor: pointer;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-.eye-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px;
-  color: #94a3b8;
-  font-size: 17px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.eye-btn:hover {
-  color: #78350f;
-}
+/* Captcha gambar */
+.cap { padding: 8px; border-radius: 16px; background: linear-gradient(160deg, #ecfeff 0%, #e0f2fe 100%); border: 1.5px solid #bae6fd;
+  box-shadow: inset 2px 2px 6px rgba(8, 145, 178, .12), inset -2px -2px 4px #fff; transition: border-color .15s, box-shadow .15s; }
+.cap.bad { border-color: #f43f5e; box-shadow: 0 0 0 3.5px rgba(244, 63, 94, .16); }
+.cap-top { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.cap-q { flex: 1; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 900; color: #0c4a6e; }
+.cap-q i { width: 24px; height: 24px; border-radius: 8px; font-size: 13px; color: #fff; background: linear-gradient(145deg, #22d3ee, #0e7490); box-shadow: 0 3px 6px rgba(14, 116, 144, .3), var(--chip-sh); }
+.cap-re { width: 30px; height: 30px; border-radius: 10px; border: 1.5px solid #bae6fd; background: #fff; color: #0e7490; font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(8, 145, 178, .15); transition: transform .3s; }
+.cap-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.cap-t { position: relative; aspect-ratio: 1; padding: 0; border-radius: 13px; border: 2.5px solid #fff; overflow: hidden; cursor: pointer; background: #fff;
+  box-shadow: 0 4px 8px rgba(8, 51, 68, .16); transition: transform .15s cubic-bezier(.34, 1.56, .64, 1), border-color .12s, box-shadow .12s; }
+.cap-t img { width: 100%; height: 100%; display: block; pointer-events: none; }
+.cap-t::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: 10px; box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .7), inset -2px -3px 5px rgba(8, 51, 68, .12); }
+.cap-t:active { transform: scale(.92); }
+.cap-t .ok { position: absolute; top: 2px; right: 2px; z-index: 2; width: 17px; height: 17px; border-radius: 50%; font-size: 10px; color: #fff; border: 1.5px solid #fff;
+  background: linear-gradient(145deg, #34d399, #047857); display: flex; align-items: center; justify-content: center; transform: scale(0); transition: transform .18s cubic-bezier(.3, 1.6, .6, 1); }
+.cap-t.on { border-color: #10b981; transform: translateY(-3px); box-shadow: 0 8px 14px rgba(4, 120, 87, .3), 0 0 0 2px rgba(16, 185, 129, .35); }
+.cap-t.on .ok { transform: scale(1); }
+@media (max-width: 340px) { .cap-grid { grid-template-columns: repeat(3, 1fr); } }
 
-.ref-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  background: #dcfce7;
-  color: #166534;
-  font-size: 9px;
-  font-weight: 900;
-  padding: 2px 6px;
-  border-radius: 6px;
-  border: 1px solid #86efac;
-  white-space: nowrap;
-}
+.btn-reg-submit { position: relative; overflow: hidden; width: 100%; height: 50px; margin-top: 12px; border-radius: 17px; border: 2px solid #fff; cursor: pointer;
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 50%, #e11d48 100%); color: #fff; font: 900 15px/1 'Nunito', sans-serif;
+  display: flex; align-items: center; justify-content: center; gap: 8px; text-shadow: 0 1px 2px rgba(76, 5, 25, .35);
+  box-shadow: 0 10px 20px rgba(225, 29, 72, .3), 0 5px 0 #be123c, inset 2px 2px 4px rgba(255, 255, 255, .5), inset -2px -3px 6px rgba(76, 5, 25, .22); transition: transform .1s, box-shadow .1s; }
+.btn-reg-submit::before { content: ''; position: absolute; top: 5px; left: 16px; width: 42%; height: 8px; border-radius: 999px; background: linear-gradient(90deg, rgba(255, 255, 255, .45), transparent); }
+.btn-reg-submit::after { content: ''; position: absolute; top: 0; left: -60%; width: 35%; height: 100%; transform: skewX(-20deg); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .35), transparent); animation: shine 3.8s ease-in-out infinite; }
+@keyframes shine { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+.btn-reg-submit .go { width: 26px; height: 26px; border-radius: 9px; background: rgba(255, 255, 255, .25); box-shadow: inset 1.5px 1.5px 3px rgba(255, 255, 255, .5); }
+.btn-reg-submit:active { transform: translateY(4px); box-shadow: 0 4px 10px rgba(225, 29, 72, .3), 0 1px 0 #be123c; }
+.btn-reg-submit[disabled] { opacity: .85; cursor: wait; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── COMPACT INLINE CAPTCHA BAR ── */
-.captcha-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 1px;
-}
-.captcha-svg-box {
-  flex-shrink: 0;
-  border-radius: 10px;
-  overflow: hidden;
-  height: 40px;
-}
-.captcha-svg-box svg {
-  display: block;
-  height: 40px;
-  width: auto;
-}
-.captcha-ans-box {
-  flex: 1;
-}
-.captcha-ans-box input {
-  width: 100%;
-  height: 40px;
-  border: 2px solid #78350f;
-  border-radius: 12px;
-  text-align: center;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 900;
-  color: #78350f;
-  background: #ffffff;
-  outline: none;
-  box-shadow: 0 2.5px 0 #78350f;
-  padding: 0 6px;
-}
-.captcha-ans-box input:focus {
-  border-color: #d97706;
-  box-shadow: 0 3px 0 #d97706;
-}
-.btn-cap-refresh {
-  width: 40px;
-  height: 40px;
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #78350f;
-  font-size: 18px;
-  cursor: pointer;
-  box-shadow: 0 2.5px 0 #78350f;
-  transition: transform 0.1s;
-  flex-shrink: 0;
-}
-.btn-cap-refresh:active {
-  transform: translateY(2px);
-  box-shadow: 0 0.5px 0 #78350f;
-}
+.foot { margin-top: 14px; text-align: center; font-size: 12px; font-weight: 800; color: #e0f2fe; }
+.foot a { color: #fef08a; font-weight: 900; text-decoration: none; margin-left: 3px; }
+.trust { margin: 10px auto 0; width: max-content; display: flex; align-items: center; gap: 9px; padding: 5px 12px; border-radius: 999px; background: rgba(255, 255, 255, .92);
+  box-shadow: 0 6px 14px rgba(8, 51, 68, .2); }
+.trust small { font-size: 9.5px; font-weight: 900; color: var(--muted); display: inline-flex; align-items: center; gap: 3px; }
+.trust small i { color: #059669; font-size: 12px; }
+.trust img { height: 18px; max-width: 60px; object-fit: contain; }
 
-/* ── SUBMIT CTA BUTTON ── */
-.btn-reg-submit {
-  width: 100%;
-  height: 48px;
-  border: 2.5px solid #78350f;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-  color: #ffffff;
-  font-size: 14.5px;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  box-shadow: 0 4px 0 #78350f;
-  text-shadow: 0 1px 2px #78350f;
-  cursor: pointer;
-  font-family: inherit;
-  margin-top: 12px;
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-.btn-reg-submit:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 #78350f;
-}
+.toast { position: fixed; left: 50%; bottom: 22px; z-index: 50; max-width: calc(100% - 32px); transform: translate(-50%, 24px); opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 15px; border: 2px solid #fff; background: #fff; color: #9f1239;
+  font-size: 12px; font-weight: 900; box-shadow: 0 14px 30px rgba(8, 51, 68, .35); transition: opacity .2s, transform .2s cubic-bezier(.34, 1.56, .64, 1); }
+.toast i { color: #e11d48; font-size: 16px; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-/* Footer Login Link */
-.reg-footer-link {
-  text-align: center;
-  margin-top: 12px;
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #78350f;
-}
-.reg-login-link {
-  font-weight: 900;
-  color: #b45309;
-  text-decoration: underline;
-  margin-left: 3px;
-  transition: color 0.1s;
-}
-.reg-login-link:hover {
-  color: #78350f;
-}
-
-/* ── TRUST & REGULATION STRIP (CARDLESS) ── */
-.auth-trust-strip {
-  margin-top: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 2px solid #78350f;
-  border-radius: 14px;
-  padding: 8px 14px;
-  box-shadow: 0 2.5px 0 #78350f;
-}
-.trust-strip-lbl {
-  font-size: 10px;
-  font-weight: 900;
-  color: #78350f;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.trust-strip-logos {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.trust-logo--ojk {
-  height: 28px;
-  max-width: 85px;
-  object-fit: contain;
-  display: block;
-}
-.trust-logo--bap {
-  height: 22px;
-  max-width: 95px;
-  object-fit: contain;
-  display: block;
-}
-.trust-strip-sep {
-  width: 1.5px;
-  height: 22px;
-  background: #cbd5e1;
-}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
 </style>
 </head>
 <body>
 
-<!-- TOP HONEY DRIP DECORATION -->
-<div class="honey-drip-top">
-  <svg viewBox="0 0 1440 90" preserveAspectRatio="none" class="honey-drip-svg">
-    <path d="M0,0 L1440,0 L1440,25 Q1380,75 1320,35 Q1260,-5 1200,45 Q1140,95 1080,40 Q1020,-15 960,30 Q900,75 840,35 Q780,-5 720,55 Q660,115 600,45 Q540,-25 480,40 Q420,105 360,35 Q300,-35 240,50 Q180,135 120,40 Q60,-50 0,30 Z" fill="#d97706" opacity="0.12"></path>
-    <path d="M0,0 L1440,0 L1440,18 Q1380,60 1320,25 Q1260,-8 1200,35 Q1140,80 1080,30 Q1020,-18 960,20 Q900,60 840,25 Q780,-8 720,45 Q660,95 600,35 Q540,-25 480,30 Q420,90 360,25 Q300,-35 240,40 Q180,115 120,30 Q60,-55 0,22 Z" fill="#f59e0b" opacity="0.22"></path>
-    <path d="M0,0 L1440,0 L1440,12 Q1350,45 1260,16 Q1170,-12 1080,28 Q990,70 900,20 Q810,-28 720,28 Q630,85 540,24 Q450,-38 360,20 Q270,78 180,20 Q90,-38 0,16 Z" fill="#fbbf24" opacity="0.28"></path>
+<div class="sea" aria-hidden="true">
+  <div class="rays"></div>
+  <div class="caustic"></div>
+
+  <span class="bub" style="left:7%;width:11px;height:11px;animation-duration:11s"></span>
+  <span class="bub" style="left:19%;width:6px;height:6px;animation-duration:8s;animation-delay:-3s"></span>
+  <span class="bub" style="left:52%;width:8px;height:8px;animation-duration:13s;animation-delay:-7s"></span>
+  <span class="bub" style="left:74%;width:13px;height:13px;animation-duration:12s;animation-delay:-2s"></span>
+  <span class="bub" style="left:93%;width:7px;height:7px;animation-duration:9s;animation-delay:-5s"></span>
+
+  <div class="fish" style="top:16%;animation-duration:22s;animation-delay:-5s"><img src="/assets/img/fish/bagus.png" alt=""></div>
+  <div class="fish rev" style="top:58%;width:28px;height:28px;animation-duration:28s;animation-delay:-12s"><img src="/assets/img/fish/super.png" alt=""></div>
+  <div class="fish" style="top:80%;width:24px;height:24px;animation-duration:34s;animation-delay:-20s"><img src="/assets/img/fish/langka.png" alt=""></div>
+
+  <svg class="jelly j1" viewBox="0 0 44 70">
+    <defs><radialGradient id="jg" cx="45%" cy="30%" r="70%"><stop offset="0" stop-color="#fdf4ff"/><stop offset=".55" stop-color="#f0abfc" stop-opacity=".9"/><stop offset="1" stop-color="#c084fc" stop-opacity=".75"/></radialGradient></defs>
+    <g class="bell"><path d="M4 26C4 12 12 3 22 3S40 12 40 26C34 24 30 28 22 28S10 24 4 26Z" fill="url(#jg)" stroke="#fff" stroke-width="1.2"/>
+      <ellipse cx="16" cy="12" rx="6" ry="3" fill="#fff" opacity=".55"/></g>
+    <g stroke="#f5d0fe" stroke-width="2" fill="none" stroke-linecap="round" opacity=".85">
+      <path d="M12 28C10 38 15 44 12 54"/><path d="M20 29C22 40 17 48 21 62"/><path d="M28 29C26 40 31 46 28 56"/><path d="M34 27C36 36 32 40 34 48"/>
+    </g>
   </svg>
-</div>
+  <svg class="jelly j2" viewBox="0 0 44 70">
+    <g class="bell"><path d="M4 26C4 12 12 3 22 3S40 12 40 26C34 24 30 28 22 28S10 24 4 26Z" fill="#a5f3fc" fill-opacity=".75" stroke="#fff" stroke-width="1.2"/>
+      <ellipse cx="16" cy="12" rx="6" ry="3" fill="#fff" opacity=".55"/></g>
+    <g stroke="#cffafe" stroke-width="2" fill="none" stroke-linecap="round" opacity=".8"><path d="M12 28C10 38 15 44 12 54"/><path d="M22 29C24 40 19 48 23 60"/><path d="M32 28C30 38 35 44 32 52"/></g>
+  </svg>
 
-<!-- FLOATING THEMED ASSETS -->
-<div class="decor-float decor-tl">
-  <img src="/assets/game/honey_jar.png" alt="">
-</div>
-<div class="decor-float decor-br">
-  <img src="/assets/game/beehive_amber.png" alt="">
-</div>
-<div class="decor-float decor-tr">
-  <img src="/assets/game/honey_drop.png" alt="">
-</div>
-<div class="decor-float decor-bl">
-  <img src="/assets/game/honey_drop.png" alt="">
-</div>
-
-<!-- CARDLESS REGISTER WRAPPER -->
-<div class="reg-wrapper">
-
-  <!-- Hero Header -->
-  <div class="reg-hero">
-    <a href="/" class="reg-close-btn" title="Kembali ke Beranda">
-      <i class="ph-bold ph-x"></i>
-    </a>
-    <div class="mascot-wrap">
-      <div class="mascot-badge">
-        <img src="<?= htmlspecialchars(site_logo($pdo)) ?>" alt="MancingCuan">
-      </div>
-    </div>
-    <h1 class="reg-title">Daftar Akun MancingCuan</h1>
-    <p class="reg-sub">Tonton Video &amp; Panen Cuan Setiap Hari</p>
+  <div class="floor">
+    <svg class="sand" viewBox="0 0 600 40" preserveAspectRatio="none"><path d="M0 16Q75 2 150 12T300 10T450 8T600 12V40H0Z" fill="#fde68a"/><path d="M0 26Q100 16 200 24T400 22T600 22V40H0Z" fill="#fcd34d" opacity=".55"/></svg>
+    <svg class="reef-l" viewBox="0 0 150 118">
+      <path class="sway" d="M26 118C18 92 38 80 28 58S36 26 28 6" stroke="#10b981" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <path class="sway d2" d="M44 118C52 98 36 86 46 68S40 44 48 30" stroke="#34d399" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <g class="sway d2"><path d="M92 116C90 98 88 86 78 74C70 64 66 54 70 46C76 52 80 60 84 68C86 56 84 44 90 36C96 46 94 58 94 70C100 60 108 54 116 52C114 62 106 70 98 80C96 94 98 106 100 116Z" fill="#fb7185" stroke="#fff" stroke-width="1.5"/>
+        <circle cx="70" cy="45" r="5" fill="#fecdd3"/><circle cx="90" cy="35" r="5" fill="#fecdd3"/><circle cx="116" cy="51" r="5" fill="#fecdd3"/></g>
+      <ellipse cx="132" cy="110" rx="13" ry="7" fill="#94a3b8"/><ellipse cx="128" cy="107" rx="5" ry="2.2" fill="#fff" opacity=".5"/>
+    </svg>
+    <svg class="reef-r" viewBox="0 0 150 118">
+      <g class="sway"><path d="M66 116C66 100 62 88 54 78C48 70 44 60 48 52C54 58 58 66 62 74C64 62 62 48 68 40C74 50 72 62 72 74C78 64 88 58 96 58C94 68 84 76 76 86C74 98 76 108 78 116Z" fill="#c084fc" stroke="#fff" stroke-width="1.5"/>
+        <circle cx="48" cy="51" r="5" fill="#f3e8ff"/><circle cx="68" cy="39" r="5" fill="#f3e8ff"/><circle cx="96" cy="57" r="5" fill="#f3e8ff"/></g>
+      <path class="sway d2" d="M128 118C120 94 138 80 128 58S136 28 128 8" stroke="#10b981" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <path d="M22 92l5 11l12 1l-9 8l3 12l-11 -6l-11 6l3 -12l-9 -8l12 -1z" fill="#fb923c" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" transform="rotate(-14 22 104) translate(0 -8)"/>
+      <path d="M100 114a10 10 0 0 1 20 0z" fill="#fecdd3" stroke="#fff" stroke-width="1.2"/><path d="M105 114l5 -8l5 8" stroke="#fb7185" stroke-width="1.4" fill="none"/>
+    </svg>
   </div>
+</div>
 
-  <?php if ($error): ?>
-    <div class="auth-err">
-      <i class="ph-bold ph-warning-circle" style="font-size:16px;flex-shrink:0;"></i>
-      <span><?= htmlspecialchars($error) ?></span>
+<div class="wrap">
+
+  <nav class="topbar">
+    <a href="/" class="glass sq" title="Kembali ke Beranda" aria-label="Kembali"><i class="ph-bold ph-caret-left"></i></a>
+    <a href="/login" class="glass"><i class="ph-bold ph-sign-in"></i>Masuk</a>
+  </nav>
+
+  <header class="head">
+    <div class="logo"><img src="<?= htmlspecialchars(site_logo($pdo)) ?>" alt="<?= htmlspecialchars($_site_name) ?>"></div>
+    <div>
+      <h1>Gabung <?= htmlspecialchars($_site_name) ?></h1>
+      <?php if (!empty($ref_inviter_name)): ?>
+        <p><i class="ph-fill ph-gift"></i>Diundang <b>@<?= htmlspecialchars($ref_inviter_name) ?></b></p>
+      <?php else: ?>
+        <p>Gratis · 3 langkah · langsung panen cuan</p>
+      <?php endif; ?>
     </div>
-  <?php endif; ?>
+  </header>
 
-  <!-- Cardless Form -->
-  <form method="POST" id="reg-form" novalidate onsubmit="return validateReg(event)">
-    <?= csrf_field() ?>
-    
-    <!-- Anti-Bot Hidden Fields -->
-    <input type="hidden" name="form_time_sig" value="<?= time() ?>">
-    <input type="hidden" name="captcha_token" id="captcha_token" value="<?= htmlspecialchars($captcha['token']) ?>">
-    <input type="hidden" name="captcha_sig" id="captcha_sig" value="<?= htmlspecialchars($captcha['sig']) ?>">
-    <input type="hidden" name="acc_num_input_type" id="f_acc_num_input_type" value="typed">
-    <input type="hidden" name="acc_name_input_type" id="f_acc_name_input_type" value="typed">
-    <input type="hidden" name="acc_num_record" id="f_acc_num_record" value="<?= htmlspecialchars($_POST['acc_num_record'] ?? '[]') ?>">
-    <input type="hidden" name="acc_name_record" id="f_acc_name_record" value="<?= htmlspecialchars($_POST['acc_name_record'] ?? '[]') ?>">
+  <main class="card">
+    <?php if ($error): ?>
+      <div class="note" role="alert"><i class="ph-fill ph-warning-circle" style="font-size:16px"></i><span><?= htmlspecialchars($error) ?></span></div>
+    <?php endif; ?>
 
-    <!-- 2-COLUMN COMPACT GRID -->
-    <div class="reg-grid">
-      
-      <!-- Col 1: Username -->
-      <div class="inp-group">
-        <label class="inp-label" for="f_username">Username</label>
-        <div class="inp-wrap">
-          <i class="ph-bold ph-user inp-icon"></i>
-          <input type="text" class="inp-field" id="f_username" name="username" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" placeholder="Min. 3 Huruf" autocomplete="username" required>
-        </div>
-      </div>
+    <form method="POST" id="reg-form" novalidate onsubmit="return validateReg(event)">
+      <?= csrf_field() ?>
 
-      <!-- Col 2: WhatsApp -->
-      <div class="inp-group">
-        <label class="inp-label" for="f_wa">WhatsApp</label>
-        <div class="inp-wrap">
-          <i class="ph-bold ph-whatsapp-logo inp-icon"></i>
-          <input type="tel" class="inp-field" id="f_wa" name="whatsapp" value="<?= htmlspecialchars($_POST['whatsapp'] ?? '') ?>" placeholder="08xxxxxxxx" autocomplete="tel" required>
-        </div>
-      </div>
+      <input type="hidden" name="form_time_sig" value="<?= time() ?>">
+      <input type="hidden" name="captcha_answer" id="f_captcha_answer" value="">
+      <input type="hidden" name="acc_num_input_type" id="f_acc_num_input_type" value="typed">
+      <input type="hidden" name="acc_name_input_type" id="f_acc_name_input_type" value="typed">
+      <input type="hidden" name="acc_num_record" id="f_acc_num_record" value="<?= htmlspecialchars($_POST['acc_num_record'] ?? '[]') ?>">
+      <input type="hidden" name="acc_name_record" id="f_acc_name_record" value="<?= htmlspecialchars($_POST['acc_name_record'] ?? '[]') ?>">
 
-      <!-- Col 3: Email -->
-      <div class="inp-group">
-        <label class="inp-label" for="f_email">Email</label>
-        <div class="inp-wrap">
-          <i class="ph-bold ph-envelope-simple inp-icon"></i>
-          <input type="email" class="inp-field" id="f_email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" placeholder="email@gmail.com" autocomplete="email" required>
-        </div>
-      </div>
-
-      <!-- Col 4: Password -->
-      <div class="inp-group">
-        <label class="inp-label" for="f_pwd">Kata Sandi</label>
-        <div class="inp-wrap">
-          <i class="ph-bold ph-lock-key inp-icon"></i>
-          <input type="password" class="inp-field" id="f_pwd" name="password" placeholder="Min. 6 Karakter" autocomplete="new-password" required>
-          <button type="button" class="eye-btn" onclick="togglePasswordVisibility()" title="Lihat">
-            <i class="ph-bold ph-eye" id="eye-icon"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Col 5: Bank / E-Wallet -->
-      <div class="inp-group">
-        <label class="inp-label" for="f_bank_name">Bank / E-Wallet</label>
-        <div class="inp-wrap">
-          <i class="ph-bold <?= $_selected_type === 'ewallet' ? 'ph-wallet' : 'ph-bank' ?> inp-icon" id="ico_bank"></i>
-          <select class="inp-field" id="f_bank_name" name="bank_name" required onchange="handleBankTypeChange()">
-            <option value="">Pilih Bank / E-Wallet</option>
-            <?php if (!empty($_banks)): ?>
-            <optgroup label="Bank Nasional">
-              <?php foreach ($_banks as $_ch): ?>
-              <option value="<?= htmlspecialchars($_ch['name']) ?>" data-type="bank" <?= ($_POST['bank_name'] ?? '') === $_ch['name'] ? 'selected' : '' ?>><?= htmlspecialchars($_ch['name']) ?></option>
-              <?php endforeach; ?>
-            </optgroup>
-            <?php endif; ?>
-            <?php if (!empty($_ewallets)): ?>
-            <optgroup label="E-Wallet">
-              <?php foreach ($_ewallets as $_ch): ?>
-              <option value="<?= htmlspecialchars($_ch['name']) ?>" data-type="ewallet" <?= ($_POST['bank_name'] ?? '') === $_ch['name'] ? 'selected' : '' ?>><?= htmlspecialchars($_ch['name']) ?></option>
-              <?php endforeach; ?>
-            </optgroup>
-            <?php endif; ?>
-          </select>
-          <i class="ph-bold ph-caret-down" style="color:#b45309;font-size:14px;flex-shrink:0;"></i>
-        </div>
-      </div>
-
-      <!-- Col 6: Account Number -->
-      <div class="inp-group">
-        <label class="inp-label" for="f_account_number" id="lbl_account_number"><?= $_lbl_acc_num ?></label>
-        <div class="inp-wrap">
-          <i class="ph-bold <?= $_selected_type === 'ewallet' ? 'ph-device-mobile' : 'ph-credit-card' ?> inp-icon" id="ico_account_number"></i>
-          <input type="text" class="inp-field" id="f_account_number" name="account_number" value="<?= htmlspecialchars($_POST['account_number'] ?? '') ?>" placeholder="<?= $_ph_acc_num ?>" required>
-        </div>
-      </div>
-
-      <!-- Span 2: Account Name -->
-      <div class="inp-group span-2">
-        <label class="inp-label" for="f_account_name" id="lbl_account_name"><?= $_lbl_acc_name ?></label>
-        <div class="inp-wrap">
-          <i class="ph-bold <?= $_selected_type === 'ewallet' ? 'ph-user-check' : 'ph-identification-card' ?> inp-icon" id="ico_account_name"></i>
-          <input type="text" class="inp-field" id="f_account_name" name="account_name" value="<?= htmlspecialchars($_POST['account_name'] ?? '') ?>" placeholder="<?= $_ph_acc_name ?>" required>
-        </div>
-      </div>
-
-      <!-- Span 2: Referral Code -->
-      <div class="inp-group span-2">
-        <label class="inp-label" for="f_referral">Kode Referral <span style="font-size:9.5px;color:#92400e;font-weight:700;">(Opsional)</span></label>
-        <div class="inp-wrap <?= $ref_from_url ? 'inp-wrap--ref' : '' ?>">
-          <i class="ph-bold ph-gift inp-icon" style="<?= $ref_from_url ? 'color:#059669;' : '' ?>"></i>
-          <input type="text" class="inp-field" id="f_referral" name="referral" value="<?= htmlspecialchars($_POST['referral'] ?? $ref_from_url) ?>" placeholder="Masukkan Kode Referral" style="text-transform:uppercase;letter-spacing:1px;<?= $ref_from_url ? 'color:#166534;font-weight:900;' : '' ?>" <?= $ref_from_url ? 'readonly' : '' ?>>
-          <?php if ($ref_from_url): ?>
-            <span class="ref-badge"><i class="ph-fill ph-check-circle"></i> Terverifikasi</span>
-          <?php endif; ?>
-        </div>
-      </div>
-
-      <!-- Span 2: Compact Inline Captcha -->
-      <div class="inp-group span-2">
-        <label class="inp-label">Verifikasi Keamanan (Hitung Angka)</label>
-        <div class="captcha-bar">
-          <div class="captcha-svg-box" id="captcha-svg-wrap">
-            <?= $captcha['svg'] ?>
+      <section class="sec s-coral">
+        <div class="sec-h"><span class="pearl p-coral">1</span><h2>Data Akun</h2></div>
+        <div class="grid">
+          <div class="fld">
+            <label class="sr" for="f_username">Username</label>
+            <div class="inp-wrap"><i class="ph-bold ph-user inp-icon"></i>
+              <input type="text" class="inp-field" id="f_username" name="username" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" placeholder="Username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
           </div>
-          <div class="captcha-ans-box">
-            <input type="number" id="f_captcha" name="captcha_answer" placeholder="Hasil?" autocomplete="off" required>
+          <div class="fld">
+            <label class="sr" for="f_wa">WhatsApp</label>
+            <div class="inp-wrap"><i class="ph-bold ph-whatsapp-logo inp-icon"></i>
+              <input type="tel" class="inp-field" id="f_wa" name="whatsapp" value="<?= htmlspecialchars($_POST['whatsapp'] ?? '') ?>" placeholder="No. WhatsApp" autocomplete="tel" inputmode="numeric" required></div>
           </div>
-          <button type="button" class="btn-cap-refresh" onclick="refreshCaptcha()" title="Ganti Soal">
-            <i class="ph-bold ph-arrows-clockwise" id="refresh-ico"></i>
-          </button>
+          <div class="fld span-2">
+            <label class="sr" for="f_email">Email</label>
+            <div class="inp-wrap"><i class="ph-bold ph-envelope-simple inp-icon"></i>
+              <input type="email" class="inp-field" id="f_email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" placeholder="Email" autocomplete="email" autocapitalize="none" required></div>
+          </div>
+          <div class="fld span-2">
+            <label class="sr" for="f_pwd">Kata Sandi</label>
+            <div class="inp-wrap"><i class="ph-bold ph-lock-key inp-icon"></i>
+              <input type="password" class="inp-field" id="f_pwd" name="password" placeholder="Kata sandi (min. 6)" autocomplete="new-password" required>
+              <button type="button" class="eye-btn" onclick="togglePasswordVisibility()" title="Lihat kata sandi" aria-label="Lihat kata sandi"><i class="ph-bold ph-eye" id="eye-icon"></i></button></div>
+          </div>
         </div>
+      </section>
+
+      <section class="sec s-kelp">
+        <div class="sec-h"><span class="pearl p-kelp">2</span><h2>Rekening Pencairan</h2></div>
+        <div class="grid">
+          <div class="fld">
+            <label class="sr" for="f_bank_name">Bank / E-Wallet</label>
+            <div class="inp-wrap">
+              <i class="ph-bold <?= $_selected_type === 'ewallet' ? 'ph-wallet' : 'ph-bank' ?> inp-icon" id="ico_bank"></i>
+              <select class="inp-field" id="f_bank_name" name="bank_name" required onchange="handleBankTypeChange()">
+                <option value="">Bank/E-Wallet</option>
+                <?php if (!empty($_ewallets)): ?>
+                <optgroup label="E-Wallet">
+                  <?php foreach ($_ewallets as $_ch): ?>
+                  <option value="<?= htmlspecialchars($_ch['name']) ?>" data-type="ewallet" <?= ($_POST['bank_name'] ?? '') === $_ch['name'] ? 'selected' : '' ?>><?= htmlspecialchars($_ch['name']) ?></option>
+                  <?php endforeach; ?>
+                </optgroup>
+                <?php endif; ?>
+                <?php if (!empty($_banks)): ?>
+                <optgroup label="Bank Nasional">
+                  <?php foreach ($_banks as $_ch): ?>
+                  <option value="<?= htmlspecialchars($_ch['name']) ?>" data-type="bank" <?= ($_POST['bank_name'] ?? '') === $_ch['name'] ? 'selected' : '' ?>><?= htmlspecialchars($_ch['name']) ?></option>
+                  <?php endforeach; ?>
+                </optgroup>
+                <?php endif; ?>
+              </select>
+              <i class="ph-bold ph-caret-down caret"></i>
+            </div>
+          </div>
+          <div class="fld">
+            <label class="sr" for="f_account_number" id="lbl_account_number"><?= $_lbl_acc_num ?></label>
+            <div class="inp-wrap"><i class="ph-bold <?= $_selected_type === 'ewallet' ? 'ph-device-mobile' : 'ph-credit-card' ?> inp-icon" id="ico_account_number"></i>
+              <input type="text" class="inp-field" id="f_account_number" name="account_number" value="<?= htmlspecialchars($_POST['account_number'] ?? '') ?>" placeholder="<?= $_ph_acc_num ?>" inputmode="numeric" required></div>
+          </div>
+          <div class="fld span-2">
+            <label class="sr" for="f_account_name" id="lbl_account_name"><?= $_lbl_acc_name ?></label>
+            <div class="inp-wrap"><i class="ph-bold <?= $_selected_type === 'ewallet' ? 'ph-user-check' : 'ph-identification-card' ?> inp-icon" id="ico_account_name"></i>
+              <input type="text" class="inp-field" id="f_account_name" name="account_name" value="<?= htmlspecialchars($_POST['account_name'] ?? '') ?>" placeholder="<?= $_ph_acc_name ?>" required></div>
+          </div>
+        </div>
+
+        <?php $ref_open = $ref_from_url || !empty($_POST['referral']) || in_array('f_referral', $error_fields, true); ?>
+        <button type="button" class="ref-toggle" id="ref-toggle" onclick="openRef()" <?= $ref_open ? 'hidden' : '' ?>><i class="ph-bold ph-gift"></i>Punya kode referral?</button>
+        <div class="ref-box" id="ref-box" <?= $ref_open ? '' : 'hidden' ?>>
+          <label class="sr" for="f_referral">Kode Referral</label>
+          <div class="inp-wrap <?= $ref_from_url ? 'inp-wrap--ref' : '' ?>"><i class="ph-bold ph-gift inp-icon"></i>
+            <input type="text" class="inp-field" id="f_referral" name="referral" value="<?= htmlspecialchars($_POST['referral'] ?? $ref_from_url) ?>" placeholder="Kode referral (opsional)" style="text-transform:uppercase;letter-spacing:1px;<?= $ref_from_url ? 'color:#047857;font-weight:900;' : '' ?>" <?= $ref_from_url ? 'readonly' : '' ?>>
+            <?php if ($ref_from_url): ?><i class="ph-fill ph-seal-check" style="color:#10b981;font-size:18px" title="Terverifikasi"></i><?php endif; ?></div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="sec-h"><span class="pearl p-violet">3</span><h2>Verifikasi</h2></div>
+        <div class="cap" id="f_captcha" tabindex="-1">
+          <div class="cap-top">
+            <div class="cap-q"><i class="ph-fill <?= $captcha['icon'] ?>" id="cap-icon"></i><span id="cap-prompt"><?= htmlspecialchars($captcha['prompt']) ?></span></div>
+            <button type="button" class="cap-re" id="cap-re" onclick="refreshCaptcha()" title="Ganti gambar" aria-label="Ganti gambar"><i class="ph-bold ph-arrows-clockwise"></i></button>
+          </div>
+          <div class="cap-grid" id="cap-grid">
+            <?php for ($i = 0; $i < 6; $i++): ?>
+              <button type="button" class="cap-t" data-i="<?= $i ?>" onclick="capPick(this)" aria-pressed="false" aria-label="Gambar <?= $i + 1 ?>">
+                <img src="/register?cap_tile=<?= $i ?>&v=<?= $captcha['v'] ?>" alt="" draggable="false"><span class="ok"><i class="ph-bold ph-check"></i></span>
+              </button>
+            <?php endfor; ?>
+          </div>
+        </div>
+      </section>
+
+      <button type="submit" id="btn-submit-reg" class="btn-reg-submit"><span>Daftar Sekarang</span><i class="ph-bold ph-arrow-right go"></i></button>
+
+      <!-- Honeypot Anti-Bot Trap (hidden safely from browser autofill) -->
+      <div style="display:none !important;" aria-hidden="true">
+        <input type="text" name="website_hp_check" value="" tabindex="-1" autocomplete="new-password">
       </div>
+    </form>
+  </main>
 
-    </div>
-
-    <!-- Submit CTA Button -->
-    <button type="submit" id="btn-submit-reg" class="btn-reg-submit">
-      <span>Daftar Akun Sekarang</span>
-      <i class="ph-bold ph-arrow-right"></i>
-    </button>
-
-    <!-- Honeypot Anti-Bot Trap (hidden safely from browser autofill) -->
-    <div style="display:none !important;" aria-hidden="true">
-      <input type="text" name="website_hp_check" value="" tabindex="-1" autocomplete="new-password">
-    </div>
-  </form>
-
-  <!-- Login Link -->
-  <div class="reg-footer-link">
-    <span>Sudah punya akun?</span>
-    <a href="/login" class="reg-login-link">Masuk Sekarang</a>
+  <div class="foot">Sudah punya akun?<a href="/login">Masuk</a></div>
+  <div class="trust">
+    <small><i class="ph-fill ph-shield-check"></i>Terdaftar</small>
+    <img src="/assets/ojkkk.png?v=3" alt="OJK">
+    <img src="/assets/bap.png?v=3" alt="Bappebti">
   </div>
-
-  <!-- ── COMPACT TRUST & REGULATION STRIP ── -->
-  <div class="auth-trust-strip">
-    <div class="trust-strip-lbl">
-      <i class="ph-fill ph-shield-check" style="color:#059669;font-size:14px;"></i>
-      <span>Diawasi &amp; Terdaftar</span>
-    </div>
-    <div class="trust-strip-logos">
-      <img src="/assets/ojkkk.png?v=3" alt="OJK" class="trust-logo--ojk">
-      <div class="trust-strip-sep"></div>
-      <img src="/assets/bap.png?v=3" alt="Bappebti" class="trust-logo--bap">
-    </div>
-  </div>
-
 </div>
+
+<div class="toast" id="toast" role="status"><i class="ph-fill ph-warning-circle"></i><span id="toast-txt"></span></div>
 
 <script>
 function togglePasswordVisibility() {
   const inp = document.getElementById('f_pwd');
   const ico = document.getElementById('eye-icon');
   if (!inp || !ico) return;
-
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    ico.className = 'ph-bold ph-eye-slash';
-  } else {
-    inp.type = 'password';
-    ico.className = 'ph-bold ph-eye';
-  }
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  ico.className = show ? 'ph-bold ph-eye-slash' : 'ph-bold ph-eye';
 }
 
+function openRef() {
+  document.getElementById('ref-toggle').hidden = true;
+  document.getElementById('ref-box').hidden = false;
+  document.getElementById('f_referral').focus();
+}
+
+let toastT;
+function regToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-txt').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 2800);
+}
+function flagField(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const box = el.closest('.inp-wrap') || el;
+  box.classList.add('bad');
+  if (el.focus) el.focus({ preventScroll: true });
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const clear = () => box.classList.remove('bad');
+  el.addEventListener('focus', clear, { once: true });
+  el.addEventListener('click', clear, { once: true });
+}
+
+/* ── Captcha gambar ── */
+function capSync() {
+  const picked = [...document.querySelectorAll('.cap-t.on')].map(b => b.dataset.i);
+  document.getElementById('f_captcha_answer').value = picked.join(',');
+}
+function capPick(btn) {
+  btn.classList.toggle('on');
+  btn.setAttribute('aria-pressed', btn.classList.contains('on') ? 'true' : 'false');
+  document.getElementById('f_captcha').classList.remove('bad');
+  capSync();
+}
 async function refreshCaptcha() {
-  const ico = document.getElementById('refresh-ico');
-  if (ico) ico.style.transform = 'rotate(180deg)';
+  const re = document.getElementById('cap-re');
+  re.style.transform = 'rotate(180deg)';
   try {
-    const res = await fetch('/register?refresh_captcha=1');
+    const res = await fetch('/register?refresh_captcha=1', { credentials: 'same-origin' });
     const data = await res.json();
     if (data.ok) {
-      document.getElementById('captcha-svg-wrap').innerHTML = data.svg;
-      document.getElementById('captcha_token').value = data.token;
-      document.getElementById('captcha_sig').value = data.sig;
-      document.getElementById('f_captcha').value = '';
-      document.getElementById('f_captcha').focus();
+      document.getElementById('cap-prompt').textContent = data.prompt;
+      document.getElementById('cap-icon').className = 'ph-fill ' + data.icon;
+      document.querySelectorAll('.cap-t').forEach(b => {
+        b.classList.remove('on'); b.setAttribute('aria-pressed', 'false');
+        b.querySelector('img').src = '/register?cap_tile=' + b.dataset.i + '&v=' + data.v;
+      });
+      capSync();
     }
   } catch (err) {
-    console.error('Failed to refresh captcha', err);
+    regToast('Gagal memuat gambar, coba lagi.');
   } finally {
-    if (ico) setTimeout(() => ico.style.transform = 'none', 300);
+    setTimeout(() => re.style.transform = '', 300);
   }
 }
 
@@ -1240,30 +972,27 @@ function handleBankTypeChange() {
 
   if (type === 'ewallet') {
     if (icoBank) icoBank.className = 'ph-bold ph-wallet inp-icon';
-    if (lblNum)  lblNum.textContent = val ? 'Nomor HP ' + val : 'Nomor HP E-Wallet';
-    if (inpNum)  inpNum.placeholder = 'Contoh: 08xxxxxxxxxx';
+    if (lblNum)  lblNum.textContent = 'Nomor HP ' + val;
+    if (inpNum)  inpNum.placeholder = 'No. HP ' + val;
     if (icoNum)  icoNum.className = 'ph-bold ph-device-mobile inp-icon';
-
-    if (lblName) lblName.textContent = val ? 'Nama Pemilik Akun ' + val : 'Nama Pemilik Akun E-Wallet';
-    if (inpName) inpName.placeholder = val ? 'Nama Terdaftar di ' + val : 'Nama Terdaftar di Akun E-Wallet';
+    if (lblName) lblName.textContent = 'Nama Pemilik Akun ' + val;
+    if (inpName) inpName.placeholder = 'Nama pemilik akun ' + val;
     if (icoName) icoName.className = 'ph-bold ph-user-check inp-icon';
   } else if (type === 'bank') {
     if (icoBank) icoBank.className = 'ph-bold ph-bank inp-icon';
-    if (lblNum)  lblNum.textContent = val ? 'Nomor Rekening ' + val : 'Nomor Rekening Bank';
-    if (inpNum)  inpNum.placeholder = val ? 'Nomor Rekening ' + val : 'Nomor Rekening Bank';
+    if (lblNum)  lblNum.textContent = 'Nomor Rekening ' + val;
+    if (inpNum)  inpNum.placeholder = 'No. rek ' + val;
     if (icoNum)  icoNum.className = 'ph-bold ph-credit-card inp-icon';
-
-    if (lblName) lblName.textContent = val ? 'Nama Pemilik Rekening ' + val : 'Nama Pemilik Rekening Bank';
-    if (inpName) inpName.placeholder = 'Sesuai Buku Tabungan / KTP';
+    if (lblName) lblName.textContent = 'Nama Pemilik Rekening ' + val;
+    if (inpName) inpName.placeholder = 'Nama sesuai buku tabungan / KTP';
     if (icoName) icoName.className = 'ph-bold ph-identification-card inp-icon';
   } else {
     if (icoBank) icoBank.className = 'ph-bold ph-bank inp-icon';
     if (lblNum)  lblNum.textContent = 'No. Rekening / HP';
-    if (inpNum)  inpNum.placeholder = 'Nomor Rekening';
+    if (inpNum)  inpNum.placeholder = 'No. rek / HP';
     if (icoNum)  icoNum.className = 'ph-bold ph-credit-card inp-icon';
-
     if (lblName) lblName.textContent = 'Nama Pemilik Rekening';
-    if (inpName) inpName.placeholder = 'Sesuai Buku Tabungan / KTP';
+    if (inpName) inpName.placeholder = 'Nama pemilik rekening';
     if (icoName) icoName.className = 'ph-bold ph-identification-card inp-icon';
   }
 }
@@ -1278,57 +1007,30 @@ function validateReg(e) {
   const b   = document.getElementById('f_bank_name').value.trim();
   const acc = document.getElementById('f_account_number').value.trim();
   const nam = document.getElementById('f_account_name').value.trim();
-  const cap = document.getElementById('f_captcha').value.trim();
+  const cap = document.getElementById('f_captcha_answer').value.trim();
+  const fail = (id, msg) => { regToast(msg); flagField(id); return false; };
 
-  if (!u || u.length < 3 || !/^[a-zA-Z0-9_]+$/.test(u)) {
-    alert('Username minimal 3 karakter (huruf, angka, underscore)!');
-    document.getElementById('f_username').focus();
-    return false;
-  }
-  if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
-    alert('Format email tidak valid!');
-    document.getElementById('f_email').focus();
-    return false;
-  }
-  if (wa.length < 9) {
-    alert('Nomor WhatsApp minimal 9 digit!');
-    document.getElementById('f_wa').focus();
-    return false;
-  }
-  if (pwd.length < 6) {
-    alert('Password minimal 6 karakter!');
-    document.getElementById('f_pwd').focus();
-    return false;
-  }
-  if (!b) {
-    alert('Pilih Bank atau E-Wallet!');
-    document.getElementById('f_bank_name').focus();
-    return false;
-  }
+  if (!u || u.length < 3 || !/^[a-zA-Z0-9_]+$/.test(u)) return fail('f_username', 'Username minimal 3 karakter (huruf, angka, underscore).');
+  if (wa.length < 9) return fail('f_wa', 'Nomor WhatsApp minimal 9 digit.');
+  if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return fail('f_email', 'Format email belum benar.');
+  if (pwd.length < 6) return fail('f_pwd', 'Kata sandi minimal 6 karakter.');
+  if (!b) return fail('f_bank_name', 'Pilih bank atau e-wallet dulu.');
 
   const selBank = document.getElementById('f_bank_name');
   const optBank = selBank ? selBank.options[selBank.selectedIndex] : null;
   const isEwallet = optBank && optBank.getAttribute('data-type') === 'ewallet';
 
-  if (!acc) {
-    alert(isEwallet ? ('Nomor HP akun ' + (b || 'e-wallet') + ' wajib diisi!') : ('Nomor rekening ' + (b || 'bank') + ' wajib diisi!'));
-    document.getElementById('f_account_number').focus();
-    return false;
-  }
-  if (!nam) {
-    alert(isEwallet ? ('Nama pemilik akun ' + (b || 'e-wallet') + ' wajib diisi sesuai akun!') : 'Nama pemilik rekening bank wajib diisi sesuai buku tabungan/KTP!');
-    document.getElementById('f_account_name').focus();
-    return false;
-  }
+  if (!acc) return fail('f_account_number', isEwallet ? ('Nomor HP ' + b + ' wajib diisi.') : ('Nomor rekening ' + b + ' wajib diisi.'));
+  if (!nam) return fail('f_account_name', isEwallet ? ('Nama pemilik akun ' + b + ' wajib diisi.') : 'Nama pemilik rekening wajib diisi sesuai buku tabungan/KTP.');
   if (cap === '') {
-    alert('Ketik hasil hitungan keamanan captcha!');
-    document.getElementById('f_captcha').focus();
+    document.getElementById('f_captcha').classList.add('bad');
+    document.getElementById('f_captcha').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    regToast(document.getElementById('cap-prompt').textContent + ' dulu ya.');
     return false;
   }
 
   const btn = document.getElementById('btn-submit-reg');
-  btn.style.opacity = '0.7';
-  btn.style.pointerEvents = 'none';
+  btn.disabled = true;
   btn.innerHTML = '<i class="ph-bold ph-spinner" style="animation:spin 1s linear infinite;"></i> Mendaftarkan...';
   return true;
 }
@@ -1354,20 +1056,13 @@ trk('f_account_number', nr, 'f_acc_num_record', 'f_acc_num_input_type', { v: 0 }
 trk('f_account_name', ar, 'f_acc_name_record', 'f_acc_name_input_type', { v: 0 });
 
 <?php if (!empty($error_fields)): ?>
-  const errFields = <?= json_encode($error_fields) ?>;
-  errFields.forEach(id => {
+  <?= json_encode($error_fields) ?>.forEach(id => {
     const el = document.getElementById(id);
-    if (el) {
-      const inp = el.closest('.inp-wrap') || el.closest('.captcha-bar');
-      if (inp) {
-        inp.style.borderColor = '#dc2626';
-        inp.style.boxShadow = '0 0 0 2.5px rgba(220, 38, 38, 0.2)';
-        el.addEventListener('focus', () => {
-          inp.style.borderColor = '';
-          inp.style.boxShadow = '';
-        }, { once: true });
-      }
-    }
+    if (!el) return;
+    const box = id === 'f_captcha' ? el : el.closest('.inp-wrap');
+    if (!box) return;
+    box.classList.add('bad');
+    el.addEventListener(id === 'f_captcha' ? 'click' : 'focus', () => box.classList.remove('bad'), { once: true });
   });
 <?php endif; ?>
 </script>
