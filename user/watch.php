@@ -409,488 +409,139 @@ $other_videos = $others->fetchAll();
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   WATCH STUDIO — MODERN CLEAN STREAMING PLAYER
-   Zero Farm References • Real-time Likes & Rewards
+   WATCH — Bioskop Bawah Laut · living coral reef clay
+   Player dalam bingkai akuarium + dock misi (timer, klaim).
+   Seragam dengan /videos.
    ══════════════════════════════════════════════════════════ */
-* { box-sizing: border-box; }
+:root {
+  --ink: #1e1b2e; --muted: #6b6478;
+  --card: linear-gradient(160deg, #ffffff 0%, #fff7ed 58%, #ffedd5 100%);
+  --clay: 0 14px 30px rgba(244, 63, 94, .10), 0 6px 14px rgba(8, 145, 178, .10), inset 3px 3px 6px rgba(255, 255, 255, .95), inset -4px -4px 9px rgba(251, 146, 60, .16);
+  --chip-sh: inset 1.5px 1.5px 3px rgba(255, 255, 255, .55), inset -1.5px -1.5px 3px rgba(0, 0, 0, .15);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; overflow-x: hidden; }
 body {
-  font-family: 'Nunito', sans-serif !important;
-  background-color: #fef8ee !important;
-  background-image: radial-gradient(rgba(217, 119, 6, 0.08) 1.5px, transparent 1.5px) !important;
-  background-size: 16px 16px !important;
-  margin: 0; padding: 0;
-  color: #1e293b;
+  font-family: 'Nunito', -apple-system, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 4%, rgba(253, 164, 175, .24) 0, transparent 34%),
+    radial-gradient(circle at 92% 22%, rgba(192, 132, 252, .16) 0, transparent 36%),
+    linear-gradient(180deg, #ecfeff 0%, #f0f9ff 40%, #fff7ed 100%) fixed;
 }
+i[class^="ph-"] { display: inline-flex; align-items: center; justify-content: center; }
+.watch-container { width: 100%; max-width: 480px; margin: 0 auto; padding: 0 0 28px; }
 
-.watch-container {
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
+/* ── Topbar ── */
+.watch-topbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+  background: rgba(255, 255, 255, .86); backdrop-filter: blur(10px); border-bottom: 1.5px solid rgba(255, 255, 255, .9); box-shadow: 0 6px 16px rgba(8, 145, 178, .08); }
+.back-btn { width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+  background: #fff; color: var(--ink); font-size: 16px; border: 1.5px solid #fff; box-shadow: 0 3px 8px rgba(30, 27, 46, .08); }
+.back-btn span { display: none; }
+.back-btn:active { transform: scale(.92); }
+.wt-title { flex: 1; min-width: 0; line-height: 1.15; }
+.wt-title small { display: block; font-size: 9.5px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; color: #0891b2; }
+.wt-title b { display: block; font-size: 12.5px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.watch-topbar__bal { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px; background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 900; border: 1.5px solid #fff; white-space: nowrap; }
 
-/* ── STICKY TOPBAR ── */
-.watch-topbar {
-  position: sticky; top: 0; z-index: 100;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border-bottom: 2.5px solid #78350f;
-  padding: 0 14px;
-  height: 54px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-}
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 6px 12px;
-  text-decoration: none;
-  font-weight: 800;
-  font-size: 12px;
-  transition: all 0.15s;
-}
-.back-btn:active {
-  transform: translateY(2px);
-  background: rgba(255, 255, 255, 0.2);
-}
-.watch-topbar__bal {
-  background: #f59e0b;
-  color: #78350f;
-  border: 1.5px solid #78350f;
-  border-radius: 14px;
-  padding: 5px 12px;
-  font-size: 11.5px;
-  font-weight: 900;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  box-shadow: 0 2px 0 #78350f;
-}
+/* ── Bingkai akuarium ── */
+.tank { margin: 10px 12px 0; padding: 6px; border-radius: 22px; border: 2px solid #fff; background: var(--card); box-shadow: var(--clay); }
+.tank-in { position: relative; border-radius: 17px; overflow: hidden; background: linear-gradient(180deg, #0e7490, #164e63);
+  box-shadow: inset 0 0 0 2px rgba(165, 243, 252, .25); }
+.tank-in::before, .tank-in::after { content: ''; position: absolute; z-index: 2; pointer-events: none; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .6); background: rgba(255, 255, 255, .15); }
+.tank-in::before { width: 9px; height: 9px; right: 12px; top: 10px; }
+.tank-in::after { width: 5px; height: 5px; right: 24px; top: 4px; }
+.player-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #0b2530; }
+.player-frame iframe, .player-frame #yt-player { position: absolute; inset: 0; width: 100% !important; height: 100% !important; border: 0; }
+.watch-track { height: 7px; background: rgba(8, 51, 68, .55); }
+.watch-fill { height: 100%; width: 0; background: linear-gradient(90deg, #22d3ee, #34d399); box-shadow: 0 0 10px rgba(52, 211, 153, .6); transition: width .4s linear; }
+.watch-fill.done { background: linear-gradient(90deg, #34d399, #10b981); }
 
-/* ── CINEMA PLAYER WRAPPER ── */
-.player-frame {
-  position: relative;
-  background: #000;
-  aspect-ratio: 16/9;
-  width: 100%;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-}
-.player-frame iframe,
-.player-frame #yt-player {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  border: none;
-}
+/* ── Dock misi ── */
+.watch-status-box { margin: 10px 12px 0; display: flex; align-items: center; gap: 11px; padding: 10px 11px; border-radius: 20px; border: 2px solid #fff; background: var(--card); box-shadow: var(--clay); }
+.watch-timer-wrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 11px; }
+.watch-timer-wrap > div:last-child { min-width: 0; }
+.timer-pill { width: 52px; height: 52px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 900; color: #fff;
+  background: radial-gradient(circle at 32% 28%, #a5f3fc 0, #06b6d4 45%, #0e7490 100%); border: 3px solid #fff;
+  box-shadow: 0 6px 14px rgba(8, 145, 178, .35), inset 2px 2px 4px rgba(255, 255, 255, .45), inset -3px -3px 6px rgba(8, 51, 68, .3); font-variant-numeric: tabular-nums; }
+.timer-pill.done { background: radial-gradient(circle at 32% 28%, #a7f3d0 0, #10b981 45%, #047857 100%); box-shadow: 0 6px 14px rgba(5, 150, 105, .35), inset 2px 2px 4px rgba(255, 255, 255, .45); font-size: 22px; }
+.watch-status-text { font-size: 12.5px; font-weight: 900; color: var(--ink); line-height: 1.25; }
+.watch-status-text i { vertical-align: -2px; }
+.watch-status-hint { margin-top: 2px; font-size: 10.5px; font-weight: 700; color: var(--muted); line-height: 1.35; }
+.btn-claim { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 11px 14px; border-radius: 15px; border: 2px solid #fff; cursor: pointer; text-decoration: none; white-space: nowrap;
+  background: linear-gradient(135deg, #34d399, #059669); color: #fff; font: 900 12.5px/1 'Nunito', sans-serif; text-shadow: 0 1px 2px rgba(4, 120, 87, .4);
+  box-shadow: 0 8px 16px rgba(5, 150, 105, .3), 0 4px 0 #047857, inset 1.5px 1.5px 3px rgba(255, 255, 255, .5); animation: pulseClaim 1.4s ease-in-out infinite; }
+.btn-claim:active { transform: translateY(3px); box-shadow: 0 2px 6px rgba(5, 150, 105, .3), 0 1px 0 #047857; }
+.btn-claim:disabled { opacity: .8; animation: none; }
+.btn-claim.up { background: linear-gradient(135deg, #fef08a, #f59e0b); color: #78350f; text-shadow: none; box-shadow: 0 6px 14px rgba(245, 158, 11, .3), 0 4px 0 #b45309; animation: none; }
+@keyframes pulseClaim { 50% { transform: scale(1.05); } }
 
-/* ── PROGRESS BAR UNDER PLAYER ── */
-.watch-track {
-  height: 6px;
-  background: #e2e8f0;
-  position: relative;
-  overflow: hidden;
-}
-.watch-fill {
-  height: 100%; width: 0%;
-  background: linear-gradient(90deg, #f59e0b, #10b981);
-  transition: width 1s linear;
-}
-.watch-fill.done { background: #10b981; }
+/* ── Lanjutkan ── */
+.resume-banner { margin: 10px 12px 0; display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 16px; background: #fffbeb; border: 1.5px solid #fff; box-shadow: 0 3px 10px rgba(245, 158, 11, .12); }
+.resume-banner__icon { width: 30px; height: 30px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px;
+  background: linear-gradient(145deg, #fde68a, #f59e0b); box-shadow: 0 3px 6px rgba(245, 158, 11, .3), var(--chip-sh); }
+.resume-banner__content { flex: 1; min-width: 0; }
+.resume-banner__title { font-size: 11.5px; font-weight: 900; color: #78350f; }
+.resume-banner__desc { font-size: 10px; font-weight: 700; color: #92400e; }
+.resume-banner__btn-reset { flex-shrink: 0; border: 1.5px solid #fde68a; background: #fff; color: #b45309; border-radius: 10px; padding: 6px 9px; font: 900 10.5px/1 'Nunito', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
 
-/* ── STATUS & CLAIM BAR ── */
-.watch-status-box {
-  background: #ffffff;
-  border-bottom: 2px solid #e2e8f0;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.watch-timer-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-}
-.timer-pill {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  background: #fef3c7;
-  border: 2px solid #78350f;
-  box-shadow: 0 2.5px 0 #78350f;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13.5px; font-weight: 900;
-  color: #78350f;
-  flex-shrink: 0;
-}
-.timer-pill.done {
-  background: #10b981;
-  color: #fff;
-  border-color: #065f46;
-  box-shadow: 0 2.5px 0 #065f46;
-}
-.watch-status-text {
-  font-size: 12px;
-  font-weight: 900;
-  color: #1e293b;
-  line-height: 1.25;
-}
-.watch-status-hint {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #64748b;
-  margin-top: 1px;
-}
+/* ── Konten ── */
+.watch-content { padding: 12px 12px 0; display: flex; flex-direction: column; gap: 10px; }
+.video-title { margin: 0 2px; font-size: 15px; font-weight: 900; line-height: 1.3; letter-spacing: -.2px; }
+.action-strip { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.action-strip::-webkit-scrollbar { display: none; }
+.btn-action, .action-stat { flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 7px 11px; border-radius: 999px; border: 1.5px solid #fff; background: #fff;
+  font: 900 11px/1 'Nunito', sans-serif; color: var(--ink); box-shadow: 0 3px 8px rgba(30, 27, 46, .06); white-space: nowrap; }
+.btn-action { cursor: pointer; }
+.btn-action:active { transform: scale(.95); }
+.btn-action i, .action-stat i { font-size: 14px; color: #0891b2; }
+.btn-action--liked { background: linear-gradient(135deg, #fb7185, #e11d48); color: #fff; }
+.btn-action--liked i { color: #fff; }
+.action-pill { padding: 2px 7px; border-radius: 999px; background: #ecfeff; color: #0e7490; font-size: 10px; }
+.btn-action--liked .action-pill { background: rgba(255, 255, 255, .25); color: #fff; }
+.action-stat { color: var(--muted); }
+.action-stat--reward { background: #ecfdf5; color: #047857; }
+.action-stat--reward i { color: #059669; }
 
-/* Claim Button */
-.btn-claim {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border: 2px solid #065f46;
-  border-radius: 12px;
-  padding: 7px 14px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 900;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  box-shadow: 0 3px 0 #065f46;
-  animation: pulseClaim 1.5s infinite;
-  white-space: nowrap;
-}
-.btn-claim:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #065f46;
-}
-@keyframes pulseClaim {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.04); }
-}
+.guide-card { border-radius: 18px; border: 2px solid #fff; background: var(--card); box-shadow: var(--clay); padding: 10px; }
+.guide-card__header { display: flex; align-items: center; gap: 6px; margin: 0 2px 8px; font-size: 11.5px; font-weight: 900; color: var(--ink); }
+.guide-card__header i { color: #059669; }
+.guide-card__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; counter-reset: g; }
+.guide-card__list li { counter-increment: g; position: relative; padding: 24px 7px 8px; border-radius: 13px; background: #fff; font-size: 10px; font-weight: 700; color: var(--muted); line-height: 1.35;
+  box-shadow: 0 2px 6px rgba(30, 27, 46, .05); }
+.guide-card__list li::before { content: counter(g); position: absolute; top: 6px; left: 7px; width: 16px; height: 16px; border-radius: 50%; font-size: 9.5px; font-weight: 900; color: #fff;
+  display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 32% 28%, #a5f3fc, #0891b2 70%); }
+.guide-card__list b { color: #047857; }
 
-/* ── VIDEO CONTENT DETAILS ── */
-.watch-content {
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.video-title {
-  font-size: 15px;
-  font-weight: 900;
-  line-height: 1.35;
-  color: #0f172a;
-  margin: 0;
-}
+.banner-watched { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-radius: 15px; background: #ecfdf5; border: 1.5px solid #fff; color: #065f46; font-size: 11.5px; font-weight: 900; box-shadow: 0 3px 10px rgba(16, 185, 129, .12); }
+.btn-more-vids { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 10px; border-radius: 14px; border: 2px solid #fff; text-decoration: none;
+  background: linear-gradient(135deg, #22d3ee, #0891b2); color: #fff; font-size: 12px; font-weight: 900; box-shadow: 0 3px 0 #0e7490, 0 6px 14px rgba(8, 145, 178, .22); }
 
-/* Actions Strip (Like, Views, Reward, Share) */
-.action-strip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.btn-action {
-  background: #ffffff;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 6px 12px;
-  font-size: 11px;
-  font-weight: 800;
-  color: #334155;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 1.5px 3px rgba(0,0,0,0.04);
-}
-.btn-action:active {
-  transform: scale(0.96);
-}
-.btn-action--liked {
-  background: #fef2f2;
-  border-color: #ef4444;
-  color: #dc2626;
-}
-.btn-action--liked i {
-  color: #dc2626;
-  transform: scale(1.1);
-}
-.action-pill {
-  background: #f1f5f9;
-  border-radius: 8px;
-  padding: 1px 6px;
-  font-size: 10px;
-  font-weight: 900;
-  color: #475569;
-}
-.btn-action--liked .action-pill {
-  background: #fee2e2;
-  color: #991b1b;
-}
+/* Rekomendasi: baris sama seperti /videos */
+.recom-section { display: flex; flex-direction: column; gap: 7px; }
+.recom-title { display: flex; align-items: center; gap: 6px; margin: 4px 2px 1px; font-size: 12.5px; font-weight: 900; color: var(--ink); }
+.recom-title i { color: #0891b2; }
+.recom-card { display: flex; gap: 10px; align-items: center; padding: 6px; border-radius: 17px; border: 2px solid #fff; background: #fff; text-decoration: none; color: inherit;
+  box-shadow: 0 4px 12px rgba(30, 27, 46, .06), inset -2px -2px 5px rgba(251, 146, 60, .08); }
+.recom-card:active { transform: scale(.98); }
+.recom-thumb { position: relative; width: 112px; aspect-ratio: 16 / 9; flex-shrink: 0; border-radius: 12px; overflow: hidden; background: #0b2530; }
+.recom-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.recom-info { flex: 1; min-width: 0; }
+.recom-name { font-size: 11.5px; font-weight: 800; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.recom-meta { margin-top: 4px; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 900; }
 
-.action-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 800;
-  color: #475569;
-}
-.action-stat--reward {
-  background: #fef3c7;
-  border-color: #f59e0b;
-  color: #92400e;
-  font-weight: 900;
-}
-
-/* Information Guideline Card */
-.guide-card {
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 16px;
-  padding: 12px 14px;
-  box-shadow: 0 4px 0 #78350f;
-}
-.guide-card__header {
-  font-size: 12px;
-  font-weight: 900;
-  color: #78350f;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-.guide-card__list {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #475569;
-  line-height: 1.5;
-}
-.guide-card__list li {
-  margin-bottom: 3px;
-}
-
-/* Already Watched Banner */
-.banner-watched {
-  background: #ecfdf5;
-  border: 2px solid #059669;
-  border-radius: 14px;
-  padding: 10px 14px;
-  color: #065f46;
-  font-size: 11.5px;
-  font-weight: 900;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 3px 0 #059669;
-}
-.btn-more-vids {
-  display: block;
-  text-align: center;
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 12px;
-  padding: 9px;
-  color: #78350f;
-  font-size: 12px;
-  font-weight: 900;
-  text-decoration: none;
-  box-shadow: 0 3px 0 #78350f;
-}
-
-/* Recommended Videos */
-.recom-section {
-  margin-top: 6px;
-  border-top: 2px dashed #cbd5e1;
-  padding-top: 14px;
-}
-.recom-title {
-  font-size: 13px;
-  font-weight: 900;
-  color: #1e293b;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.recom-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  margin-bottom: 8px;
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 14px;
-  box-shadow: 0 3px 0 #78350f;
-  text-decoration: none;
-  color: inherit;
-  transition: transform 0.1s;
-}
-.recom-card:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #78350f;
-}
-.recom-thumb {
-  position: relative;
-  width: 90px;
-  aspect-ratio: 16/9;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #000;
-  border: 1.5px solid #78350f;
-  flex-shrink: 0;
-}
-.recom-thumb img {
-  width: 100%; height: 100%; object-fit: cover;
-}
-.recom-info {
-  flex: 1;
-  min-width: 0;
-}
-.recom-name {
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.35;
-  color: #0f172a;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-.recom-meta {
-  font-size: 10px;
-  font-weight: 800;
-  color: #d97706;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Page Loader */
-#page-loader {
-  position: fixed; inset: 0; z-index: 9999;
-  background: #fef8ee;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-  transition: opacity .35s;
-}
+/* Loader & popup */
+#page-loader { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: linear-gradient(180deg, #ecfeff, #fff7ed); transition: opacity .35s; }
 #page-loader.hidden { opacity: 0; pointer-events: none; }
-.loader-spinner {
-  width: 44px; height: 44px;
-  border: 4px solid #fde68a;
-  border-top-color: #d97706;
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-}
+.loader-spinner { width: 46px; height: 46px; border-radius: 50%; border: 4px solid #cffafe; border-top-color: #0891b2; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.loader-label { font-size: 12px; font-weight: 900; color: #78350f; }
+.loader-label { font-size: 12px; font-weight: 900; color: #0e7490; }
+.reward-popup { position: fixed; left: 50%; top: 16px; z-index: 10000; transform: translate(-50%, -220%); visibility: hidden; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 16px; border: 2px solid #fff;
+  background: linear-gradient(135deg, #34d399, #059669); color: #fff; font-size: 13px; font-weight: 900; text-align: center; box-shadow: 0 14px 30px rgba(5, 150, 105, .35);
+  transition: transform .35s cubic-bezier(.34, 1.56, .64, 1), visibility .35s; }
+.reward-popup.show { transform: translate(-50%, 0); visibility: visible; }
 
-/* Reward Floating Popup */
-.reward-popup {
-  position: fixed;
-  bottom: 30px; left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: #10b981;
-  color: #fff;
-  border: 2px solid #065f46;
-  border-radius: 14px;
-  padding: 10px 20px;
-  font-size: 13px;
-  font-weight: 900;
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  z-index: 99999;
-}
-.reward-popup.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* Resume Watch Progress Banner */
-.resume-banner {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-  border: 2px solid #f59e0b;
-  border-radius: 14px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  box-shadow: 0 3px 0 #d97706;
-}
-.resume-banner__icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #f59e0b;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-.resume-banner__content {
-  flex: 1;
-  min-width: 0;
-}
-.resume-banner__title {
-  font-size: 12px;
-  font-weight: 900;
-  color: #78350f;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.resume-banner__desc {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #92400e;
-  margin-top: 1px;
-}
-.resume-banner__btn-reset {
-  background: #fff;
-  border: 1.5px solid #d97706;
-  border-radius: 8px;
-  color: #b45309;
-  font-size: 10.5px;
-  font-weight: 800;
-  padding: 4px 8px;
-  cursor: pointer;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  box-shadow: 0 1.5px 0 #d97706;
-  transition: all 0.15s;
-}
-.resume-banner__btn-reset:hover {
-  background: #fef2f2;
-  border-color: #ef4444;
-  color: #dc2626;
-  box-shadow: 0 1.5px 0 #ef4444;
-}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
 
 /* ── MODE DEBUG TESTER STYLES ── */
 .debug-badge-top {
@@ -1110,30 +761,19 @@ body {
 <!-- Page Loader -->
 <div id="page-loader">
   <div class="loader-spinner"></div>
-  <div class="loader-label">
-    <i class="ph-bold ph-play-circle" style="color:#d97706;font-size:16px;vertical-align:middle"></i> Memuat Tayangan Video...
-  </div>
+  <div class="loader-label"><i class="ph-bold ph-film-strip"></i> Menyiapkan bioskop...</div>
 </div>
 
 <div class="watch-container">
 
-  <!-- ── 1. STICKY TOPBAR ── -->
+  <!-- ── TOPBAR ── -->
   <div class="watch-topbar">
-    <a href="/videos" class="back-btn">
-      <i class="ph-bold ph-arrow-left"></i>
-      <span>Kembali ke Video</span>
-    </a>
-    <div style="display:flex;align-items:center;gap:6px;">
-      <?php if ($is_debug_user): ?>
-        <span class="debug-badge-top" title="Akun ini berada dalam Mode Debug Tester">
-          <i class="ph-bold ph-wrench"></i> DEBUG
-        </span>
-      <?php endif; ?>
-      <div class="watch-topbar__bal" title="Saldo Siap Tarik">
-        <i class="ph-fill ph-wallet"></i>
-        <span><?= format_rp((float)$user['balance_wd']) ?></span>
-      </div>
-    </div>
+    <a href="/videos" class="back-btn" title="Kembali ke Video"><i class="ph-bold ph-caret-left"></i><span>Kembali ke Video</span></a>
+    <div class="wt-title"><small>Bioskop Cuan</small><b><?= htmlspecialchars($video['title']) ?></b></div>
+    <?php if ($is_debug_user): ?>
+      <span class="debug-badge-top" title="Akun ini berada dalam Mode Debug Tester"><i class="ph-bold ph-wrench"></i> DEBUG</span>
+    <?php endif; ?>
+    <div class="watch-topbar__bal" title="Saldo Siap Tarik"><i class="ph-fill ph-wallet"></i><span><?= format_rp((float)$user['balance_wd']) ?></span></div>
   </div>
 
   <?php if ($is_debug_user): ?>
@@ -1210,35 +850,26 @@ body {
   </div>
   <?php endif; ?>
 
+  <!-- ── PLAYER (bingkai akuarium) ── -->
+  <div class="tank">
+    <div class="tank-in">
+      <div class="player-frame"><div id="yt-player"></div></div>
+      <div class="watch-track"><div class="watch-fill" id="prog-fill"></div></div>
+    </div>
+  </div>
+
   <?php if ($saved_seconds > 0 && ($canWatch || $is_debug_user)): ?>
-  <!-- ── RESUME WATCH PROGRESS BANNER ── -->
   <div class="resume-banner" id="resume-banner">
-    <div class="resume-banner__icon">
-      <i class="ph-bold ph-arrow-counter-clockwise"></i>
-    </div>
+    <div class="resume-banner__icon"><i class="ph-bold ph-arrow-counter-clockwise"></i></div>
     <div class="resume-banner__content">
-      <div class="resume-banner__title">Melanjutkan Riwayat Menonton</div>
-      <div class="resume-banner__desc">
-        Tersimpan: <b><?= $saved_seconds ?>s / <?= $active_duration ?>s</b> (Tersisa <b id="resume-left-sec"><?= max(0, $active_duration - $saved_seconds) ?></b> detik lagi)
-      </div>
+      <div class="resume-banner__title">Lanjut dari <?= $saved_seconds ?>s</div>
+      <div class="resume-banner__desc">Sisa <b id="resume-left-sec"><?= max(0, $active_duration - $saved_seconds) ?></b> detik lagi</div>
     </div>
-    <button type="button" class="resume-banner__btn-reset" onclick="resetWatchProgress()" title="Ulangi video dari detik 0">
-      <i class="ph-bold ph-arrow-u-down-left"></i> Mulai Awal
-    </button>
+    <button type="button" class="resume-banner__btn-reset" onclick="resetWatchProgress()" title="Ulangi video dari detik 0"><i class="ph-bold ph-arrow-u-down-left"></i> Ulang</button>
   </div>
   <?php endif; ?>
 
-  <!-- ── 2. YOUTUBE PLAYER ── -->
-  <div class="player-frame">
-    <div id="yt-player"></div>
-  </div>
-
-  <!-- Progress Track -->
-  <div class="watch-track">
-    <div class="watch-fill" id="prog-fill"></div>
-  </div>
-
-  <!-- ── 3. STATUS & COUNTDOWN BAR ── -->
+  <!-- ── DOCK MISI ── -->
   <div class="watch-status-box" id="status-bar">
     <div class="watch-timer-wrap">
       <div class="timer-pill <?= ($already_watched && !$is_debug_user) ? 'done' : '' ?>" id="timer-badge">
@@ -1268,120 +899,81 @@ body {
       </div>
     </div>
 
-    <!-- Claim Button -->
     <?php if ($canWatch || $is_debug_user): ?>
       <div id="claim-wrap" style="display:none;">
-        <button type="button" class="btn-claim" id="claim-btn" onclick="claimReward()">
-          <i class="ph-bold ph-coins"></i>
-          <span>Klaim Cuan</span>
-        </button>
+        <button type="button" class="btn-claim" id="claim-btn" onclick="claimReward()"><i class="ph-bold ph-coins"></i><span>Klaim Cuan</span></button>
       </div>
     <?php elseif ($watch_today >= $watch_limit): ?>
-      <a href="/upgrade" class="btn-claim" style="background:#f59e0b;border-color:#78350f;color:#78350f;animation:none;">
-        <i class="ph-bold ph-crown"></i>
-        <span>Upgrade VIP</span>
-      </a>
+      <a href="/upgrade" class="btn-claim up"><i class="ph-fill ph-crown"></i><span>Upgrade</span></a>
     <?php endif; ?>
   </div>
 
-  <!-- ── 4. CONTENT & ACTIONS ── -->
+  <!-- ── KONTEN ── -->
   <div class="watch-content">
-    
-    <!-- Title -->
     <h1 class="video-title"><?= htmlspecialchars($video['title']) ?></h1>
 
-    <!-- Action Strip: Like Button, Views, Reward, Share -->
     <div class="action-strip">
-      <!-- Interactive Like Button -->
       <button type="button" id="btnLike" onclick="toggleLike()" class="btn-action <?= $user_has_liked ? 'btn-action--liked' : '' ?>" title="Suka Video Ini">
         <i class="ph-<?= $user_has_liked ? 'fill' : 'bold' ?> ph-thumbs-up" id="likeIco"></i>
         <span id="likeTxt"><?= $user_has_liked ? 'Disukai' : 'Suka' ?></span>
         <span class="action-pill" id="likeCnt"><?= number_format((int)($video['total_likes'] ?? 0)) ?></span>
       </button>
-
-      <!-- Views -->
-      <div class="action-stat" title="Total Tayangan">
-        <i class="ph-bold ph-eye"></i>
-        <span><?= number_format((int)$video['total_watches']) ?> tayangan</span>
-      </div>
-
-      <!-- Reward -->
-      <div class="action-stat action-stat--reward" title="Komisi Reward">
-        <i class="ph-bold ph-coins"></i>
-        <span>+<?= format_rp((float)$active_reward) ?></span>
-      </div>
-
-      <!-- Share -->
-      <button type="button" class="btn-action" onclick="shareVideo()" title="Bagikan Video">
-        <i class="ph-bold ph-share-network"></i>
-        <span>Bagikan</span>
-      </button>
-    </div>
-
-    <!-- Official Viewing Instructions -->
-    <div class="guide-card">
-      <div class="guide-card__header">
-        <i class="ph-bold ph-shield-check" style="font-size:16px;"></i>
-        <span>Petunjuk Menonton Misi Resmi</span>
-      </div>
-      <ol class="guide-card__list">
-        <li>Tekan tombol putar pada video untuk mengaktifkan penghitung waktu mundur.</li>
-        <li>Tonton hingga waktu hitung mundur selesai tanpa menjeda (*pause*) tayangan.</li>
-        <li>Klik tombol hijau <b>Klaim Cuan</b> yang muncul untuk langsung mencairkan saldo ke dompet Anda.</li>
-      </ol>
+      <div class="action-stat action-stat--reward" title="Reward"><i class="ph-bold ph-coins"></i><span>+<?= format_rp((float)$active_reward) ?></span></div>
+      <div class="action-stat" title="Total Tayangan"><i class="ph-bold ph-eye"></i><span><?= number_format((int)$video['total_watches']) ?></span></div>
+      <button type="button" class="btn-action" onclick="shareVideo()" title="Bagikan Video"><i class="ph-bold ph-share-network"></i><span>Bagikan</span></button>
     </div>
 
     <?php if ($already_watched): ?>
       <div class="banner-watched">
-        <i class="ph-bold ph-check-circle" style="font-size:18px;"></i>
-        <span>Misi video ini sudah berhasil Anda selesaikan hari ini!</span>
+        <i class="ph-fill ph-check-circle" style="font-size:18px;"></i>
+        <span>Misi video ini sudah selesai hari ini!</span>
         <?php if ($is_debug_user): ?>
-          <button type="button" class="resume-banner__btn-reset" onclick="resetDebugVideoStatus()" style="margin-left:auto;">
-            <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset Status
-          </button>
+          <button type="button" class="resume-banner__btn-reset" onclick="resetDebugVideoStatus()" style="margin-left:auto;"><i class="ph-bold ph-arrow-counter-clockwise"></i> Reset</button>
         <?php endif; ?>
       </div>
-      <a href="/videos" class="btn-more-vids">← Pilih Video Misi Lainnya</a>
     <?php endif; ?>
 
-    <!-- ── 5. RECOMMENDED VIDEOS ── -->
+    <div class="guide-card">
+      <div class="guide-card__header"><i class="ph-fill ph-shield-check"></i><span>Cara klaim reward</span></div>
+      <ol class="guide-card__list">
+        <li>Putar video, timer mulai jalan.</li>
+        <li>Tonton sampai timer habis, jangan dijeda.</li>
+        <li>Tekan <b>Klaim Cuan</b>, saldo langsung masuk.</li>
+      </ol>
+    </div>
+
     <?php if (!empty($other_videos)): ?>
     <div class="recom-section">
-      <div class="recom-title">
-        <i class="ph-bold ph-film-strip" style="color:#d97706;font-size:16px;"></i>
-        <span>Rekomendasi Video Berikutnya</span>
-      </div>
+      <div class="recom-title"><i class="ph-fill ph-film-strip"></i><span>Tonton berikutnya</span></div>
       <?php foreach ($other_videos as $ov):
         $ov_done    = (bool)$ov['watched_today'];
         $ov_blocked = !$ov_done && ($watch_today >= $watch_limit);
         $ov_href    = ($ov_done || $ov_blocked) ? '#' : '/watch?id=' . $ov['id'];
       ?>
-      <a href="<?= $ov_href ?>" class="recom-card" style="<?= ($ov_done || $ov_blocked) ? 'opacity:.65;pointer-events:none' : '' ?>">
+      <a href="<?= $ov_href ?>" class="recom-card" style="<?= ($ov_done || $ov_blocked) ? 'opacity:.6;pointer-events:none' : '' ?>">
         <div class="recom-thumb">
           <img src="<?= yt_thumb($ov['youtube_id']) ?>" alt="" onerror="this.src='https://img.youtube.com/vi/<?= $ov['youtube_id'] ?>/hqdefault.jpg'">
           <?php if ($ov_done): ?>
-            <div style="position:absolute;inset:0;background:rgba(16,185,129,.75);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;">
-              <i class="ph-bold ph-check"></i>
-            </div>
+            <div style="position:absolute;inset:0;background:rgba(16,185,129,.7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;"><i class="ph-bold ph-check"></i></div>
           <?php endif; ?>
         </div>
         <div class="recom-info">
           <div class="recom-name"><?= htmlspecialchars($ov['title']) ?></div>
           <div class="recom-meta">
             <?php if ($ov_done): ?>
-              <span style="color:#10b981;"><i class="ph-bold ph-check-circle"></i> Selesai</span>
+              <span style="color:#059669;"><i class="ph-bold ph-check-circle"></i> Selesai</span>
             <?php else: ?>
-              <span style="color:#d97706;"><i class="ph-bold ph-coins"></i> +<?= format_rp((float)$ov['reward_amount']) ?></span>
+              <span style="color:#047857;background:#ecfdf5;padding:2px 7px;border-radius:999px;">+<?= format_rp((float)$ov['reward_amount']) ?></span>
             <?php endif; ?>
-            <span style="color:#64748b;">• <?= (int)$ov['watch_duration'] ?>s</span>
+            <span style="color:#6b6478;"><i class="ph-bold ph-clock"></i> <?= (int)$ov['watch_duration'] ?>s</span>
           </div>
         </div>
       </a>
       <?php endforeach; ?>
-      <a href="/videos" class="btn-more-vids" style="margin-top:8px;">Lihat Semua Video Misi →</a>
     </div>
     <?php endif; ?>
 
+    <a href="/videos" class="btn-more-vids"><i class="ph-bold ph-squares-four"></i>Semua Video</a>
   </div>
 
 </div>
