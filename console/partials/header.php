@@ -417,7 +417,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 
     <!-- 2. PUSAT ANALISIS & DATA (COLLAPSIBLE) -->
     <?php
-    $analPages = ['activity_analytics', 'transaction_flow', 'analytics', 'video_analytics', 'registration_analytics', 'target', 'heartbeats', 'qris_logs', 'missions'];
+    $analPages = ['transaction_flow', 'analytics', 'video_analytics', 'registration_analytics', 'target', 'heartbeats', 'qris_logs', 'missions'];
     $isAnalActive = in_array($activePage ?? '', $analPages, true);
     $canAnal = staff_can('analytics') || staff_can('video_analytics') || staff_can('target') || staff_can('transaction_flow') || staff_can('deposits');
     ?>
@@ -430,18 +430,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
           <span>Pusat Analitik</span>
         </div>
         <div class="c-nav-collapse-btn__right">
-          <span class="c-nav-collapse-badge">9 Menu</span>
+          <span class="c-nav-collapse-badge">8 Menu</span>
           <svg class="c-nav-collapse-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </button>
 
       <div class="c-nav-collapse-body">
         <div class="c-nav-collapse-inner">
-          <a href="/console/activity_analytics.php" class="c-nav-sublink <?= $activePage==='activity_analytics'?'active':'' ?>" style="background:rgba(245,158,11,0.08);color:#fbbf24;font-weight:700;">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color:#fbbf24;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            <span>⭐ Analisis Aktivitas Utama</span>
-          </a>
-
           <?php if (staff_can('transaction_flow') || staff_can('deposits')): ?>
           <a href="/console/transaction_flow.php" class="c-nav-sublink <?= $activePage==='transaction_flow'?'active':'' ?>">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -910,33 +905,39 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 </aside>
 
 <script>
+// Status buka/tutup grup sidebar disimpan di localStorage ({ "nav-col-xxx": "open" | "closed" }),
+// jadi tetap sama setelah pindah halaman atau browser ditutup. Grup tanpa status tersimpan
+// mengikuti bawaan server (terbuka bila berisi halaman aktif).
+const SIDEBAR_STATE_KEY = 'console_sidebar_groups';
+function sidebarStateRead() {
+  try { return JSON.parse(localStorage.getItem(SIDEBAR_STATE_KEY) || '{}') || {}; } catch (e) { return {}; }
+}
+function sidebarSetOpen(el, open) {
+  el.classList.toggle('open', open);
+  const btn = el.querySelector('.c-nav-collapse-btn');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
 function toggleSidebarCollapse(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  const isOpen = el.classList.toggle('open');
-  const btn = el.querySelector('.c-nav-collapse-btn');
-  if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-  try {
-    sessionStorage.setItem(id + '_state', isOpen ? 'open' : 'closed');
-  } catch(e) {}
+  const open = !el.classList.contains('open');
+  sidebarSetOpen(el, open);
+  const state = sidebarStateRead();
+  state[id] = open ? 'open' : 'closed';
+  try { localStorage.setItem(SIDEBAR_STATE_KEY, JSON.stringify(state)); } catch (e) {}
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-  const collapseIds = ['nav-col-analytics', 'nav-col-farm', 'nav-col-finance', 'nav-col-users', 'nav-col-promo', 'nav-col-settings'];
-  collapseIds.forEach(function(id) {
-    const el = document.getElementById(id);
-    if (el && !el.classList.contains('open')) {
-      try {
-        const saved = sessionStorage.getItem(id + '_state');
-        if (saved === 'open') {
-          el.classList.add('open');
-          const btn = el.querySelector('.c-nav-collapse-btn');
-          if (btn) btn.setAttribute('aria-expanded', 'true');
-        }
-      } catch(e) {}
-    }
+// Pulihkan segera (sidebar sudah ada di DOM) tanpa animasi agar tidak berkedip
+(function () {
+  const state = sidebarStateRead();
+  document.querySelectorAll('.c-nav-collapse-group[id]').forEach(function (el) {
+    const saved = state[el.id];
+    if (saved !== 'open' && saved !== 'closed') return;
+    const body = el.querySelector('.c-nav-collapse-body');
+    if (body) body.style.transition = 'none';
+    sidebarSetOpen(el, saved === 'open');
+    if (body) requestAnimationFrame(function () { requestAnimationFrame(function () { body.style.transition = ''; }); });
   });
-});
+})();
 </script>
 
 <div class="c-main">
