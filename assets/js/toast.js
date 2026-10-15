@@ -74,6 +74,12 @@
     duration = duration || 3000;
     var t = THEME[type];
     var wrap = getContainer();
+    var text = cleanMsg(msg);
+    // Pesan yang sama sedang tampil: perpanjang saja, jangan menumpuk
+    for (var k = 0; k < wrap.children.length; k++) {
+      var ex = wrap.children[k];
+      if (ex._nt && ex._nt.type === type && ex._nt.text === text && !ex._nt.closed) { ex._nt.restart(duration); return ex; }
+    }
     while (wrap.children.length >= 3) wrap.removeChild(wrap.firstChild);
 
     var el = document.createElement('div');
@@ -82,23 +88,29 @@
       '<span class="ntoast-ico" style="background:' + t.grad + ';box-shadow:0 5px 12px ' + t.glow + ',inset 2px 2px 3px rgba(255,255,255,.55),inset -2px -2px 4px rgba(0,0,0,.15)">' +
         '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[type] + '</svg></span>' +
       '<div class="ntoast-body"><div class="ntoast-lbl" style="color:' + t.ink + '">' + t.label + '</div>' +
-        '<div class="ntoast-msg">' + cleanMsg(msg) + '</div></div>' +
+        '<div class="ntoast-msg">' + text + '</div></div>' +
       '<button type="button" class="ntoast-x" aria-label="Tutup">&times;</button>' +
       '<span class="ntoast-bar"><i style="background:' + t.bar + '"></i></span>';
     wrap.appendChild(el);
 
     var bar = el.querySelector('.ntoast-bar i');
-    if (bar.animate) bar.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: duration, easing: 'linear', fill: 'forwards' });
-
-    var closed = false;
+    var anim = null, timer = null;
+    var state = el._nt = { type: type, text: text, closed: false };
     function close() {
-      if (closed) return; closed = true;
+      if (state.closed) return; state.closed = true;
       el.classList.remove('in'); el.classList.add('out');
       setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 220);
     }
+    state.restart = function (d) {
+      clearTimeout(timer);
+      if (anim) anim.cancel();
+      if (bar.animate) anim = bar.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: d, easing: 'linear', fill: 'forwards' });
+      if (el.animate && el.classList.contains('in')) el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.03)' }, { transform: 'scale(1)' }], { duration: 260 });
+      timer = setTimeout(close, d);
+    };
     el.addEventListener('click', close);
     requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('in'); }); });
-    setTimeout(close, duration);
+    state.restart(duration);
     return el;
   };
 

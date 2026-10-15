@@ -16,6 +16,8 @@ $baitToday  = $q("SELECT COUNT(*) c, COALESCE(SUM(price),0) v, COALESCE(SUM(qty)
 $bait7      = $q("SELECT COALESCE(SUM(price),0) v FROM fishing_bait_purchases WHERE created_at >= ?", [$d7])->fetchColumn();
 $players7   = (int)$q("SELECT COUNT(DISTINCT user_id) FROM fishing_logs WHERE created_at >= ?", [$d7])->fetchColumn();
 $baitsHeld  = (int)$q("SELECT COALESCE(SUM(fishing_baits),0) FROM users")->fetchColumn();
+$lock7      = $q("SELECT COUNT(*) c, COALESCE(SUM(is_free),0) f, COALESCE(SUM(price),0) v FROM fishing_lock_uses WHERE created_at >= ?", [$d7])->fetch(PDO::FETCH_ASSOC);
+$released7  = $q("SELECT COUNT(*) c, COALESCE(SUM(reward),0) v FROM fishing_released WHERE created_at >= ?", [$d7])->fetch(PDO::FETCH_ASSOC);
 
 // Grafik 14 hari: tangkapan & penjualan
 $days = [];
@@ -28,7 +30,7 @@ $maxC = max(1, max(array_column($days, 'c')));
 $maxS = max(1, max(array_column($days, 's')), max(array_column($days, 'b')));
 
 // Distribusi spesies 7 hari
-$dist = array_fill_keys(FISHING_BADGES, 0);
+$dist = array_fill_keys(FISHING_ALL_BADGES, 0);
 foreach ($q("SELECT " . FS_BADGE_SQL . " b, COUNT(*) c FROM fishing_logs WHERE created_at >= ? GROUP BY b", [$d7]) as $r) $dist[$r['b']] = (int)$r['c'];
 $distTotal = max(1, array_sum($dist));
 
@@ -61,6 +63,8 @@ fs_styles();
   <div class="col-6 col-lg-3"><?php fs_stat('Pendapatan Umpan Hari Ini', format_rp((float)$baitToday['v']), 'ph-bug', '#fb923c', (int)$baitToday['q'] . ' umpan · 7 hari ' . format_rp((float)$bait7)); ?></div>
   <div class="col-6 col-lg-3"><?php fs_stat('Pemain Aktif 7 Hari', number_format($players7), 'ph-users-three', '#a78bfa'); ?></div>
   <div class="col-6 col-lg-3"><?php fs_stat('Umpan Beredar', number_format($baitsHeld), 'ph-package', '#f472b6', 'Total umpan di semua akun'); ?></div>
+  <div class="col-6 col-lg-3"><?php fs_stat('Kunci Ikan 7 Hari', format_rp((float)$lock7['v']), 'ph-lock-simple', '#c4b5fd', (int)$lock7['c'] . 'x dipakai · ' . (int)$lock7['f'] . 'x gratis'); ?></div>
+  <div class="col-6 col-lg-3"><?php fs_stat('Ikan Dilepas 7 Hari', number_format((int)$released7['c']), 'ph-flag', '#94a3b8', 'Nilai dasar ' . format_rp((float)$released7['v'])); ?></div>
   <div class="col-12 col-lg-6">
     <div class="c-stat h-100" style="border-top:3px solid #38bdf8">
       <div class="d-flex justify-content-between align-items-center mb-2">
@@ -157,7 +161,7 @@ fs_styles();
               <td><?= fs_badge(fishing_badge_of($r['rarity'])) ?> <span class="ms-1"><?= htmlspecialchars($r['fish_name']) ?></span></td>
               <td class="fs-num"><?= number_format((float)$r['weight_kg'], 2) ?> kg</td>
               <td class="fs-num"><?= format_rp((float)$r['reward']) ?></td>
-              <td><?= $r['sold_at'] ? '<span class="fs-pill" style="color:#34d399;border-color:#34d39955">Terjual</span>' : '<span class="fs-pill" style="color:#fbbf24;border-color:#fbbf2455">Di Ember</span>' ?></td>
+              <td><?= fs_status($r) ?></td>
             </tr>
           <?php endforeach; ?>
           </tbody>

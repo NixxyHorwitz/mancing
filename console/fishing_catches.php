@@ -60,7 +60,7 @@ fs_styles();
     <div><label class="c-label">Pemain (ID / username)</label><input class="c-form-control" name="u" value="<?= htmlspecialchars($fu) ?>" placeholder="semua"></div>
     <div><label class="c-label">Jenis</label>
       <select class="c-form-control" name="badge"><option value="">Semua</option>
-        <?php foreach (FISHING_BADGES as $b): ?><option value="<?= $b ?>" <?= $fb === $b ? 'selected' : '' ?>><?= FISHING_BADGE_LABEL[$b] ?> · <?= FISHING_SPECIES[$b] ?></option><?php endforeach; ?>
+        <?php foreach (FISHING_ALL_BADGES as $b): ?><option value="<?= $b ?>" <?= $fb === $b ? 'selected' : '' ?>><?= FISHING_BADGE_LABEL[$b] ?> · <?= FISHING_SPECIES[$b] ?></option><?php endforeach; ?>
       </select></div>
     <div><label class="c-label">Status</label>
       <select class="c-form-control" name="status">
@@ -91,9 +91,9 @@ fs_styles();
         <td><?= fs_badge(fishing_badge_of($r['rarity'])) ?> <span class="ms-1"><?= htmlspecialchars($r['fish_name']) ?></span></td>
         <td class="fs-num"><?= number_format((float)$r['weight_kg'], 2) ?> kg</td>
         <td class="fs-num"><?= format_rp((float)$r['reward']) ?></td>
-        <td><?= $r['sold_at']
+        <td><?= strtoupper((string)$r['rarity']) === 'JUNK' ? fs_status($r) : ($r['sold_at']
               ? '<span class="fs-pill" style="color:#34d399;border-color:#34d39955">Terjual</span><div class="fs-muted">' . date('d/m H:i', strtotime((string)$r['sold_at'])) . ($r['sale_id'] ? ' · <a href="/console/fishing_sales.php?sale=' . (int)$r['sale_id'] . '" style="color:#67e8f9">#' . (int)$r['sale_id'] . '</a>' : '') . '</div>'
-              : '<span class="fs-pill" style="color:#fbbf24;border-color:#fbbf2455">Di Ember</span>' ?></td>
+              : '<span class="fs-pill" style="color:#fbbf24;border-color:#fbbf2455">Di Ember</span>') ?></td>
         <td class="fs-num" style="color:#34d399"><?= $r['sold_price'] !== null ? format_rp((float)$r['sold_price']) : '-' ?></td>
         <td>
           <?php if (!$r['sold_at']): ?>

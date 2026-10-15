@@ -571,7 +571,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
           </a>
           <a href="/console/fishing_species.php" class="c-nav-sublink <?= $activePage==='fishing_species'?'active':'' ?>">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
-            <span>Harga Ikan</span>
+            <span>Harga &amp; Kesulitan Ikan</span>
           </a>
           <a href="/console/fishing_catches.php" class="c-nav-sublink <?= $activePage==='fishing_catches'?'active':'' ?>">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c3-5 9-7 14-4l4-3v14l-4-3c-5 3-11 1-14-4z"/><circle cx="14" cy="11" r="1"/></svg>

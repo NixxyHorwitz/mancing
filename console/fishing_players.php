@@ -121,6 +121,9 @@ fs_styles();
 
       <div class="c-card"><div class="c-card-header"><b>Joran & Preferensi</b></div><div class="c-card-body">
         <div class="mb-2" style="font-size:13px">Joran dipakai: <b><?= htmlspecialchars($rods[$state['selected']]['name'] ?? $state['selected']) ?></b></div>
+        <?php $lk = $pdo->prepare("SELECT COUNT(*) c, COALESCE(SUM(is_free),0) f, COALESCE(SUM(price),0) v FROM fishing_lock_uses WHERE user_id = ?"); $lk->execute([$uid]); $lk = $lk->fetch(PDO::FETCH_ASSOC);
+              $rl = $pdo->prepare("SELECT COUNT(*) FROM fishing_released WHERE user_id = ?"); $rl->execute([$uid]); ?>
+        <div class="mb-2 fs-muted">Kunci Ikan: <?= (int)$lk['c'] ?>x (<?= (int)$lk['f'] ?>x gratis, sisa uji coba <?= fishing_lock_free_left($pdo, $uid) ?>x) · <?= format_rp((float)$lk['v']) ?> · Ikan dilepas: <?= (int)$rl->fetchColumn() ?>x</div>
         <div class="mb-2 fs-muted">Tier membership: <?= (int)$state['tier'] ?> · Suara: <?= $prefs['sound_muted'] ? 'dimatikan' : 'aktif' ?> · Panduan dilihat: <?= $prefs['tutorial_seen'] ? htmlspecialchars(implode(', ', $prefs['tutorial_seen'])) : '-' ?></div>
         <div class="d-flex flex-wrap gap-1 mb-3">
           <?php foreach ($state['rods'] as $r): ?>
@@ -145,7 +148,7 @@ fs_styles();
               <td><?= fs_badge(fishing_badge_of($c['rarity'])) ?> <span class="ms-1"><?= htmlspecialchars($c['fish_name']) ?></span></td>
               <td class="fs-num"><?= number_format((float)$c['weight_kg'], 2) ?> kg</td>
               <td class="fs-num"><?= format_rp((float)$c['reward']) ?></td>
-              <td><?= $c['sold_at'] ? '<span style="color:#34d399">' . format_rp((float)$c['sold_price']) . '</span>' : '<span style="color:#fbbf24">Di Ember</span>' ?></td></tr>
+              <td><?= fs_status($c, true) ?></td></tr>
           <?php endforeach; ?>
           </tbody>
         </table></div>

@@ -14,6 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'enabled'          => isset($_POST['enabled']),
         'daily_free_baits' => max(0, min(100, (int)($_POST['daily_free_baits'] ?? 3))),
         'bait_per_video'   => max(0, min(10, (int)($_POST['bait_per_video'] ?? 1))),
+        'ember_3d'         => isset($_POST['ember_3d']),
+        'lock_price'       => max(0, round((float)($_POST['lock_price'] ?? 2000))),
+        'lock_free_trials' => max(0, min(100, (int)($_POST['lock_free_trials'] ?? 2))),
+        'fight_hardness'   => round(max(0.3, min(3.0, (float)($_POST['fight_hardness'] ?? 1))), 2),
     ];
     {
         $cfg['fishing_engine'] = array_merge($old, $new);
@@ -57,9 +61,27 @@ fs_styles();
             <label class="form-check-label text-white" for="fe-en" style="font-weight:700">Fitur mancing aktif untuk pengguna</label>
           </div>
         </div>
+        <div class="col-12">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="fe-3d" name="ember_3d" <?= !array_key_exists('ember_3d', $fe) || !empty($fe['ember_3d']) ? 'checked' : '' ?>>
+            <label class="form-check-label text-white" for="fe-3d" style="font-weight:700">Tampilkan karusel ikan 3D di Ember</label>
+          </div>
+          <div class="fs-muted mt-1">Matikan agar Ember langsung menampilkan daftar jual ikan tanpa kanvas 3D (lebih ringan untuk HP lama).</div>
+        </div>
         <div class="col-6"><label class="c-label">Umpan gratis harian</label><input type="number" min="0" max="100" class="c-form-control" name="daily_free_baits" value="<?= (int)($fe['daily_free_baits'] ?? 3) ?>">
           <div class="fs-muted mt-1">Diisi ulang sekali sehari bila umpan pemain di bawah angka ini.</div></div>
         <div class="col-6"><label class="c-label">Umpan per video ditonton</label><input type="number" min="0" max="10" class="c-form-control" name="bait_per_video" value="<?= (int)($fe['bait_per_video'] ?? 1) ?>"></div>
+        <div class="col-6"><label class="c-label">Harga Kunci Ikan (Rp, Saldo Beli)</label><input type="number" min="0" step="100" class="c-form-control" name="lock_price" value="<?= (float)($fe['lock_price'] ?? 2000) ?>">
+          <div class="fs-muted mt-1">Ikan tidak bisa menjauh selama tarik-ulur. 0 = gratis.</div></div>
+        <div class="col-12"><label class="c-label">Skala kesulitan tarik-ulur (semua ikan)</label>
+          <div class="d-flex align-items-center gap-2">
+            <input type="range" min="0.5" max="2" step="0.05" value="<?= (float)($fe['fight_hardness'] ?? 1) ?>" class="form-range flex-grow-1" oninput="this.nextElementSibling.value=this.value">
+            <input type="number" min="0.3" max="3" step="0.05" class="c-form-control fs-num" name="fight_hardness" value="<?= (float)($fe['fight_hardness'] ?? 1) ?>" style="width:90px" oninput="this.previousElementSibling.value=this.value">
+            <span class="fs-muted">×</span>
+          </div>
+          <div class="fs-muted mt-1">1.0 = normal. Dikalikan dengan kesulitan tiap jenis di <a href="/console/fishing_species.php" style="color:#67e8f9">Harga &amp; Kesulitan Ikan</a>.</div></div>
+        <div class="col-6"><label class="c-label">Uji coba Kunci gratis per pemain</label><input type="number" min="0" max="100" class="c-form-control" name="lock_free_trials" value="<?= (int)($fe['lock_free_trials'] ?? 2) ?>">
+          <div class="fs-muted mt-1">Dihitung seumur akun.</div></div>
         <div class="col-12"><button class="btn btn-primary w-100">Simpan Pengaturan</button></div>
         <div class="col-12 fs-muted">Harga dasar ikan diatur di tab <a href="/console/fishing_species.php" style="color:#67e8f9">Harga Ikan</a>, paket umpan di tab <a href="/console/fishing_baits.php" style="color:#67e8f9">Umpan</a>, pengali harga jual di tab <a href="/console/fishing_market.php" style="color:#67e8f9">Harga Pasar</a>.</div>
       </form>

@@ -17,9 +17,22 @@ declare(strict_types=1);
  * di Pasar dengan harga = nilai dasar × pengali pasar hari itu (85%–115%).
  */
 
+/** Jenis yang bisa dijual (punya harga pasar). */
 const FISHING_BADGES = ['biasa', 'bagus', 'langka', 'super', 'jackpot'];
-const FISHING_BADGE_LABEL = ['biasa' => 'Biasa', 'bagus' => 'Bagus', 'langka' => 'Langka', 'super' => 'Super', 'jackpot' => 'Jackpot'];
-const FISHING_SPECIES = ['biasa' => 'Mujair / Nila', 'bagus' => 'Gurame', 'langka' => 'Kakap Merah', 'super' => 'Barramundi', 'jackpot' => 'Peti Harta Karun'];
+/** Zonk = sampah laut: bisa tertangkap, tidak bernilai, tidak masuk Ember. */
+const FISHING_ZONK = 'zonk';
+const FISHING_ALL_BADGES = ['biasa', 'bagus', 'langka', 'super', 'jackpot', 'zonk'];
+/** Jenis sampah zonk: kunci model => [nama, berat min, berat maks (kg)]. Model 3D di assets/models/junk/. */
+const FISHING_JUNK = [
+    'boot'     => ['Sepatu Bot Bekas', 0.60, 1.60],
+    'bottle'   => ['Botol Plastik Bekas', 0.05, 0.40],
+    'can'      => ['Kaleng Minuman Ringsek', 0.02, 0.15],
+    'bag'      => ['Kantong Plastik Kresek', 0.01, 0.08],
+    'cup'      => ['Gelas Plastik Bekas', 0.01, 0.06],
+    'trashbag' => ['Kantong Sampah Hitam', 1.00, 4.50],
+];
+const FISHING_BADGE_LABEL = ['biasa' => 'Biasa', 'bagus' => 'Bagus', 'langka' => 'Langka', 'super' => 'Super', 'jackpot' => 'Jackpot', 'zonk' => 'Zonk'];
+const FISHING_SPECIES = ['biasa' => 'Mujair / Nila', 'bagus' => 'Gurame', 'langka' => 'Kakap Merah', 'super' => 'Barramundi', 'jackpot' => 'Peti Harta Karun', 'zonk' => 'Sampah Laut'];
 
 function fishing_column_exists(PDO $pdo, string $table, string $col): bool {
     $s = $pdo->prepare("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
@@ -34,7 +47,7 @@ function fishing_ensure_schema(PDO $pdo): void {
     $done = true;
 
     $sqlFile = dirname(__DIR__) . '/database_migrations/create_fishing_system.sql';
-    $tables = ['fishing_logs', 'fishing_sales', 'fishing_bait_packs', 'fishing_bait_purchases', 'fishing_rod_skins', 'fishing_market_prices', 'fishing_prefs', 'fishing_admin_logs', 'fishing_species'];
+    $tables = ['fishing_logs', 'fishing_sales', 'fishing_bait_packs', 'fishing_bait_purchases', 'fishing_rod_skins', 'fishing_market_prices', 'fishing_prefs', 'fishing_admin_logs', 'fishing_species', 'fishing_lock_uses', 'fishing_released'];
     $in = implode(',', array_fill(0, count($tables), '?'));
     $s = $pdo->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ($in)");
     $s->execute($tables);
@@ -47,6 +60,19 @@ function fishing_ensure_schema(PDO $pdo): void {
     }
 
     fishing_species_seed($pdo);
+    // Zonk / sampah laut (sekali tambah; peluang bisa diubah atau dinolkan admin)
+    try {
+        $pdo->exec("INSERT IGNORE INTO fishing_species (badge, name, chance, weight_min, weight_max, price_min, price_max)
+                    VALUES ('zonk', 'Sampah Laut (acak)', 8, 0.01, 4.50, 0, 0)");
+        $pdo->exec("UPDATE fishing_species SET name = 'Sampah Laut (acak)' WHERE badge = 'zonk' AND name = 'Sepatu Bot Bekas'");
+    } catch (\Throwable) {}
+    // Tingkat kesulitan tarik-ulur per jenis ikan (Barramundi dibuat sedikit lebih menantang)
+    if (!fishing_column_exists($pdo, 'fishing_species', 'hardness')) {
+        try {
+            $pdo->exec("ALTER TABLE fishing_species ADD COLUMN hardness DECIMAL(4,2) NOT NULL DEFAULT 1.00 AFTER price_max");
+            $pdo->exec("UPDATE fishing_species SET hardness = 1.25 WHERE badge = 'super'");
+        } catch (\Throwable) {}
+    }
 
     // Migrasi kolom pada tabel lama
     if (!fishing_column_exists($pdo, 'fishing_logs', 'sold_at')) {
@@ -69,9 +95,9 @@ function fishing_ensure_schema(PDO $pdo): void {
 
 /* ───────────────────────── JENIS IKAN & HARGA DASAR ───────────────────────── */
 
-const FISHING_RARITY = ['biasa' => 'Common', 'bagus' => 'Uncommon', 'langka' => 'Rare', 'super' => 'Epic', 'jackpot' => 'JACKPOT'];
-const FISHING_ICON   = ['biasa' => '🐟', 'bagus' => '🐠', 'langka' => '🐡', 'super' => '🦈', 'jackpot' => '✨'];
-const FISHING_COLOR  = ['biasa' => '#0284c7', 'bagus' => '#d97706', 'langka' => '#e11d48', 'super' => '#7c3aed', 'jackpot' => '#10b981'];
+const FISHING_RARITY = ['biasa' => 'Common', 'bagus' => 'Uncommon', 'langka' => 'Rare', 'super' => 'Epic', 'jackpot' => 'JACKPOT', 'zonk' => 'Junk'];
+const FISHING_ICON   = ['biasa' => '🐟', 'bagus' => '🐠', 'langka' => '🐡', 'super' => '🦈', 'jackpot' => '✨', 'zonk' => '🥾'];
+const FISHING_COLOR  = ['biasa' => '#0284c7', 'bagus' => '#d97706', 'langka' => '#e11d48', 'super' => '#7c3aed', 'jackpot' => '#10b981', 'zonk' => '#78716c'];
 
 /** Isi katalog awal sekali saja, meniru rumus lama (reward_min/reward_max) agar ekonomi tidak berubah diam-diam. */
 function fishing_species_seed(PDO $pdo): void {
@@ -80,6 +106,7 @@ function fishing_species_seed(PDO $pdo): void {
         $pdo->exec("CREATE TABLE IF NOT EXISTS fishing_species (badge VARCHAR(20) NOT NULL PRIMARY KEY, name VARCHAR(80) NOT NULL,
             chance DECIMAL(6,2) NOT NULL DEFAULT 0, weight_min DECIMAL(6,2) NOT NULL DEFAULT 0.50, weight_max DECIMAL(6,2) NOT NULL DEFAULT 1.00,
             price_min DECIMAL(12,2) NOT NULL DEFAULT 0, price_max DECIMAL(12,2) NOT NULL DEFAULT 0,
+            hardness DECIMAL(4,2) NOT NULL DEFAULT 1.00,
             updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     } catch (\Throwable) { return; }
     $fe = function_exists('home_cms_config') ? (home_cms_config($pdo)['fishing_engine'] ?? []) : [];
@@ -101,7 +128,7 @@ function fishing_species(PDO $pdo): array {
     $out = [];
     foreach ($pdo->query("SELECT * FROM fishing_species")->fetchAll(PDO::FETCH_ASSOC) as $r) $out[$r['badge']] = $r;
     $sorted = [];
-    foreach (FISHING_BADGES as $b) if (isset($out[$b])) $sorted[$b] = $out[$b];
+    foreach (FISHING_ALL_BADGES as $b) if (isset($out[$b])) $sorted[$b] = $out[$b];
     return $sorted;
 }
 
@@ -110,6 +137,21 @@ function fishing_species_price(array $sp, float $weight): float {
     $wMin = (float)$sp['weight_min']; $wMax = (float)$sp['weight_max'];
     $t = $wMax > $wMin ? max(0.0, min(1.0, ($weight - $wMin) / ($wMax - $wMin))) : 1.0;
     return round((float)$sp['price_min'] + $t * ((float)$sp['price_max'] - (float)$sp['price_min']));
+}
+
+/** Nilai dasar tarik-ulur (kesulitan 1.0): [kekuatan tarikan, jarak awal meter]. */
+const FISHING_FIGHT_BASE = ['biasa' => [0.5, 12], 'bagus' => [0.62, 14], 'langka' => [0.75, 17], 'super' => [0.9, 22], 'jackpot' => [0.85, 22], 'zonk' => [0.4, 10]];
+
+/** Parameter tarik-ulur per jenis = nilai dasar × kesulitan jenis × skala kesulitan global. */
+function fishing_fight_params(PDO $pdo, ?array $species = null): array {
+    $species = $species ?? fishing_species($pdo);
+    $global = max(0.3, min(3.0, (float)(home_cms_config($pdo)['fishing_engine']['fight_hardness'] ?? 1)));
+    $out = [];
+    foreach (FISHING_FIGHT_BASE as $b => [$pull, $dist]) {
+        $h = max(0.3, min(3.0, (float)($species[$b]['hardness'] ?? 1) * $global));
+        $out[$b] = ['hardness' => round($h, 3), 'pull' => round($pull * $h, 3), 'dist' => (int)round($dist * (0.6 + 0.4 * $h))];
+    }
+    return $out;
 }
 
 /** Undi hasil tangkapan sesuai peluang & rentang di tabel fishing_species. */
@@ -121,6 +163,14 @@ function fishing_roll_catch(PDO $pdo): array {
     $pick = array_key_last($species);
     foreach ($species as $b => $s) { $roll -= (float)$s['chance']; if ($roll <= 0) { $pick = $b; break; } }
     $sp = $species[$pick];
+    if ($pick === FISHING_ZONK) { // undi jenis sampah
+        $junk = array_rand(FISHING_JUNK);
+        [$jName, $jMin, $jMax] = FISHING_JUNK[$junk];
+        return [
+            'name' => $jName, 'icon' => 'junk:' . $junk, 'rarity' => FISHING_RARITY[$pick], 'badge' => $pick, 'junk' => $junk,
+            'color' => FISHING_COLOR[$pick], 'weight' => max(0.01, round(mt_rand((int)round($jMin * 100), (int)round($jMax * 100)) / 100, 2)), 'reward' => 0.0,
+        ];
+    }
     $weight = round(mt_rand((int)round((float)$sp['weight_min'] * 100), (int)round((float)$sp['weight_max'] * 100)) / 100, 2);
     return [
         'name' => $sp['name'], 'icon' => FISHING_ICON[$pick], 'rarity' => FISHING_RARITY[$pick], 'badge' => $pick,
@@ -131,7 +181,7 @@ function fishing_roll_catch(PDO $pdo): array {
 /** Rarity di database (Common, Uncommon, ...) → badge (biasa, bagus, ...) */
 function fishing_badge_of(string $rarity): string {
     return [
-        'common' => 'biasa', 'uncommon' => 'bagus', 'rare' => 'langka', 'epic' => 'super', 'jackpot' => 'jackpot',
+        'common' => 'biasa', 'uncommon' => 'bagus', 'rare' => 'langka', 'epic' => 'super', 'jackpot' => 'jackpot', 'junk' => 'zonk',
     ][strtolower($rarity)] ?? 'biasa';
 }
 
@@ -293,7 +343,7 @@ function fishing_rod_state(PDO $pdo, array $user, array $skins): array {
     try {
         foreach ($pdo->query("SELECT name, sort_order FROM memberships WHERE is_active = 1 ORDER BY sort_order ASC") as $m) $tierNames[(int)$m['sort_order']] = (string)$m['name'];
     } catch (\Throwable) {}
-    $s = $pdo->prepare("SELECT COUNT(*) AS c, COALESCE(SUM(UPPER(rarity) = 'JACKPOT'), 0) AS j FROM fishing_logs WHERE user_id = ?");
+    $s = $pdo->prepare("SELECT COUNT(*) AS c, COALESCE(SUM(UPPER(rarity) = 'JACKPOT'), 0) AS j FROM fishing_logs WHERE user_id = ? AND UPPER(rarity) <> 'JUNK'");
     $s->execute([$user['id']]);
     $agg = $s->fetch(PDO::FETCH_ASSOC) ?: ['c' => 0, 'j' => 0];
     $catches = (int)$agg['c']; $jackpots = (int)$agg['j'];
@@ -341,6 +391,82 @@ function fishing_prefs_save(PDO $pdo, int $userId, array $fields): void {
     $pdo->prepare("INSERT INTO fishing_prefs (user_id, rod_skin, sound_muted, tutorial_seen) VALUES (?, ?, ?, ?)
                    ON DUPLICATE KEY UPDATE rod_skin = VALUES(rod_skin), sound_muted = VALUES(sound_muted), tutorial_seen = VALUES(tutorial_seen)")
         ->execute([$userId, $rod, $muted, substr(implode(',', $seen), 0, 120)]);
+}
+
+/* ───────────────────────── KUNCI IKAN & LEPASKAN IKAN ───────────────────────── */
+
+/** Harga & jatah gratis fitur Kunci Ikan (Console › Fish System › Pengaturan). */
+function fishing_lock_cfg(PDO $pdo): array {
+    $fe = home_cms_config($pdo)['fishing_engine'] ?? [];
+    return ['price' => max(0, (float)($fe['lock_price'] ?? 2000)), 'free' => max(0, (int)($fe['lock_free_trials'] ?? 2))];
+}
+
+function fishing_lock_free_left(PDO $pdo, int $userId): int {
+    $s = $pdo->prepare("SELECT COUNT(*) FROM fishing_lock_uses WHERE user_id = ? AND is_free = 1");
+    $s->execute([$userId]);
+    return max(0, fishing_lock_cfg($pdo)['free'] - (int)$s->fetchColumn());
+}
+
+/** Tangkapan yang sedang ditarik: milik user, belum dijual, dilempar maksimal 15 menit lalu. */
+function fishing_active_catch(PDO $pdo, int $userId, int $logId, bool $forUpdate = false): ?array {
+    $s = $pdo->prepare("SELECT * FROM fishing_logs WHERE id = ? AND user_id = ? AND (sold_at IS NULL OR UPPER(rarity) = 'JUNK')
+                        AND created_at >= NOW() - INTERVAL 15 MINUTE" . ($forUpdate ? " FOR UPDATE" : ""));
+    $s->execute([$logId, $userId]);
+    return $s->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+/** Kunci ikan: pakai jatah gratis dulu, selebihnya potong Saldo Beli. */
+function fishing_lock(PDO $pdo, int $userId, int $logId): array {
+    $cfg = fishing_lock_cfg($pdo);
+    try {
+        $pdo->beginTransaction();
+        if (!fishing_active_catch($pdo, $userId, $logId, true)) { $pdo->rollBack(); return ['ok' => false, 'msg' => 'Tidak ada ikan yang sedang ditarik.']; }
+        $s = $pdo->prepare("SELECT 1 FROM fishing_lock_uses WHERE log_id = ?");
+        $s->execute([$logId]);
+        if ($s->fetchColumn()) { $pdo->rollBack(); return ['ok' => true, 'already' => true, 'msg' => 'Ikan sudah terkunci.']; }
+        $s = $pdo->prepare("SELECT balance_dep FROM users WHERE id = ? FOR UPDATE");
+        $s->execute([$userId]);
+        $dep = (float)$s->fetchColumn();
+        $s = $pdo->prepare("SELECT COUNT(*) FROM fishing_lock_uses WHERE user_id = ? AND is_free = 1");
+        $s->execute([$userId]);
+        $freeLeft = max(0, $cfg['free'] - (int)$s->fetchColumn());
+        $isFree = $freeLeft > 0 || $cfg['price'] <= 0;
+        $price = $isFree ? 0.0 : $cfg['price'];
+        if (!$isFree && $dep < $price) {
+            $pdo->rollBack();
+            return ['ok' => false, 'need_deposit' => true, 'msg' => 'Saldo Beli kurang untuk Kunci Ikan (' . format_rp($price) . '). Top Up dulu yuk!'];
+        }
+        if ($price > 0) $pdo->prepare("UPDATE users SET balance_dep = balance_dep - ? WHERE id = ?")->execute([$price, $userId]);
+        $pdo->prepare("INSERT INTO fishing_lock_uses (user_id, log_id, is_free, price) VALUES (?, ?, ?, ?)")
+            ->execute([$userId, $logId, $isFree && $freeLeft > 0 ? 1 : 0, $price]);
+        $pdo->commit();
+        $left = $isFree && $freeLeft > 0 ? $freeLeft - 1 : $freeLeft;
+        return ['ok' => true, 'free' => $isFree, 'free_left' => $left, 'balance_dep' => format_rp($dep - $price),
+                'msg' => $isFree ? 'Ikan terkunci! (uji coba gratis, sisa ' . $left . 'x)' : 'Ikan terkunci! Saldo Beli -' . format_rp($price)];
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        return ['ok' => false, 'msg' => 'Gagal mengunci ikan.'];
+    }
+}
+
+/** Lepaskan ikan (menyerah): pindahkan dari Ember ke catatan fishing_released. Umpan tidak dikembalikan. */
+function fishing_release(PDO $pdo, int $userId, int $logId): array {
+    try {
+        $pdo->beginTransaction();
+        $row = fishing_active_catch($pdo, $userId, $logId, true);
+        if (!$row) { $pdo->rollBack(); return ['ok' => false, 'msg' => 'Ikan ini tidak bisa dilepas.']; }
+        $s = $pdo->prepare("SELECT 1 FROM fishing_lock_uses WHERE log_id = ?");
+        $s->execute([$logId]);
+        $locked = (bool)$s->fetchColumn();
+        $pdo->prepare("INSERT INTO fishing_released (user_id, log_id, fish_name, rarity, weight_kg, reward, was_locked, caught_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+            ->execute([$userId, $logId, $row['fish_name'], $row['rarity'], $row['weight_kg'], $row['reward'], $locked ? 1 : 0, $row['created_at']]);
+        $pdo->prepare("DELETE FROM fishing_logs WHERE id = ? AND (sold_at IS NULL OR UPPER(rarity) = 'JUNK')")->execute([$logId]);
+        $pdo->commit();
+        return ['ok' => true, 'msg' => 'Ikan dilepas kembali ke laut.'];
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        return ['ok' => false, 'msg' => 'Gagal melepas ikan.'];
+    }
 }
 
 /* ───────────────────────── AUDIT ADMIN ───────────────────────── */

@@ -5,6 +5,7 @@ require_once dirname(__DIR__) . '/auth/guard.php';
 $cms_cfg = home_cms_config($pdo);
 $fishing_cfg = $cms_cfg['fishing_engine'] ?? [];
 $is_fishing_enabled = !empty($fishing_cfg['enabled']);
+$ember_3d = !array_key_exists('ember_3d', $fishing_cfg) || !empty($fishing_cfg['ember_3d']); // karusel 3D di Ember (Console › Fish System › Pengaturan)
 
 if (!$is_fishing_enabled) {
     $_SESSION['flash_home_err'] = '⚠️ Fitur Pemancingan Cuan sedang dinonaktifkan sementara oleh Administrator.';
@@ -86,9 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE users SET fishing_baits = ? WHERE id = ?")->execute([$new_baits, $user['id']]);
 
             // Insert into fishing_logs
+            // Zonk (sampah) langsung tercatat "dibuang": tidak bernilai & tidak pernah masuk Ember
+            $isZonk = $fish['badge'] === FISHING_ZONK;
             $logIns = $pdo->prepare("
-                INSERT INTO fishing_logs (user_id, fish_name, fish_icon, rarity, weight_kg, reward)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO fishing_logs (user_id, fish_name, fish_icon, rarity, weight_kg, reward, sold_at, sold_price)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $logIns->execute([
                 $user['id'],
@@ -96,14 +99,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $fish['icon'],
                 $fish['rarity'],
                 $fish['weight'],
-                $fish['reward']
+                $fish['reward'],
+                $isZonk ? date('Y-m-d H:i:s') : null,
+                $isZonk ? 0 : null,
             ]);
 
             $logId = (int)$pdo->lastInsertId();
             $pdo->commit();
 
             $market = fishing_market_today($pdo);
-            $price  = fishing_sell_price((float)$fish['reward'], $fish['badge'], $market);
+            $price  = $isZonk ? 0.0 : fishing_sell_price((float)$fish['reward'], $fish['badge'], $market);
 
             echo json_encode([
                 'ok'             => true,
@@ -113,6 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'price'          => $price,
                 'price_rp'       => format_rp($price),
                 'market_trend'   => $market[$fish['badge']]['trend'] ?? 'flat',
+                'is_zonk'        => $isZonk,
             ]);
             exit;
 
@@ -170,6 +176,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // 7. KUNCI IKAN (berbayar, uji coba gratis) & 8. LEPASKAN IKAN (menyerah)
+    if ($action === 'lock_fish' || $action === 'release_fish') {
+        if (!csrf_verify()) { echo json_encode(['ok' => false, 'msg' => 'Sesi keamanan kedaluwarsa. Silakan refresh halaman!']); exit; }
+        $logId = (int)($_POST['log_id'] ?? 0);
+        echo json_encode($action === 'lock_fish' ? fishing_lock($pdo, (int)$user['id'], $logId) : fishing_release($pdo, (int)$user['id'], $logId));
+        exit;
+    }
+
     echo json_encode(['ok' => false, 'msg' => 'Aksi tidak dikenal.']);
     exit;
 }
@@ -178,6 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // DATA UNTUK TAMPILAN
 // ─────────────────────────────────────────────────────────────
 $market = fishing_market_today($pdo);
+$lock_cfg = fishing_lock_cfg($pdo);
 $todayCatches = fishing_unsold($pdo, (int)$user['id'], 40);
 $todayCatchesTotal = 0.0; // nilai Ember dengan harga pasar hari ini
 foreach ($todayCatches as $tc) {
@@ -490,6 +505,18 @@ button { font-family: inherit; }
 }
 .btn-reel.held { background: linear-gradient(145deg, #a7f3d0 0%, #34d399 45%, #059669 100%); }
 .btn-reel.locked { filter: grayscale(0.7) brightness(0.85); }
+.ft-tools { display: flex; gap: 6px; margin-bottom: 8px; }
+.ft-tool { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; padding: 6px 9px; border: 2px solid rgba(255, 255, 255, 0.85); border-radius: 14px; cursor: pointer; color: #fff; text-align: left; }
+.ft-tool i { font-size: 18px; flex: 0 0 auto; }
+.ft-tool span { display: flex; flex-direction: column; min-width: 0; line-height: 1.1; }
+.ft-tool b { font-size: 11px; font-weight: 900; white-space: nowrap; }
+.ft-tool small { font-size: 9px; font-weight: 800; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ft-tool--lock { background: linear-gradient(145deg, #c4b5fd, #7c3aed); box-shadow: 0 5px 12px rgba(124, 58, 237, 0.35), inset 2px 2px 3px rgba(255, 255, 255, 0.4); }
+.ft-tool--release { flex: 0 0 auto; background: linear-gradient(145deg, #94a3b8, #475569); box-shadow: 0 5px 12px rgba(71, 85, 105, 0.3), inset 2px 2px 3px rgba(255, 255, 255, 0.35); }
+.ft-tool:disabled { opacity: 0.6; cursor: default; }
+.ft-tool--lock.on { opacity: 1; background: linear-gradient(145deg, #fde68a, #d97706); animation: lockPulse 1.6s ease-in-out infinite; }
+@keyframes lockPulse { 50% { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.35), inset 2px 2px 3px rgba(255, 255, 255, 0.4); } }
+.fight-card.is-locked .ft-dist-fill { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
 
 /* ── LOADER ── */
 .mc-loader {
@@ -614,11 +641,15 @@ button { font-family: inherit; }
   -webkit-backdrop-filter: blur(8px);
 }
 .mc-modal.open { display: flex; }
+.mc-modal-card::-webkit-scrollbar, .mc-modal-card *::-webkit-scrollbar { display: none; }
+.mc-modal-card * { scrollbar-width: none; }
 .mc-modal-card {
   width: 100%;
   max-width: 380px;
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   border: 2px solid #ffffff;
   border-radius: 26px;
   background: var(--reef-card);
@@ -655,6 +686,9 @@ button { font-family: inherit; }
 .rb-langka  { background: linear-gradient(145deg, #fda4af, #e11d48); }
 .rb-super   { background: linear-gradient(145deg, #c084fc, #7c3aed); }
 .rb-jackpot { background: linear-gradient(145deg, #fef08a, #f59e0b 50%, #d97706); color: #78350f; }
+.rb-zonk    { background: linear-gradient(145deg, #a8a29e, #57534e); }
+.show-stage.is-zonk { filter: saturate(0.55); }
+.btn-save.is-zonk { background: linear-gradient(145deg, #a8a29e, #57534e); box-shadow: 0 8px 18px rgba(68, 64, 60, 0.35), inset 2.5px 2.5px 4px rgba(255, 255, 255, 0.4), inset -3px -3px 6px rgba(28, 25, 23, 0.3); }
 
 /* Showcase */
 .show-stage, .inv-stage {
@@ -746,7 +780,7 @@ button { font-family: inherit; }
 }
 
 /* Ember Cuan (inventory 3D) */
-.inv-stage { height: 250px; background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.9) 0, rgba(255, 255, 255, 0) 55%), linear-gradient(180deg, #a5f3fc 0%, #22d3ee 45%, #0e7490 100%); }
+.inv-stage { height: clamp(150px, 25dvh, 240px); background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.9) 0, rgba(255, 255, 255, 0) 55%), linear-gradient(180deg, #a5f3fc 0%, #22d3ee 45%, #0e7490 100%); }
 .inv-nav {
   position: absolute;
   top: 50%;
@@ -1042,10 +1076,29 @@ button { font-family: inherit; }
 .rt-biasa { --rt: #cffafe; } .rt-bagus { --rt: #d1fae5; } .rt-langka { --rt: #ffe4e6; } .rt-super { --rt: #ede9fe; } .rt-jackpot { --rt: #fef3c7; }
 .fish-tools { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; font-size: 11px; font-weight: 900; color: var(--reef-muted); }
 .fish-tools button { border: none; background: #fff; border-radius: 999px; padding: 5px 11px; font-size: 10.5px; font-weight: 900; color: #0e7490; cursor: pointer; box-shadow: inset -1px -1px 3px rgba(8, 145, 178, 0.15); }
-.fish-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; max-height: 300px; overflow-y: auto; padding: 2px; }
-.fish-tile { position: relative; aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 4px; border: 2px solid transparent; border-radius: 15px; background: #fff; cursor: pointer; box-shadow: inset -2px -2px 4px rgba(251, 146, 60, 0.1); }
-.fish-tile .ft-thumb { width: 100%; height: 46px; margin-top: 8px; background: radial-gradient(ellipse at 50% 60%, var(--rt, #e0f2fe) 0%, rgba(255,255,255,0) 70%); }
-.fish-tile .ft-thumb img { height: 50px; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 4px rgba(30, 27, 46, 0.22)); }
+.fish-grid { --ft-h: 104px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: var(--ft-h); gap: 7px; padding: 2px; touch-action: pan-y; }
+.fish-tools .fish-pager { display: inline-flex; align-items: center; gap: 4px; }
+.fish-tools .fish-pager button { width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+.fish-tools .fish-pager button:disabled { opacity: 0.35; }
+.fish-tools .fish-pager span { min-width: 34px; text-align: center; font-size: 10.5px; color: #0e7490; }
+#mc-inv.no-stage .inv-stage, #mc-inv.no-stage .show-info { display: none; }
+/* Layar pendek: ringkas agar Ember tetap muat tanpa scroll */
+@media (max-height: 760px) {
+  #mc-inv .inv-stage { height: clamp(110px, 18dvh, 200px); }
+  #mc-inv .show-info { padding-top: 7px; }
+  #mc-inv .show-name { font-size: 15px; }
+  #mc-inv .show-latin { margin-bottom: 6px; }
+  #mc-inv .mk-thumb { display: none; }
+  #mc-inv .mk-board { margin-bottom: 6px; }
+  #mc-inv:not(.no-stage) .fish-grid { --ft-h: 94px; }
+  #mc-inv:not(.no-stage) .fish-tile .ft-thumb { height: 32px; margin-top: 10px; overflow: hidden; }
+  #mc-inv:not(.no-stage) .fish-tile .ft-thumb img { height: 32px; }
+  #mc-inv .sell-bar { margin-top: 6px; }
+  #mc-inv .sell-wallet { margin-top: 3px; }
+}
+.fish-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 4px; border: 2px solid transparent; border-radius: 15px; background: #fff; cursor: pointer; box-shadow: inset -2px -2px 4px rgba(251, 146, 60, 0.1); }
+.fish-tile .ft-thumb { width: 100%; height: 40px; margin-top: 8px; background: radial-gradient(ellipse at 50% 60%, var(--rt, #e0f2fe) 0%, rgba(255,255,255,0) 70%); }
+.fish-tile .ft-thumb img { height: 44px; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 4px rgba(30, 27, 46, 0.22)); }
 .fish-tile .ft-name { font-size: 9.5px; font-weight: 900; line-height: 1.1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .fish-tile .ft-w { font-size: 8.5px; font-weight: 800; color: var(--reef-muted); }
 .fish-tile .ft-p { font-size: 10px; font-weight: 900; color: #059669; }
@@ -1214,6 +1267,10 @@ button { font-family: inherit; }
           <div class="ft-ten-fill" id="ft-ten-fill"></div>
           <div class="ft-needle" id="ft-needle"></div>
         </div>
+        <div class="ft-tools">
+          <button type="button" class="ft-tool ft-tool--lock" id="btn-lock"><i class="ph-fill ph-lock-simple"></i><span><b>Kunci Ikan</b><small id="lock-cost">Gratis</small></span></button>
+          <button type="button" class="ft-tool ft-tool--release" id="btn-release"><i class="ph-fill ph-flag"></i><span><b>Lepaskan</b><small>Menyerah</small></span></button>
+        </div>
         <button type="button" class="btn-hold btn-reel" id="btn-reel">
           <i class="ph-bold ph-arrows-clockwise"></i> <span>Tahan untuk Gulung</span>
         </button>
@@ -1237,14 +1294,14 @@ button { font-family: inherit; }
         <div class="show-stat"><small>Berat Tangkapan</small><b id="show-weight">0.00 Kg</b></div>
         <div class="show-stat show-stat--rp"><small>Harga Pasar Hari Ini</small><b id="show-reward">Rp 0</b></div>
       </div>
-      <div class="show-note">Ikan masuk Ember. Jual di Pasar Ikan (tombol Ember) untuk mencairkannya jadi Saldo Tarik.</div>
+      <div class="show-note" id="show-note">Ikan masuk Ember. Jual di Pasar Ikan (tombol Ember) untuk mencairkannya jadi Saldo Tarik.</div>
       <button type="button" class="btn-save" id="btn-save"><i class="ph-fill ph-basket"></i> Simpan ke Ember Cuan</button>
     </div>
   </div>
 </div>
 
 <!-- ══════════ EMBER CUAN (INVENTORY 3D) ══════════ -->
-<div class="mc-modal" id="mc-inv" role="dialog" aria-modal="true" aria-labelledby="inv-title">
+<div class="mc-modal<?= $ember_3d ? '' : ' no-stage' ?>" id="mc-inv" role="dialog" aria-modal="true" aria-labelledby="inv-title">
   <div class="mc-modal-card">
     <div class="modal-head">
       <div class="modal-title" id="inv-title"><span class="m-ico m-ico--gold"><i class="ph-fill ph-basket"></i></span> Ember &amp; Pasar Ikan</div>
@@ -1265,7 +1322,15 @@ button { font-family: inherit; }
     </div>
     <div class="mk-head"><span><i class="ph-fill ph-scales"></i> Harga Pasar Hari Ini</span><small>dibanding kemarin</small></div>
     <div class="mk-board" id="mk-board"></div>
-    <div class="fish-tools"><span id="fish-count-lbl">0 ikan di Ember</span><button type="button" id="btn-sel-all">Pilih Semua</button></div>
+    <div class="fish-tools">
+      <span id="fish-count-lbl">0 ikan di Ember</span>
+      <span class="fish-pager" id="fish-pager">
+        <button type="button" id="fish-pg-prev" aria-label="Halaman sebelumnya"><i class="ph-bold ph-caret-left"></i></button>
+        <span id="fish-pg-lbl">1/1</span>
+        <button type="button" id="fish-pg-next" aria-label="Halaman berikutnya"><i class="ph-bold ph-caret-right"></i></button>
+      </span>
+      <button type="button" id="btn-sel-all">Pilih Semua</button>
+    </div>
     <div class="fish-grid" id="fish-grid"></div>
     <div class="sell-bar">
       <div class="sell-sum"><small id="sell-sel-lbl">0 dipilih</small><b id="sell-total">Rp 0</b></div>
@@ -1364,6 +1429,7 @@ window.MANCING_CFG = {
   endpoint: '/minigame',
   csrf: <?= json_encode(csrf_token()) ?>,
   baits: <?= (int)($user['fishing_baits'] ?? 0) ?>,
+  ember3d: <?= $ember_3d ? 'true' : 'false' ?>,
   todayTotal: <?= json_encode((float)$todayCatchesTotal) ?>,
   catches: <?= json_encode($inv_catches, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>,
   rods: <?= json_encode($rod_state['rods'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>,
@@ -1371,11 +1437,15 @@ window.MANCING_CFG = {
   market: <?= json_encode($market) ?>,
   packs: <?= json_encode($bait_packs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>,
   balanceDep: <?= json_encode(format_rp((float)($user['balance_dep'] ?? 0))) ?>,
+  fight: <?= json_encode(fishing_fight_params($pdo)) ?>,
+  lock: <?= json_encode(['price' => $lock_cfg['price'], 'priceRp' => format_rp($lock_cfg['price']), 'freeLeft' => fishing_lock_free_left($pdo, (int)$user['id'])]) ?>,
   balanceWd: <?= json_encode(format_rp((float)($user['balance_wd'] ?? 0))) ?>,
   prefs: <?= json_encode($prefs) ?>,
   splash: { small: ['/assets/audio/splash/small-1.ogg', '/assets/audio/splash/small-3.ogg', '/assets/audio/splash/small-6.ogg'], big: ['/assets/audio/splash/big-1.ogg', '/assets/audio/splash/big-3.ogg'] },
   ambience: <?= json_encode($ambience_url) ?>,
-  three: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+  three: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+  gltf: 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js',
+  junk: <?= json_encode(['boot' => '/assets/models/junk/rubber-boot.glb', 'bottle' => '/assets/models/junk/plastic-bottle.glb', 'can' => '/assets/models/junk/soda-can-crushed.glb', 'cup' => '/assets/models/junk/plastic-cup.glb', 'trashbag' => '/assets/models/junk/trash-bag.glb']) ?> // kresek ('bag') memakai model trashbag
 };
 </script>
 
@@ -1397,7 +1467,7 @@ const {
   U_KNOTS, BADGES, BADGE_LABEL, BADGE_SPECIES, SPECIES, snoutX, SNOUT_TIP, profile,
   TexCache, canvasTex, dotTexture, scaleTexture, shadeFinGeometry, finMaterial, shapeFrom,
   buildFish, buildChest, buildModel, disposeTree,
-  WAVES, waveH, waveGrad, GLSL_WAVES, Thumbs, fishThumb
+  WAVES, waveH, waveGrad, GLSL_WAVES, Thumbs, fishThumb, JunkLib
 } = window.Bahari; // modul bersama: /assets/js/bahari-core.js
 
 /* ───────────────────────── API BACKEND & HOOKS ─────────────────────────
@@ -2337,7 +2407,7 @@ function createWorld(G) {
   function setCatch(spKey, weight) {
     clearCatch();
     catchModel = buildModel(spKey, false);
-    const s = spKey === 'chest' ? 0.75 : clamp(0.35 + weight * 0.065, 0.38, 1.0);
+    const s = spKey === 'chest' ? 0.75 : (catchModel.isJunk ? 0.8 : clamp(0.35 + weight * 0.065, 0.38, 1.0));
     catchModel.group.scale.setScalar(s);
     catchModel.group.rotation.order = 'YZX';
     catchModel.group.visible = false;
@@ -2621,7 +2691,8 @@ const Showcase = (() => {
    mengelilingi keranjang anyaman bambu. Geser / tombol panah untuk memilih. */
 const Inventory = (() => {
   const items = (CFG.catches || []).slice();
-  let renderer = null, scene = null, cam = null, ring = null, ok = HAS_GL, dirty = true, isOpen = false;
+  // Karusel 3D bisa dimatikan admin: kanvas tidak dibuat sama sekali agar hemat GPU
+  let renderer = null, scene = null, cam = null, ring = null, ok = HAS_GL && CFG.ember3d !== false, dirty = true, isOpen = false;
   let entries = [], idx = 0, rot = 0, targetRot = 0, drag = null;
 
   function buildBasket() {
@@ -2723,12 +2794,28 @@ const Inventory = (() => {
       board.appendChild(cell);
     });
   }
+  // Grid dibagi per halaman supaya modal tidak perlu scrollbar
+  const PER_PAGE = CFG.ember3d === false ? 9 : 6;
+  let page = 0;
+  function pageCount() { return Math.max(1, Math.ceil(items.length / PER_PAGE)); }
+  function goPage(d) {
+    const n = Math.max(0, Math.min(pageCount() - 1, page + d));
+    if (n === page) return;
+    page = n; Sfx.tick(); renderGrid();
+  }
   function renderGrid() {
     const grid = $('fish-grid'); grid.innerHTML = '';
     $('fish-count-lbl').textContent = items.length + ' ikan di Ember';
     $('btn-sel-all').style.display = items.length ? '' : 'none';
+    page = Math.min(page, pageCount() - 1);
+    $('fish-pager').style.display = pageCount() > 1 ? '' : 'none';
+    $('fish-pg-lbl').textContent = (page + 1) + '/' + pageCount();
+    $('fish-pg-prev').disabled = page === 0;
+    $('fish-pg-next').disabled = page >= pageCount() - 1;
+    grid.style.gridTemplateRows = 'repeat(' + Math.max(1, Math.ceil(Math.min(PER_PAGE, items.length || 1) / 3)) + ', var(--ft-h))';
     if (!items.length) grid.innerHTML = '<div class="fish-empty">Ember kosong. Lempar kail dulu, lalu jual hasilnya di sini!</div>';
     items.forEach((f, i) => {
+      if (i < page * PER_PAGE || i >= (page + 1) * PER_PAGE) return;
       const t = document.createElement('button'); t.type = 'button';
       t.className = 'fish-tile' + (sel.has(f.id) ? ' sel' : ''); t.dataset.id = f.id;
       const th = fishThumb(f.badge);
@@ -2760,7 +2847,8 @@ const Inventory = (() => {
   function sell() {
     if (!sel.size || busy) return;
     busy = true; syncSell();
-    const ids = Array.from(sel);
+    const ids = Array.from(sel).filter((id) => Number.isInteger(id) && id > 0);
+    if (!ids.length) { sel.clear(); renderGrid(); toast('Pilih ikan yang ingin dijual dulu ya.', 'warn'); return; }
     MancingAPI.post('sell_fish', { ids: ids.join(',') }).then((res) => {
       if (!res.ok) { toast(res.msg, 'error'); return; }
       const sold = res.sold_ids || [];
@@ -2807,7 +2895,10 @@ const Inventory = (() => {
   }
   return {
     get isOpen() { return isOpen; },
-    add(it) { items.unshift(it); dirty = true; },
+    add(it) {
+      if (!(it.id > 0) || items.some((x) => x.id === it.id)) return; // abaikan data tanpa ID / ganda
+      items.unshift(it); dirty = true;
+    },
     count() { return items.length; },
     open() {
       isOpen = true;
@@ -2826,6 +2917,7 @@ const Inventory = (() => {
     prev() { select(idx - 1); },
     sell,
     toggleAll,
+    goPage,
     next() { select(idx + 1); },
     frame(dt, t) {
       if (!renderer) return;
@@ -3016,8 +3108,11 @@ const Help = (() => {
         'Selama menggulung, <b>tegangan senar naik</b>. Hijau aman, kuning waspada, merah bahaya.',
         '<b>Lepas tombol</b> saat jarum masuk zona merah. Tegangan turun, tapi ikan menjauh pelan-pelan.',
         'Saat muncul <b>"Ikan berontak!"</b>, tegangan melonjak cepat. Sebaiknya lepas sebentar.',
-        'Tegangan <b>100%</b> = senar hampir putus: ikan kabur 4 m dan gulungan terkunci 0,7 detik.',
-        'Jarak 0 m → ikan melompat keluar air. Tangkapan berhasil!'
+        'Tegangan <b>100%</b> = senar hampir putus: ikan kabur 4 m dan gulungan terkunci 1 detik.',
+        '<b>Kunci Ikan</b> membuat ikan tidak bisa menjauh sampai tertangkap. Ada uji coba gratis, selebihnya pakai Saldo Beli.',
+        'Menyerah? Tekan <b>Lepaskan</b> untuk melepas ikan kembali ke laut.',
+        'Jarak 0 m → ikan melompat keluar air. Tangkapan berhasil!',
+        'Hati-hati, kadang yang nyangkut cuma <b>sampah (Zonk)</b>: tidak bernilai dan langsung dibuang.'
       ], tip: rodLine('reel')
     };
     if (ph === 'result') return {
@@ -3144,7 +3239,7 @@ const G = {
   bob: { mode: 'hang', x: 0, z: -10, fx: 0, fy: 0, fz: 0, flyT: 0, arc: 2, dip: 0 },
   res: null, castDone: false, sweet: false, timers: [], rodBend: 0,
   fight: { dist: 0, D0: 20, tension: 0, x: 0, tx: 0, surge: 0, surgeCd: 1.5, reelLock: 0, leap: 0, leapDur: 0.8, leapDx: 0.5, pull: 1, redT: 0, buzzT: 0, tickT: 0 },
-  land: { s: 0, x0: 0, z0: -4 }, slowmo: false, reeling: false, rarityIdx: 0,
+  land: { s: 0, x0: 0, z0: -4 }, slowmo: false, reeling: false, rarityIdx: 0, badge: 'biasa',
   rodKey: 'bambu', rodBonus: { reel: 0, bite: 0 }, paused: false
 };
 const World = HAS_GL ? (() => { try { return createWorld(G); } catch (e) { console.error(e); return null; } })() || createNullWorld() : createNullWorld();
@@ -3243,9 +3338,11 @@ function doCast(power) {
     if (!res || !res.ok) { castFailed(res || {}); return; }
     G.res = res;
     UI.baits(res.remaining_baits);
-    const badge = BADGES.indexOf(res.fish.badge) >= 0 ? res.fish.badge : 'biasa';
+    const badge = BADGE_SPECIES[res.fish.badge] ? res.fish.badge : 'biasa'; // termasuk 'zonk' (sampah)
+    G.badge = badge;
     G.rarityIdx = BADGES.indexOf(badge);
-    World.setCatch(BADGE_SPECIES[badge], Number(res.fish.weight) || 1);
+    G.catchKey = badge === 'zonk' ? 'junk:' + (res.fish.junk || 'boot') : BADGE_SPECIES[badge];
+    World.setCatch(G.catchKey, Number(res.fish.weight) || 1);
     emit('onCast', res);
   }).catch(() => castFailed({ msg: 'Kendala jaringan saat melempar kail. Coba lagi ya.' }));
 }
@@ -3323,15 +3420,70 @@ function hookMissed() {
   scheduleBite(true);
 }
 
+/* Kunci Ikan (berbayar, uji coba gratis) & Lepaskan Ikan (menyerah), divalidasi server */
+const Fight = (() => {
+  const L = CFG.lock || { price: 0, priceRp: '', freeLeft: 0 };
+  function label() {
+    const F = G.fight;
+    $('btn-lock').classList.toggle('on', !!F.locked);
+    $('btn-lock').disabled = !!F.locked || !!F.lockBusy;
+    $('lock-cost').textContent = F.locked ? 'Ikan terkunci' : (L.freeLeft > 0 ? 'Gratis · sisa ' + L.freeLeft + 'x' : (L.price > 0 ? L.priceRp : 'Gratis'));
+    document.querySelector('#pnl-fight .fight-card').classList.toggle('is-locked', !!F.locked);
+  }
+  function lock() {
+    const F = G.fight;
+    if (G.state !== 'fighting' || F.locked || F.lockBusy || !G.res) return;
+    F.lockBusy = true; label();
+    MancingAPI.post('lock_fish', { log_id: G.res.log_id }).then((res) => {
+      if (!res.ok) {
+        if (res.need_deposit) MancingUI.ask({ title: 'Saldo Beli Kurang', msg: res.msg, icon: 'ph-lock-simple', yes: 'Top Up Sekarang', yesIcon: 'ph-plus-circle', href: '/deposit' });
+        else toast(res.msg, 'error');
+        return;
+      }
+      if (G.state !== 'fighting') return;
+      F.locked = true;
+      if (typeof res.free_left === 'number') L.freeLeft = res.free_left;
+      if (res.balance_dep) { CFG.balanceDep = res.balance_dep; const d = $('shop-dep'); if (d) d.textContent = res.balance_dep; }
+      Sfx.coin(); Haptic.buzz([20, 40, 20]);
+      UI.msg('Ikan terkunci! Sekarang ikan tidak bisa menjauh, gulung pelan-pelan.', 'good');
+      if (!res.already) toast(res.msg, 'success');
+    }).catch(() => toast('Gagal mengunci ikan. Coba lagi.', 'error'))
+      .finally(() => { F.lockBusy = false; label(); });
+  }
+  function release() {
+    if (G.state !== 'fighting' || !G.res) return;
+    MancingUI.ask({
+      title: 'Lepaskan Ikan?', icon: 'ph-flag', yes: 'Ya, Lepaskan', yesIcon: 'ph-flag', no: 'Lanjut Tarik',
+      msg: 'Ikan akan dilepas kembali ke laut dan tidak masuk Ember. Umpan yang sudah dipakai tidak kembali.',
+      onYes: () => {
+        const res0 = G.res;
+        if (G.state !== 'fighting' || !res0) return;
+        MancingAPI.post('release_fish', { log_id: res0.log_id }).then((res) => {
+          if (!res.ok) { toast(res.msg, 'error'); return; }
+          const F = G.fight;
+          World.spawnSplash(F.x, 0.05, -(2.8 + F.dist * 0.75), 30, 1.3, 1.1); Sfx.splash(1.1); Haptic.buzz(40);
+          resetToIdle();
+          UI.msg('Ikan dilepas kembali ke laut. Coba lagi ya!');
+          toast(res.msg, 'info');
+        }).catch(() => toast('Gagal melepas ikan. Coba lagi.', 'error'));
+      }
+    });
+  }
+  return { reset: label, lock, release };
+})();
+
 /* Fase 3 — Tarik-menarik (tension fight) */
 function startFight() {
   clearTimers();
   const r = G.rarityIdx;
   const F = G.fight;
-  F.D0 = [14, 17, 21, 25, 28][r]; F.dist = F.D0;
-  F.pull = [0.55, 0.75, 0.95, 1.2, 1.05][r];
-  F.tension = 30; F.x = G.bob.x; F.tx = G.bob.x; F.surge = 0; F.surgeCd = 1.2;
-  F.reelLock = 0; F.leap = 0; F.redT = 0;
+  // Kesulitan per jenis ikan diatur admin (Console › Fish System › Harga & Kesulitan Ikan)
+  const fp = (CFG.fight || {})[G.badge];
+  F.D0 = fp ? fp.dist : ([12, 14, 17, 22, 22][r] || 10); F.dist = F.D0;
+  F.pull = fp ? fp.pull : ([0.5, 0.62, 0.75, 0.9, 0.85][r] || 0.4);
+  F.tension = 30; F.x = G.bob.x; F.tx = G.bob.x; F.surge = 0; F.surgeCd = 1.6;
+  F.reelLock = 0; F.leap = 0; F.redT = 0; F.locked = false; F.lockBusy = false;
+  Fight.reset();
   G.state = 'fighting'; G.bob.mode = 'hidden';
   UI.panel('fight');
   UI.strikeText('HOOKED!');
@@ -3340,15 +3492,15 @@ function startFight() {
   after(0.4, () => Help.firstTime('fight'));
 }
 function updateFight(dt) {
-  const F = G.fight, isChest = G.rarityIdx === 4;
+  const F = G.fight, isChest = G.badge === 'jackpot' || G.badge === 'zonk';
   F.surgeCd -= dt;
   if (F.surgeCd <= 0) {
     F.surge = rand(0.45, 0.9);
-    F.surgeCd = rand(1.0, 2.4) / (0.6 + F.pull * 0.5);
+    F.surgeCd = rand(1.5, 3.0) / (0.7 + F.pull * 0.4);
     const dir = Math.random() < 0.5 ? -1 : 1;
     const lim = 1 + F.dist * 0.22;
     F.tx = clamp(F.x + dir * rand(1.4, 3.2), -lim, lim);
-    UI.msg(isChest ? 'Peti tersangkut karang! Hati-hati!' : 'Ikan berontak ke ' + (dir < 0 ? 'kiri' : 'kanan') + '!', 'warn');
+    UI.msg(F.locked ? 'Ikan berontak, tapi terkunci. Tidak bisa menjauh!' : (isChest ? (G.badge === 'zonk' ? 'Senar tersangkut sesuatu yang berat...' : 'Peti tersangkut karang! Hati-hati!') : 'Ikan berontak ke ' + (dir < 0 ? 'kiri' : 'kanan') + '!'), 'warn');
     Haptic.buzz(35);
     if (!isChest && Math.random() < 0.35 && F.dist > 3) { F.leap = F.leapDur = 0.8; F.leapDx = dir * 0.6; Sfx.splash(0.9); }
     else Sfx.splash(0.5);
@@ -3365,12 +3517,12 @@ function updateFight(dt) {
 
   let dT;
   if (reeling) {
-    dT = (12 + F.pull * 10) * dt + (surging ? 26 * F.pull * dt : 0);
-    F.dist -= (2.4 - F.pull * 0.35) * (1 + G.rodBonus.reel) * (surging ? 0.45 : 1) * dt;
+    dT = (10 + F.pull * 8) * dt + (surging ? 18 * F.pull * dt : 0);
+    F.dist -= (2.6 - F.pull * 0.3) * (1 + G.rodBonus.reel) * (surging ? 0.65 : 1) * dt;
     F.tickT -= dt; if (F.tickT <= 0) { Sfx.tick(); F.tickT = 0.11; }
   } else {
-    dT = -26 * dt + (surging ? 12 * F.pull * dt : 0);
-    F.dist = Math.min(F.D0, F.dist + (surging ? 1.2 : 0.25) * F.pull * dt);
+    dT = -32 * dt + (surging ? 10 * F.pull * dt : 0);
+    if (!F.locked) F.dist = Math.min(F.D0, F.dist + (surging ? 0.9 : 0.2) * F.pull * dt); // terkunci: ikan tidak bisa menjauh
   }
   F.tension = clamp(F.tension + dT, 0, 100);
 
@@ -3380,8 +3532,10 @@ function updateFight(dt) {
   } else F.redT = 0;
 
   if (F.tension >= 100) {
-    F.tension = 48; F.dist = Math.min(F.D0, F.dist + 4); F.reelLock = 0.7;
-    UI.msg('Senar hampir putus! Ikan kabur menjauh 4 m — lepas tombol di zona merah!', 'warn');
+    // Terkunci: ikan tidak mundur & jeda gulung lebih singkat. Tidak terkunci: ikan kabur 4 m.
+    F.tension = F.locked ? 50 : 55; F.reelLock = F.locked ? 0.6 : 1.0;
+    if (!F.locked) F.dist = Math.min(F.D0, F.dist + 4);
+    UI.msg(F.locked ? 'Senar hampir putus! Ikan tetap terkunci, lepas tombol sebentar.' : 'Senar hampir putus! Ikan kabur menjauh 4 m — lepas tombol di zona merah!', 'warn');
     Haptic.buzz([200, 60, 200]); Sfx.snap(); Sfx.splash(0.8);
     World.spawnSplash(F.x, 0.05, -(2.8 + F.dist * 0.75), 26, 1.2, 1);
   }
@@ -3408,7 +3562,7 @@ function startLanding() {
   G.land.s = 0; G.land.x0 = F.x; G.land.z0 = -2.8;
   World.spawnSplash(F.x, 0.05, -2.8, 46, 1.8, 1.2);
   World.addRipple(F.x, -2.8);
-  UI.msg(G.rarityIdx === 4 ? 'Peti harta karun muncul dari dasar laut!' : 'Ikan melompat keluar air!', 'good');
+  UI.msg(G.badge === 'jackpot' ? 'Peti harta karun muncul dari dasar laut!' : (G.badge === 'zonk' ? 'Eh... kok berat tapi diam saja? Ada yang nyangkut!' : 'Ikan melompat keluar air!'), G.badge === 'zonk' ? 'warn' : 'good');
   Haptic.buzz([60, 40, 60, 40, 120]); Sfx.splash(1.6);
   emit('onLanded', G.res);
 }
@@ -3421,15 +3575,23 @@ function updateLanding(dt) {
 function openShowcase() {
   G.state = 'showcase';
   const f = G.res.fish;
-  const badge = BADGES[G.rarityIdx];
-  const spKey = BADGE_SPECIES[badge];
+  const badge = G.badge;
+  const spKey = G.catchKey || BADGE_SPECIES[badge];
+  const zonk = badge === 'zonk';
+  const JUNK_DESC = { boot: 'Sepatu bot karet bekas', bottle: 'Botol plastik sekali pakai', can: 'Kaleng minuman ringsek', bag: 'Kantong plastik kresek', cup: 'Gelas plastik bekas', trashbag: 'Kantong sampah penuh' };
+  const junkKind = zonk ? String(spKey).replace('junk:', '') : '';
   const st = $('show-stage');
   st.classList.toggle('is-jackpot', badge === 'jackpot');
+  st.classList.toggle('is-zonk', zonk);
   const b = $('show-badge'); b.className = 'show-badge rb-' + badge; b.textContent = BADGE_LABEL[badge];
   $('show-name').textContent = String(f.name || '').replace(/[^\p{L}\p{N}\s()\/.-]/gu, '').trim();
-  $('show-latin').textContent = spKey === 'chest' ? 'Relik kuno berbingkai tembaga & emas' : SPECIES[spKey].latin;
+  $('show-latin').textContent = zonk ? 'ZONK! ' + (JUNK_DESC[junkKind] || 'Sampah laut') + ', tidak bernilai' : (spKey === 'chest' ? 'Relik kuno berbingkai tembaga & emas' : SPECIES[spKey].latin);
   $('show-weight').textContent = Number(f.weight).toFixed(2) + ' Kg';
-  $('show-reward').textContent = G.res.price_rp || fmtRp(G.res.price || f.reward);
+  $('show-reward').textContent = zonk ? 'Rp 0' : (G.res.price_rp || fmtRp(G.res.price || f.reward));
+  $('show-note').textContent = zonk ? (['bottle', 'bag', 'cup'].includes(junkKind) ? 'Yah, zonk! Plastik butuh ratusan tahun untuk terurai. Buang ke tempat sampah, lalu lempar kail lagi ya.' : 'Yah, zonk! Sampah ini tidak bisa dijual. Buang dulu, lalu lempar kail lagi ya.') : 'Ikan masuk Ember. Jual di Pasar Ikan (tombol Ember) untuk mencairkannya jadi Saldo Tarik.';
+  $('btn-save').innerHTML = zonk ? '<i class="ph-fill ph-trash"></i> Buang ke Tempat Sampah' : '<i class="ph-fill ph-basket"></i> Simpan ke Ember Cuan';
+  $('btn-save').classList.toggle('is-zonk', zonk);
+  if (zonk) { Sfx.thud(); Haptic.buzz([80, 40, 80]); }
   $('btn-save').disabled = false;
   $('mc-show').classList.add('open');
   Showcase.show(spKey);
@@ -3439,11 +3601,16 @@ function saveCatch() {
   if (btn.disabled) return;
   if (!G.res) { $('mc-show').classList.remove('open'); resetToIdle(); return; }
   btn.disabled = true;
-  const res = G.res, f = res.fish, badge = BADGES[G.rarityIdx];
+  const res = G.res, f = res.fish, badge = G.badge;
+  if (badge === 'zonk') { // sampah: tidak masuk Ember
+    Sfx.pop();
+    after(0.3, () => { $('mc-show').classList.remove('open'); resetToIdle(); toast('Sampah dibuang. Laut jadi lebih bersih, coba lempar lagi!', 'info'); });
+    return;
+  }
   flyCoins(btn, $('hud-inv'), 10, () => {
     G.todayTotal += Number(res.price || f.reward) || 0;
     $('hud-cuan-val').textContent = fmtRp(G.todayTotal);
-    prependCatchRow(f, badge);
+    prependCatchRow(f, badge, res);
     emit('onSaved', { fish: f, todayTotal: G.todayTotal });
   });
   after(0.75, () => {
@@ -3486,10 +3653,11 @@ function flyCoins(fromEl, toEl, n, done) {
     };
   }
 }
-function prependCatchRow(fish, badge) {
+function prependCatchRow(fish, badge, res) {
   const now = new Date();
   Inventory.add({
-    name: fish.name, badge, weight: Number(fish.weight), reward: Number((G.res && G.res.price) || fish.reward),
+    id: Number(res && res.log_id) || 0,
+    name: fish.name, badge, weight: Number(fish.weight), reward: Number((res && res.price) || fish.reward),
     time: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
   });
   const b = $('hud-inv-count');
@@ -3600,6 +3768,7 @@ window.MancingUI = {
     const yes = $('cf-yes');
     yes.innerHTML = '<i class="ph-fill ' + (o.yesIcon || 'ph-arrow-right') + '"></i> ' + (o.yes || 'Lanjut');
     yes.href = o.href || '#';
+    yes.onclick = o.onYes ? (e) => { e.preventDefault(); MancingUI.closeAsk(); o.onYes(); } : null;
     $('cf-no').textContent = o.no || 'Nanti';
     $('mc-confirm').classList.add('open');
   },
@@ -3613,6 +3782,21 @@ $('mc-shop').addEventListener('click', (e) => { if (e.target.id === 'mc-shop') M
 $('btn-buy').addEventListener('click', () => Shop.buy());
 $('btn-sell').addEventListener('click', () => Inventory.sell());
 $('btn-sel-all').addEventListener('click', () => Inventory.toggleAll());
+$('btn-lock').addEventListener('click', () => Fight.lock());
+$('btn-release').addEventListener('click', () => Fight.release());
+$('fish-pg-prev').addEventListener('click', () => Inventory.goPage(-1));
+$('fish-pg-next').addEventListener('click', () => Inventory.goPage(1));
+(() => { // geser kiri/kanan di grid untuk ganti halaman
+  let sx = null, sy = 0;
+  const g = $('fish-grid');
+  g.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; });
+  g.addEventListener('pointerup', (e) => {
+    if (sx === null) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) Inventory.goPage(dx < 0 ? 1 : -1);
+  });
+  g.addEventListener('pointercancel', () => { sx = null; });
+})();
 $('mc-inv').addEventListener('click', (e) => { if (e.target.id === 'mc-inv') MancingUI.closeInventory(); });
 $('inv-prev').addEventListener('click', () => Inventory.prev());
 $('mc-rods').addEventListener('click', (e) => { if (e.target.id === 'mc-rods') MancingUI.closeRods(); });
@@ -3623,6 +3807,7 @@ $('inv-next').addEventListener('click', () => Inventory.next());
 UI.baits(G.baits);
 updatePowerUI();
 Sfx.useSamples(CFG.splash);
+JunkLib.load(CFG.junk); // model sampah zonk (GLB) dimuat di latar
 if (CFG.prefs && CFG.prefs.sound_muted) { Sfx.toggle(); $('hud-mute').innerHTML = '<i class="ph-fill ph-speaker-slash"></i>'; }
 };
 </script>
@@ -3641,7 +3826,7 @@ if (CFG.prefs && CFG.prefs.sound_muted) { Sfx.toggle(); $('hud-mute').innerHTML 
     'Lepas tombol Gulung saat jarum masuk zona merah supaya senar tidak hampir putus.',
     'Ikan langka melawan lebih kuat — sabar dan atur ritme gulunganmu.',
     'Peti harta karun kuno bisa muncul dari dasar laut. Semoga beruntung!',
-    'Buka Ember Cuan di pojok kanan atas untuk melihat koleksi tangkapanmu dalam 3D.'
+    'Buka Ember di dok samping untuk menjual tangkapan, harga pasar berubah setiap hari.'
   ];
   var tipIdx = 0;
   var tipTimer = setInterval(function () { tipIdx = (tipIdx + 1) % tips.length; tipEl.textContent = tips[tipIdx]; }, 2600);
@@ -3660,7 +3845,12 @@ if (CFG.prefs && CFG.prefs.sound_muted) { Sfx.toggle(); $('hud-mute').innerHTML 
       var creep = setInterval(function () { set(Math.min(target + 2.5, 58)); }, 120);
       var s = document.createElement('script');
       s.src = window.MANCING_CFG.three;
-      s.onload = function () { clearInterval(creep); resolve(true); };
+      s.onload = function () { // GLTFLoader untuk model sampah (opsional)
+        var g = document.createElement('script');
+        g.src = window.MANCING_CFG.gltf;
+        g.onload = g.onerror = function () { clearInterval(creep); resolve(true); };
+        document.head.appendChild(g);
+      };
       s.onerror = function () { clearInterval(creep); resolve(false); };
       document.head.appendChild(s);
     });

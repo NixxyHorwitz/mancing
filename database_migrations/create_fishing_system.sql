@@ -143,6 +143,37 @@ CREATE TABLE IF NOT EXISTS `fishing_species` (
   `weight_max` DECIMAL(6,2) NOT NULL DEFAULT 1.00,
   `price_min` DECIMAL(12,2) NOT NULL DEFAULT 0,
   `price_max` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `hardness` DECIMAL(4,2) NOT NULL DEFAULT 1.00,
   `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`badge`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Pemakaian fitur Kunci Ikan (ikan tidak bisa menjauh saat tarik-ulur). Uji coba gratis dihitung dari is_free.
+CREATE TABLE IF NOT EXISTS `fishing_lock_uses` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` INT UNSIGNED NOT NULL,
+  `log_id` BIGINT NOT NULL,
+  `is_free` TINYINT(1) NOT NULL DEFAULT 0,
+  `price` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_lock_log` (`log_id`),
+  KEY `idx_lock_user` (`user_id`, `is_free`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Ikan yang dilepas pemain saat tarik-ulur (menyerah). Baris dipindah dari fishing_logs agar tidak masuk Ember.
+CREATE TABLE IF NOT EXISTS `fishing_released` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` INT UNSIGNED NOT NULL,
+  `log_id` BIGINT NOT NULL,
+  `fish_name` VARCHAR(100) NOT NULL,
+  `rarity` VARCHAR(30) NOT NULL,
+  `weight_kg` DECIMAL(5,2) NOT NULL DEFAULT 0,
+  `reward` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `was_locked` TINYINT(1) NOT NULL DEFAULT 0,
+  `caught_at` TIMESTAMP NULL DEFAULT NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_rel_user` (`user_id`),
+  KEY `idx_rel_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

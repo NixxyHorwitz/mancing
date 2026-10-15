@@ -8,7 +8,7 @@ fishing_ensure_schema($pdo);
 
 const FS_PAGES = [
     'fishing_dashboard' => ['Dashboard',        'ph-chart-line-up'],
-    'fishing_species'   => ['Harga Ikan',       'ph-tag'],
+    'fishing_species'   => ['Harga & Kesulitan', 'ph-tag'],
     'fishing_catches'   => ['Log Tangkapan',    'ph-fish-simple'],
     'fishing_sales'     => ['Penjualan',        'ph-hand-coins'],
     'fishing_baits'     => ['Umpan',            'ph-bug'],
@@ -17,7 +17,7 @@ const FS_PAGES = [
     'fishing_players'   => ['Pemain',           'ph-users-three'],
     'fishing_settings'  => ['Pengaturan & Audit', 'ph-gear-six'],
 ];
-const FS_BADGE_COLOR = ['biasa' => '#22d3ee', 'bagus' => '#34d399', 'langka' => '#fb7185', 'super' => '#a78bfa', 'jackpot' => '#fbbf24'];
+const FS_BADGE_COLOR = ['biasa' => '#22d3ee', 'bagus' => '#34d399', 'langka' => '#fb7185', 'super' => '#a78bfa', 'jackpot' => '#fbbf24', 'zonk' => '#a8a29e'];
 
 function fs_badge(string $badge): string {
     $c = FS_BADGE_COLOR[$badge] ?? '#94a3b8';
@@ -49,7 +49,14 @@ function fs_find_user_id(PDO $pdo, string $q): ?int {
 }
 
 /** Ekspresi SQL: kolom rarity (Common/Uncommon/...) → badge (biasa/bagus/...) */
-const FS_BADGE_SQL = "CASE UPPER(rarity) WHEN 'UNCOMMON' THEN 'bagus' WHEN 'RARE' THEN 'langka' WHEN 'EPIC' THEN 'super' WHEN 'JACKPOT' THEN 'jackpot' ELSE 'biasa' END";
+const FS_BADGE_SQL = "CASE UPPER(rarity) WHEN 'UNCOMMON' THEN 'bagus' WHEN 'RARE' THEN 'langka' WHEN 'EPIC' THEN 'super' WHEN 'JACKPOT' THEN 'jackpot' WHEN 'JUNK' THEN 'zonk' ELSE 'biasa' END";
+
+/** Status tangkapan: zonk (dibuang), terjual, atau masih di Ember */
+function fs_status(array $r, bool $withPrice = false): string {
+    if (strtoupper((string)$r['rarity']) === 'JUNK') return '<span class="fs-pill" style="color:#a8a29e;border-color:#a8a29e55">Zonk · dibuang</span>';
+    if (!empty($r['sold_at'])) return '<span class="fs-pill" style="color:#34d399;border-color:#34d39955">Terjual' . ($withPrice ? ' ' . format_rp((float)$r['sold_price']) : '') . '</span>';
+    return '<span class="fs-pill" style="color:#fbbf24;border-color:#fbbf2455">Di Ember</span>';
+}
 
 function fs_head(string $title, string $sub = ''): void {
     echo '<div class="mb-3"><h4 class="mb-1 text-white" style="font-weight:800">🎣 ' . htmlspecialchars($title) . '</h4>'

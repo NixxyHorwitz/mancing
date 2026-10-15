@@ -1,0 +1,10 @@
+Model 3D sampah/zonk untuk Pemancingan Bahari Nusantara (diunduh dari https://poly.pizza)
+
+rubber-boot.glb       "Rubber boot" oleh dook (Poly by Google) - CC BY 3.0 - https://poly.pizza/m/eFxqLZsis1O
+plastic-bottle.glb    "Water Bottle" oleh Quaternius - CC0 1.0 - https://poly.pizza/m/KpxDpidn1Z
+soda-can-crushed.glb  "Soda Can Crushed" oleh Kenney - CC0 1.0 - https://poly.pizza/m/MWvBbxYzjJ
+trash-bag.glb         "Trash Bag" oleh Quaternius - CC0 1.0 - https://poly.pizza/m/jYrMKg2Q7C (juga dipakai untuk kantong kresek, diwarnai ulang)
+plastic-cup.glb       "Plastic Cup" oleh Zsky - CC BY 3.0 - https://poly.pizza/m/rMlBPeMynP (warna diubah jadi plastik bening)
+
+CC BY 3.0: https://creativecommons.org/licenses/by/3.0/  (wajib mencantumkan kredit di atas)
+CC0 1.0:   https://creativecommons.org/publicdomain/zero/1.0/

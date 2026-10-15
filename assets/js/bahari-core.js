@@ -270,8 +270,8 @@ const Ambience = (() => {
    di titik-titik u sepanjang badan (-1 ekor → +1 moncong), panjang L=1. */
 const U_KNOTS = [-1, -0.85, -0.6, -0.3, 0, 0.3, 0.6, 0.8, 0.92, 1];
 const BADGES = ['biasa', 'bagus', 'langka', 'super', 'jackpot'];
-const BADGE_LABEL = { biasa: 'Biasa', bagus: 'Bagus', langka: 'Langka', super: 'Super', jackpot: 'Jackpot' };
-const BADGE_SPECIES = { biasa: 'mujair', bagus: 'gurame', langka: 'kakap', super: 'barramundi', jackpot: 'chest' };
+const BADGE_LABEL = { biasa: 'Biasa', bagus: 'Bagus', langka: 'Langka', super: 'Super', jackpot: 'Jackpot', zonk: 'Zonk' };
+const BADGE_SPECIES = { biasa: 'mujair', bagus: 'gurame', langka: 'kakap', super: 'barramundi', jackpot: 'chest', zonk: 'boot' }; // zonk = sampah, tidak dijual
 
 const SPECIES = {
   mujair: {
@@ -727,7 +727,111 @@ function buildChest(withLight) {
   return { group: root, update, isChest: true };
 }
 
+/* Zonk: sepatu bot karet bekas berlumut + kaleng karatan */
+function buildBoot() {
+  const root = new THREE.Group();
+  const rubber = new THREE.MeshPhongMaterial({ color: 0x4d5b3a, shininess: 35, specular: 0x334422 });
+  const sole = new THREE.MeshPhongMaterial({ color: 0x2b2420, shininess: 10 });
+  const mud = new THREE.MeshPhongMaterial({ color: 0x6b4f2a, shininess: 5 });
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.15, 0.62, 18, 1, true), rubber);
+  leg.position.set(-0.12, 0.31, 0); root.add(leg);
+  const legIn = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.14, 0.6, 18, 1, true), new THREE.MeshPhongMaterial({ color: 0x1f2418, side: THREE.BackSide }));
+  legIn.position.copy(leg.position); root.add(legIn);
+  const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.155, 0.025, 8, 20), rubber);
+  cuff.rotation.x = Math.PI / 2; cuff.position.set(-0.12, 0.62, 0); root.add(cuff);
+  const foot = new THREE.Mesh(new THREE.SphereGeometry(0.2, 18, 12), rubber);
+  foot.scale.set(1.55, 0.62, 0.95); foot.position.set(0.06, 0.06, 0); root.add(foot);
+  const heel = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.16, 18), rubber);
+  heel.position.set(-0.12, 0.08, 0); root.add(heel);
+  const soleM = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.05, 0.3), sole);
+  soleM.position.set(0.04, -0.06, 0); root.add(soleM);
+  for (let i = 0; i < 5; i++) { // lumpur & teritip
+    const m = new THREE.Mesh(new THREE.SphereGeometry(rand(0.03, 0.06), 8, 6), i % 2 ? mud : new THREE.MeshPhongMaterial({ color: 0xe7e5e4 }));
+    m.position.set(rand(-0.25, 0.3), rand(0.0, 0.45), rand(-0.14, 0.14) > 0 ? 0.15 : -0.15); root.add(m);
+  }
+  const weedMat = new THREE.MeshPhongMaterial({ color: 0x15803d, side: THREE.DoubleSide, shininess: 30 });
+  const weeds = [];
+  for (let i = 0; i < 4; i++) { // rumput laut menjuntai
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.42, 1, 6), weedMat);
+    const pos = w.geometry.attributes.position;
+    for (let k = 0; k < pos.count; k++) pos.setX(k, pos.getX(k) + Math.sin(pos.getY(k) * 9 + i) * 0.03);
+    w.position.set(-0.2 + i * 0.05, 0.55 - i * 0.04, 0.12 * (i % 2 ? 1 : -1));
+    w.rotation.z = 0.5 + i * 0.15;
+    root.add(w); weeds.push(w);
+  }
+  const can = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.16, 14), new THREE.MeshPhongMaterial({ color: 0xb45309, shininess: 60, specular: 0x777777 }));
+  can.rotation.z = Math.PI / 2; can.position.set(0.3, 0.02, 0.16); root.add(can);
+  const lbl = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.08, 14, 1, true), new THREE.MeshPhongMaterial({ color: 0xdc2626 }));
+  lbl.rotation.z = Math.PI / 2; lbl.position.copy(can.position); root.add(lbl);
+  root.position.y = -0.2;
+  const wrap = new THREE.Group(); wrap.add(root);
+  function update(t) { weeds.forEach((w, i) => { w.rotation.z = 0.5 + i * 0.15 + Math.sin(t * 2 + i) * 0.12; }); }
+  update(0);
+  return { group: wrap, update, isChest: false, isJunk: true };
+}
+
+/* Model sampah (Zonk) dari GLB — dimuat di latar. Selama belum siap, dipakai sepatu bot prosedural. */
+const JunkLib = (() => {
+  const cache = {};
+  // Variasi warna/bahan: kresek = model kantong sampah berwarna merah tipis, gelas = plastik bening
+  const TUNE = {
+    bag: { src: 'trashbag', color: 0xef4444, opacity: 0.82, shininess: 90 },
+    cup: { color: 0xe0f2fe, opacity: 0.55, shininess: 120 }
+  };
+  function toPhong(root) { // samakan gaya pencahayaan dengan ikan (Phong)
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      const conv = (m) => {
+        const p = new THREE.MeshPhongMaterial({
+          color: m.color ? m.color.clone() : new THREE.Color(0xffffff), map: m.map || null,
+          shininess: m.roughness !== undefined ? Math.round((1 - m.roughness) * 70) + 12 : 30,
+          transparent: !!m.transparent, opacity: m.opacity == null ? 1 : m.opacity, side: m.side
+        });
+        if (p.map) p.map.__shared = true;
+        return p;
+      };
+      o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material);
+    });
+  }
+  function load(map) {
+    if (!window.THREE || !THREE.GLTFLoader || !map) return Promise.resolve();
+    const ld = new THREE.GLTFLoader();
+    return Promise.all(Object.keys(map).map((k) => new Promise((res) => {
+      ld.load(map[k], (g) => { toPhong(g.scene); cache[k] = g.scene; res(); }, undefined, () => res());
+    })));
+  }
+  function build(kind) {
+    const tune = TUNE[kind] || {};
+    const src = cache[tune.src || kind];
+    if (!src) return null;
+    const obj = src.clone(true);
+    const tint = (m) => {
+      const c = m.clone();
+      if (tune.color != null) { c.color.setHex(tune.color); c.map = null; }
+      if (tune.opacity != null) { c.transparent = true; c.opacity = tune.opacity; c.depthWrite = tune.opacity > 0.7; }
+      if (tune.shininess != null) { c.shininess = tune.shininess; c.specular = new THREE.Color(0xffffff); }
+      return c;
+    };
+    obj.traverse((o) => { // salinan sendiri agar disposeTree tidak merusak cache
+      if (!o.isMesh) return;
+      o.geometry = o.geometry.clone();
+      o.material = Array.isArray(o.material) ? o.material.map(tint) : tint(o.material);
+    });
+    const box = new THREE.Box3().setFromObject(obj), size = new THREE.Vector3(), ctr = new THREE.Vector3();
+    box.getSize(size); box.getCenter(ctr);
+    const k = 0.9 / Math.max(size.x, size.y, size.z, 1e-3);
+    obj.scale.setScalar(k); obj.position.copy(ctr).multiplyScalar(-k);
+    const wrap = new THREE.Group(); wrap.add(obj);
+    return { group: wrap, update() {}, isChest: false, isJunk: true };
+  }
+  return { load, build, has: (k) => !!cache[(TUNE[k] && TUNE[k].src) || k] };
+})();
+
 function buildModel(spKey, withLight) {
+  if (spKey === 'boot' || String(spKey).indexOf('junk:') === 0) {
+    const kind = spKey === 'boot' ? 'boot' : spKey.slice(5);
+    return JunkLib.build(kind) || buildBoot();
+  }
   return spKey === 'chest' ? buildChest(withLight) : buildFish(spKey);
 }
 function disposeTree(obj) {
@@ -811,7 +915,7 @@ const Thumbs = (() => {
 function fishThumb(badge) {
   const key = BADGE_SPECIES[badge] || 'mujair';
   return Thumbs.get('fish-' + key, () => { const m = buildModel(key, false); if (m.update) m.update(0.6, 0.03); return m.group; },
-    { rot: key === 'chest' ? [0.35, -0.6, 0] : [0.2, -0.35, 0.05], pad: key === 'chest' ? 1.0 : 1.02 });
+    { rot: key === 'chest' || key === 'boot' ? [0.35, -0.6, 0] : [0.2, -0.35, 0.05], pad: key === 'chest' || key === 'boot' ? 1.0 : 1.02 });
 }
 
 window.Bahari = {
@@ -820,6 +924,6 @@ window.Bahari = {
   TexCache, canvasTex, dotTexture, scaleTexture, shadeFinGeometry, finMaterial, shapeFrom,
   buildFish, buildChest, buildModel, disposeTree,
   WAVES, waveH, waveGrad, GLSL_WAVES,
-  Thumbs, fishThumb
+  Thumbs, fishThumb, JunkLib
 };
 })();
