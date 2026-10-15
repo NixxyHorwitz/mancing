@@ -207,13 +207,56 @@ i[class^="ph-"] {
     inset 0 -3px 6px rgba(251, 146, 60, 0.08);
 }
 
-/* Brand */
+/* Brand: logo situs + nama dua warna + nama halaman */
 .island-brand-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
+  min-width: 0;
+  flex: 1 1 auto;
   text-decoration: none;
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.brand-logo {
+  position: relative;
+  width: 38px; height: 38px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  padding: 2px;
+  background: linear-gradient(145deg, #ffffff, #ffedd5);
+  box-shadow:
+    0 4px 10px rgba(8, 145, 178, 0.22),
+    0 2px 4px rgba(244, 63, 94, 0.12),
+    inset 1.5px 1.5px 3px #ffffff,
+    inset -2px -2px 4px rgba(251, 146, 60, 0.22);
+}
+.brand-logo img {
+  display: block; width: 100%; height: 100%;
+  object-fit: contain; border-radius: 11px;
+  animation: brandBob 4.5s ease-in-out infinite;
+}
+.brand-logo .brand-fin-icon { width: 100%; height: 100%; border-radius: 11px; }
+@keyframes brandBob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-1.5px) rotate(-3deg); } }
+.brand-copy { display: flex; flex-direction: column; min-width: 0; line-height: 1.05; }
+.brand-name {
+  font-size: 16px; font-weight: 900; letter-spacing: -0.4px;
+  color: var(--reef-lagoon-600);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.brand-name b {
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--reef-sun-500), var(--reef-coral-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.brand-page {
+  margin-top: 2px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 800; color: var(--reef-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.brand-page::before {
+  content: ''; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%;
+  background: var(--reef-coral-400); box-shadow: 0 0 0 2px rgba(251, 113, 133, 0.2);
 }
 .island-brand-pill:active { transform: scale(0.97); }
 .brand-fin-icon {
@@ -244,6 +287,7 @@ i[class^="ph-"] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 .cluster-balance-btn {
   display: flex;
@@ -427,7 +471,7 @@ i[class^="ph-"] {
 .twp-card-btn.baits { background: linear-gradient(145deg, #fbbf24, #d97706); }
 
 @media (prefers-reduced-motion: reduce) {
-  body::before, .pulse-emerald-dot { animation: none !important; }
+  body::before, .pulse-emerald-dot, .brand-logo img { animation: none !important; }
 }
 </style>
 </head>
@@ -437,11 +481,25 @@ i[class^="ph-"] {
   <div class="topbar-wrap">
     <div class="topbar-floating-row">
       <!-- Left Island: Geometric Nautical Brand -->
-      <a href="/home" class="island-brand-pill">
-        <div class="brand-fin-icon">
-          <i class="ph-fill ph-fish-simple"></i>
-        </div>
-        <span class="brand-text">mancing<span class="brand-dot">.</span><span class="brand-sub">cuan</span></span>
+      <?php
+        // Nama situs dua warna: "MancingCuan" -> "Mancing" + "Cuan"
+        $_brand_a = $_site_name; $_brand_b = '';
+        if (preg_match('/^(.+?)([A-Z][a-z0-9]+)$/u', trim($_site_name), $_bm)) { $_brand_a = $_bm[1]; $_brand_b = $_bm[2]; }
+        $_brand_page = trim((string)($pageTitle ?? ''));
+      ?>
+      <a href="/home" class="island-brand-pill" aria-label="<?= htmlspecialchars($_site_name) ?> — Beranda">
+        <span class="brand-logo">
+          <?php if ($_site_logo): ?>
+          <img src="<?= htmlspecialchars($_site_logo) ?>" alt="" width="34" height="34" decoding="async"
+               onerror="this.outerHTML='<span class=&quot;brand-fin-icon&quot;><i class=&quot;ph-fill ph-fish-simple&quot;></i></span>'">
+          <?php else: ?>
+          <span class="brand-fin-icon"><i class="ph-fill ph-fish-simple"></i></span>
+          <?php endif; ?>
+        </span>
+        <span class="brand-copy">
+          <span class="brand-name"><?= htmlspecialchars($_brand_a) ?><?php if ($_brand_b !== ''): ?><b><?= htmlspecialchars($_brand_b) ?></b><?php endif; ?></span>
+          <?php if ($_brand_page !== ''): ?><span class="brand-page"><?= htmlspecialchars($_brand_page) ?></span><?php endif; ?>
+        </span>
       </a>
 
       <!-- Right Island: Smart Balance & Alert Capsule -->

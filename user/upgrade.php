@@ -93,6 +93,7 @@ if ($user['membership_id'] && $user['membership_expires_at'] && strtotime($user[
 // AJAX Check Voucher
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check_voucher') {
     header('Content-Type: application/json');
+    if (!csrf_verify()) { echo json_encode(['error' => 'Sesi kedaluwarsa, muat ulang halaman.']); exit; }
     $code = strtoupper(trim($_POST['code'] ?? ''));
     $mid  = (int)($_POST['membership_id'] ?? 0);
     
@@ -161,6 +162,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    if (!csrf_verify()) {
+        $flash = 'Sesi keamanan kedaluwarsa. Muat ulang halaman lalu coba lagi.'; $flashType = 'error';
+        goto end_post;
+    }
     
     if ($action === 'refund_level') {
         $stmtPending = $pdo->prepare("SELECT id FROM admin_requests WHERE user_id=? AND type='refund_level' AND status='pending'");
@@ -335,901 +340,350 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 end_post:
 
-// Auto-rename ranks to Amber Tier theme
-$rankMap = [
-  0 => ['name' => 'Golden Amber',   'icon' => 'ph-sparkle'],
-  1 => ['name' => 'Royal Amber',    'icon' => 'ph-crown'],
-  2 => ['name' => 'Imperial Amber', 'icon' => 'ph-shield-star'],
+// Migrasi sekali jalan: nama pangkat tema Amber -> tema nelayan (hanya jika masih bernama lama)
+$rankRename = [
+  'Raw Amber'      => ['Nelayan Pemula',    'ph-fish-simple',    'Pangkat awal. Kuota nonton harian dasar.'],
+  'Golden Amber'   => ['Juragan Perahu',    'ph-sailboat',       'Kuota nonton lebih banyak & batas tarik lebih tinggi.'],
+  'Royal Amber'    => ['Kapten Kapal',      'ph-steering-wheel', 'Pilihan favorit: kuota besar & tarik lebih cepat.'],
+  'Imperial Amber' => ['Laksamana Samudra', 'ph-crown',          'Pangkat tertinggi: kuota maksimal & pencairan prioritas.'],
 ];
-$pdo->query("UPDATE memberships SET name='Raw Amber', icon='ph-drop' WHERE id=1 AND name!='Raw Amber'");
-$paid_ids = array_values(array_filter($memberships, fn($m) => (float)$m['price'] > 0));
-foreach ($paid_ids as $idx => $m) {
-  if (isset($rankMap[$idx])) {
-    $pdo->prepare("UPDATE memberships SET name=?, icon=? WHERE id=?")->execute([
-      $rankMap[$idx]['name'], $rankMap[$idx]['icon'], $m['id']
-    ]);
-  }
-}
+$renStmt = $pdo->prepare("UPDATE memberships SET name = ?, icon = ?, description = ? WHERE name = ?");
+foreach ($rankRename as $old => [$new, $icon, $desc]) $renStmt->execute([$new, $icon, $desc, $old]);
 // Reload after rename
 $memberships = $pdo->query("SELECT * FROM memberships WHERE is_active=1 ORDER BY sort_order ASC")->fetchAll();
+// Ambil ulang pangkat aktif agar nama/ikon sesuai data terbaru
+if ($active_membership) {
+    $ms = $pdo->prepare("SELECT * FROM memberships WHERE id=?");
+    $ms->execute([$active_membership['id']]);
+    $active_membership = $ms->fetch() ?: $active_membership;
+}
 
-$pageTitle  = 'Keanggotaan VIP — MancingCuan';
+$pageTitle  = 'Naik Pangkat';
 $activePage = 'upgrade';
 require dirname(__DIR__) . '/partials/header.php';
 ?>
 <style>
 /* ══════════════════════════════════════════════════════════
-   UPGRADE PAGE — AMBER HONEY PALETTE + DARK FOREST TREE DECO
+   NAIK PANGKAT — Living Coral Reef, ringkas & minim teks
+   Token warna & latar laut dari partials/header.php (--reef-*)
    ══════════════════════════════════════════════════════════ */
-body {
-  background-color: #fef8ee !important;
-  background-image: 
-    radial-gradient(#fde68a 0.85px, transparent 0.85px),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23f59e0b' fill-opacity='0.035'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l11 6.35 11-6.35V17.9l-11-6.35L3 17.9zM0 49l14-8.08L28 49H0zm0-49h28L14 8.08 0 0z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") !important;
-  background-size: 24px 24px, 28px 49px !important;
-  color: #78350f;
-  font-family: 'Nunito', -apple-system, sans-serif;
-  margin: 0;
-  padding: 0;
-}
+.pk-wrap { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 8px 12px 96px; color: var(--reef-ink); }
+.pk-flash { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px 11px; border: 2px solid #fff; border-radius: 16px; font-size: 11.5px; font-weight: 800; box-shadow: var(--reef-clay-shadow); }
+.pk-flash.success { background: linear-gradient(145deg, #ecfdf5, #d1fae5); color: #065f46; }
+.pk-flash.error { background: linear-gradient(145deg, #fff1f2, #ffe4e6); color: #9f1239; }
 
-.up-page {
-  max-width: 480px;
-  margin: 0 auto;
-  padding-bottom: 70px;
-}
+/* Strip status: saldo beli + pangkat sekarang */
+.pk-status { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pk-st { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 9px; border: 2px solid #fff; border-radius: 18px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); }
+.pk-st .ic { width: 32px; height: 32px; flex-shrink: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; box-shadow: inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5), inset -2px -2px 4px rgba(0, 0, 0, 0.14); }
+.pk-st .ic.wal { background: linear-gradient(145deg, #c084fc, #7c3aed); }
+.pk-st .ic.rank { background: linear-gradient(145deg, #67e8f9, #0891b2); }
+.pk-st .tx { flex: 1; min-width: 0; }
+.pk-st small { display: block; font-size: 8.5px; font-weight: 900; letter-spacing: 0.4px; text-transform: uppercase; color: var(--reef-muted); }
+.pk-st b { display: block; font-size: 12.5px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-st em { display: block; font-style: normal; font-size: 9px; font-weight: 800; color: var(--reef-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-st .add { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #fff; font-size: 14px; background: linear-gradient(145deg, #6ee7b7, #059669); border: 2px solid #fff; box-shadow: 0 3px 8px rgba(5, 150, 105, 0.3); }
+.pk-refund { flex-shrink: 0; border: none; background: none; padding: 0; cursor: pointer; color: #e11d48; font-size: 16px; }
 
-/* HERO CANOPY BANNER WITH DARK FOREST PINE TREELINE */
-.up-hero {
-  background: linear-gradient(160deg, #b45309 0%, #d97706 40%, #1a3c2b 100%);
-  border-bottom: 3.5px solid #78350f;
-  padding: 14px 14px 0;
-  position: relative;
-  overflow: hidden;
-}
-.up-hero-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  position: relative;
-  z-index: 3;
-}
-.up-hero-back {
-  width: 36px; height: 36px;
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  color: #78350f;
-  font-size: 18px; font-weight: 900;
-  text-decoration: none;
-  box-shadow: 0 3px 0 #78350f;
-  transition: transform 0.1s;
-}
-.up-hero-back:active { transform: translateY(2px); box-shadow: 0 1px 0 #78350f; }
-.up-hero-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: #fef3c7; color: #78350f;
-  border: 2px solid #78350f;
-  border-radius: 20px;
-  padding: 3.5px 12px;
-  font-size: 11px; font-weight: 900;
-  box-shadow: 0 2.5px 0 #78350f;
-}
+/* Pemilih pangkat */
+.pk-tiers { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 5px; margin: 10px 0 8px; padding: 4px; border: 2px solid #fff; border-radius: 18px; background: rgba(255, 255, 255, 0.6); box-shadow: inset 1.5px 1.5px 4px rgba(8, 145, 178, 0.12); }
+.pk-tier { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px 5px; border: none; border-radius: 14px; background: none; cursor: pointer; font-family: inherit; color: var(--reef-muted); }
+.pk-tier i { font-size: 18px; }
+.pk-tier b { font-size: 10.5px; font-weight: 900; line-height: 1.1; text-align: center; }
+.pk-tier small { font-size: 9px; font-weight: 800; }
+.pk-tier .hot { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 999px; font-size: 7.5px; font-weight: 900; letter-spacing: 0.4px; color: #fff; background: linear-gradient(145deg, #fb7185, #e11d48); border: 1.5px solid #fff; white-space: nowrap; }
+.pk-tier.on { color: #fff; box-shadow: 0 5px 12px rgba(30, 27, 46, 0.18), inset 2px 2px 3px rgba(255, 255, 255, 0.4); }
+.pk-tier.on.t0 { background: linear-gradient(145deg, #67e8f9, #0891b2); }
+.pk-tier.on.t1 { background: linear-gradient(145deg, #fb7185, #e11d48); }
+.pk-tier.on.t2 { background: linear-gradient(145deg, #fcd34d, #d97706); }
+.pk-tier .cur { position: absolute; top: 3px; right: 4px; font-size: 11px; color: #10b981; }
+.pk-tier.on .cur { color: #fff; }
 
-.up-mascot-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: relative;
-  z-index: 3;
-  margin-bottom: 12px;
-}
-.up-mascot-img {
-  width: 60px; height: 60px;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-  animation: upBeeFloat 3s ease-in-out infinite;
-  flex-shrink: 0;
-}
-@keyframes upBeeFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-.up-mascot-bubble {
-  background: #ffffff;
-  border: 2.5px solid #78350f;
-  border-radius: 16px;
-  padding: 9px 12px;
-  box-shadow: 0 3.5px 0 #78350f;
-  position: relative;
-  flex: 1;
-}
-.up-mascot-bubble::before {
-  content: '';
-  position: absolute; left: -8px; top: 50%;
-  transform: translateY(-50%);
-  border-width: 5px 8px 5px 0;
-  border-style: solid;
-  border-color: transparent #78350f transparent transparent;
-}
-.up-mascot-bubble-title {
-  font-size: 12.5px; font-weight: 900; color: #78350f;
-  margin-bottom: 2px; display: flex; align-items: center; gap: 5px;
-}
-.up-mascot-bubble-sub {
-  font-size: 11px; font-weight: 700; color: #92400e; line-height: 1.35;
-}
+/* Kartu harga */
+.pk-card { display: none; position: relative; overflow: hidden; border: 2px solid #fff; border-radius: 24px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); }
+.pk-card.on { display: block; animation: pkIn 0.3s ease; }
+@keyframes pkIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.pk-top { position: relative; display: flex; align-items: center; gap: 11px; padding: 13px 14px 12px; color: #fff; }
+.pk-card.t0 .pk-top { background: linear-gradient(150deg, #0e7490, #22d3ee); }
+.pk-card.t1 .pk-top { background: linear-gradient(150deg, #be123c, #fb7185); }
+.pk-card.t2 .pk-top { background: linear-gradient(150deg, #b45309, #fbbf24); }
+.pk-top::after { content: ''; position: absolute; right: -24px; top: -34px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.25), transparent 70%); }
+.pk-emb { position: relative; width: 50px; height: 50px; flex-shrink: 0; border-radius: 17px; display: flex; align-items: center; justify-content: center; font-size: 26px; background: rgba(255, 255, 255, 0.22); border: 2px solid rgba(255, 255, 255, 0.75); box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.35); }
+.pk-name { position: relative; flex: 1; min-width: 0; }
+.pk-name b { display: block; font-size: 17px; font-weight: 900; line-height: 1.1; text-shadow: 0 2px 3px rgba(0, 0, 0, 0.2); }
+.pk-name span { display: inline-flex; align-items: center; gap: 3px; margin-top: 4px; padding: 1px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 900; background: rgba(255, 255, 255, 0.25); }
+.pk-price { position: relative; text-align: right; flex-shrink: 0; }
+.pk-price s { display: block; font-size: 10px; font-weight: 800; opacity: 0.8; }
+.pk-price b { display: block; font-size: 19px; font-weight: 900; line-height: 1.1; text-shadow: 0 2px 3px rgba(0, 0, 0, 0.2); }
+.pk-price em { display: inline-block; margin-top: 2px; padding: 0 6px; border-radius: 999px; font-style: normal; font-size: 9px; font-weight: 900; background: #fff; color: #e11d48; }
+.pk-body { padding: 11px 12px 12px; }
+.pk-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pk-num { display: flex; align-items: center; gap: 7px; padding: 7px 8px; border-radius: 14px; background: rgba(255, 255, 255, 0.85); box-shadow: inset 1px 1px 3px rgba(251, 146, 60, 0.15); min-width: 0; }
+.pk-num i { font-size: 17px; flex-shrink: 0; }
+.pk-num b { display: block; font-size: 12.5px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-num small { display: block; font-size: 8.5px; font-weight: 800; color: var(--reef-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.pk-num.c1 i { color: #0891b2; } .pk-num.c2 i { color: #059669; } .pk-num.c3 i { color: #7c3aed; } .pk-num.c4 i { color: #e11d48; }
+.pk-perks { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.pk-perks span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 10px; font-weight: 900; color: #047857; background: #d1fae5; }
+.pk-cta { width: 100%; height: 46px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 2.5px solid #fff; border-radius: 16px; cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 900; color: #fff;
+  box-shadow: 0 9px 18px rgba(30, 27, 46, 0.2), inset 3px 3px 5px rgba(255, 255, 255, 0.4), inset -3px -4px 8px rgba(0, 0, 0, 0.18); }
+.pk-cta i { font-size: 18px; }
+.pk-card.t0 .pk-cta { background: linear-gradient(145deg, #22d3ee, #0e7490); }
+.pk-card.t1 .pk-cta { background: linear-gradient(145deg, #fb7185, #be123c); }
+.pk-card.t2 .pk-cta { background: linear-gradient(145deg, #fbbf24, #b45309); }
+.pk-cta.low { background: linear-gradient(145deg, #e2e8f0, #cbd5e1) !important; color: #475569; box-shadow: inset 2px 2px 3px #fff; }
+.pk-cta.is-cur { background: linear-gradient(145deg, #6ee7b7, #059669) !important; }
+.pk-note { margin-top: 6px; text-align: center; font-size: 9.5px; font-weight: 700; color: var(--reef-muted); }
 
-/* DARK FOREST TREES SILHOUETTE IN HERO */
-.forest-trees-strip {
-  width: 100%;
-  height: 40px;
-  position: relative;
-  z-index: 2;
-  margin-top: -6px;
-  pointer-events: none;
-}
-.forest-trees-strip svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+/* Jaminan (ikon saja) */
+.pk-trust { display: flex; justify-content: space-between; gap: 6px; margin-top: 10px; }
+.pk-trust span { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 4px; border: 2px solid #fff; border-radius: 15px; background: rgba(255, 255, 255, 0.7); font-size: 9.5px; font-weight: 900; text-align: center; box-shadow: 0 3px 8px rgba(8, 145, 178, 0.06); }
+.pk-trust i { font-size: 18px; }
+.pk-trust span:nth-child(1) i { color: #059669; } .pk-trust span:nth-child(2) i { color: #f59e0b; } .pk-trust span:nth-child(3) i { color: #0891b2; }
+/* Bonus joran */
+.pk-rod-ttl { display: flex; align-items: center; gap: 5px; margin: 10px 2px 5px; font-size: 10.5px; font-weight: 900; color: #0e7490; }
+.pk-rod-ttl i { font-size: 14px; }
+.pk-rod-ttl small { margin-left: auto; font-size: 9px; font-weight: 800; color: var(--reef-muted); }
+.pk-rod { display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 14px; background: rgba(255, 255, 255, 0.9); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rc) 22%, transparent); }
+.pk-rod + .pk-rod { margin-top: 5px; }
+.pk-rod-ic { width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, color-mix(in srgb, var(--rc) 55%, #fff), var(--rc)); border: 2px solid #fff; box-shadow: 0 4px 9px color-mix(in srgb, var(--rc) 35%, transparent), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.45); }
+.pk-rod-ic svg { width: 24px; height: 24px; }
+.pk-rod-tx { flex: 1; min-width: 0; }
+.pk-rod-tx b { display: block; font-size: 11.5px; font-weight: 900; color: var(--rc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-rod-b { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.pk-rod-b em { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; font-style: normal; font-size: 9.5px; font-weight: 900; color: var(--reef-ink); background: color-mix(in srgb, var(--rc) 12%, #fff); }
+/* Panduan lipat */
+.pk-guide { margin-top: 8px; border: 2px solid #fff; border-radius: 18px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); overflow: hidden; }
+.pk-guide summary { display: flex; align-items: center; gap: 6px; padding: 10px 12px; cursor: pointer; list-style: none; font-size: 12px; font-weight: 900; }
+.pk-guide summary::-webkit-details-marker { display: none; }
+.pk-guide summary > i:first-child { font-size: 16px; color: #0891b2; }
+.pk-guide summary .chev { margin-left: auto; font-size: 13px; color: var(--reef-muted); transition: transform 0.2s; }
+.pk-guide[open] summary .chev { transform: rotate(180deg); }
+.pk-steps { list-style: none; margin: 0; padding: 0 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+.pk-steps li { display: flex; align-items: flex-start; gap: 9px; }
+.pk-steps li > span { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff; background: linear-gradient(145deg, #67e8f9, #0891b2); border: 2px solid #fff; box-shadow: 0 3px 6px rgba(8, 145, 178, 0.25); }
+.pk-steps b { display: block; font-size: 11.5px; font-weight: 900; }
+.pk-steps small { display: block; font-size: 10px; font-weight: 700; color: var(--reef-muted); line-height: 1.35; }
+.pk-glos { margin: 0; padding: 0 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+.pk-glos > div { padding: 6px 9px; border-radius: 12px; background: rgba(255, 255, 255, 0.85); }
+.pk-glos dt { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 900; }
+.pk-glos dt i { font-size: 14px; }
+.pk-glos dd { margin: 1px 0 0 19px; font-size: 10px; font-weight: 700; color: var(--reef-muted); line-height: 1.35; }
+.pk-empty { padding: 20px; text-align: center; border-radius: 20px; border: 2px dashed rgba(8, 145, 178, 0.35); background: rgba(255, 255, 255, 0.65); font-size: 11.5px; font-weight: 800; color: var(--reef-muted); }
 
-/* TRUST STRIP */
-.up-trust-strip {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  padding: 10px 14px;
-}
-.up-trust-pill {
-  background: #ffffff;
-  border: 1.5px solid #78350f;
-  border-radius: 12px;
-  padding: 6px 4px;
-  text-align: center;
-  font-size: 9.5px; font-weight: 900; color: #78350f;
-  box-shadow: 0 2px 0 #78350f;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-}
-.up-trust-pill i { font-size: 13.5px; color: #d97706; }
-
-/* BODY */
-.up-body {
-  padding: 0 14px 20px;
-}
-
-/* SECTION HEADER */
-.sh-honey {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px; margin-top: 10px;
-}
-.sh-honey__title {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 900; color: #78350f;
-  text-transform: uppercase; letter-spacing: 0.5px;
-}
-
-/* LIVE TICKER */
-.live-ticker {
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 14px;
-  padding: 7px 12px;
-  margin-bottom: 12px;
-  box-shadow: 0 3px 0 #78350f;
-  display: flex; align-items: center; gap: 8px;
-  font-size: 10.5px; font-weight: 800; color: #92400e;
-}
-.live-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: #16a34a;
-  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.3);
-  animation: livePulse 1.5s infinite;
-  flex-shrink: 0;
-}
-@keyframes livePulse {
-  0% { transform: scale(0.9); opacity: 0.8; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.8; }
-}
-
-/* SALDO TILE */
-.saldo-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
-  border: 2.5px solid #78350f;
-  border-radius: 18px;
-  padding: 12px 14px;
-  box-shadow: 0 4px 0 #78350f;
-  margin-bottom: 10px;
-  position: relative;
-  overflow: hidden;
-}
-.saldo-card-bg {
-  position: absolute; right: -8px; bottom: -8px;
-  width: 65px; height: 65px; opacity: 0.12;
-  pointer-events: none;
-}
-.saldo-lbl {
-  font-size: 10.5px; font-weight: 800; color: #92400e;
-  display: flex; align-items: center; gap: 5px; margin-bottom: 3px;
-}
-.saldo-val {
-  font-size: 24px; font-weight: 900; color: #78350f;
-  letter-spacing: -0.4px; margin-bottom: 4px;
-}
-.saldo-sub {
-  font-size: 10px; font-weight: 700; color: #b45309;
-}
-
-/* QA GRID */
-.qa-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-  margin-bottom: 14px;
-}
-.qa-btn {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  border-radius: 12px; padding: 10px 8px;
-  font-size: 11.5px; font-weight: 900; text-decoration: none;
-  border: 2px solid #78350f; transition: transform 0.1s;
-}
-.qa-btn:active { transform: translateY(2px); }
-.qa-btn--dep {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #ffffff; box-shadow: 0 3px 0 #064e3b;
-}
-.qa-btn--checkin {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: #78350f; box-shadow: 0 3px 0 #b45309;
-}
-
-/* ACTIVE MEMBERSHIP STATUS */
-.active-rank-card {
-  background: #ecfdf5;
-  border: 2px solid #059669;
-  border-radius: 16px;
-  padding: 12px 14px;
-  box-shadow: 0 3.5px 0 #064e3b;
-  margin-bottom: 14px;
-}
-.active-rank-hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 4px;
-}
-.active-rank-badge {
-  background: #059669; color: #fff;
-  border-radius: 10px; padding: 2px 7px;
-  font-size: 9.5px; font-weight: 900;
-}
-.active-rank-name {
-  font-size: 16px; font-weight: 900; color: #064e3b;
-}
-.active-rank-detail {
-  font-size: 11px; font-weight: 800; color: #047857; margin-bottom: 8px;
-}
-
-/* ══════════════════════════════════════════════
-   COMPACT & SOLID PRICING CARDS (AMBER + FOREST)
-   ══════════════════════════════════════════════ */
-.lvl-card {
-  background: #ffffff;
-  border: 2.5px solid #78350f;
-  border-radius: 20px;
-  padding: 14px 14px 12px;
-  margin-bottom: 15px;
-  position: relative;
-  box-shadow: 0 5px 0 #78350f;
-  transition: transform 0.12s;
-  cursor: pointer;
-  overflow: hidden;
-}
-.lvl-card:active {
-  transform: translateY(3px);
-  box-shadow: 0 2px 0 #78350f;
-}
-
-/* Corner Honeycomb & Forest Watermark */
-.lvl-card-deco-bg {
-  position: absolute; right: -5px; top: -5px;
-  width: 95px; height: 95px;
-  opacity: 0.08;
-  pointer-events: none;
-}
-
-/* Card Skins */
-.lvl-card--starter {
-  background: linear-gradient(180deg, #ffffff 0%, #fefcf8 100%);
-}
-.lvl-card--popular {
-  background: linear-gradient(180deg, #ffffff 0%, #fffdf5 100%);
-  border-color: #78350f;
-  box-shadow: 0 5.5px 0 #78350f;
-}
-.lvl-card--sultan {
-  background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%);
-  border-color: #78350f;
-  box-shadow: 0 6px 0 #78350f;
-}
-
-/* RIBBONS */
-.lvl-ribbon {
-  position: absolute; top: 0; right: 14px;
-  font-size: 9px; font-weight: 900;
-  padding: 3px 9px; border-radius: 0 0 10px 10px;
-  border: 1.5px solid #78350f; border-top: none;
-  z-index: 2; letter-spacing: 0.3px;
-}
-.lvl-ribbon--starter {
-  background: #dcfce7; color: #065f46;
-}
-.lvl-ribbon--popular {
-  background: linear-gradient(135deg, #f97316, #ea580c);
-  color: #fff;
-}
-.lvl-ribbon--sultan {
-  background: linear-gradient(135deg, #fbbf24, #d97706);
-  color: #78350f;
-}
-
-/* CARD HEADER */
-.lvl-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 9px; margin-top: 3px;
-}
-.lvl-icon-box {
-  width: 44px; height: 44px;
-  border-radius: 13px;
-  border: 2px solid #78350f;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px;
-  box-shadow: 0 2.5px 0 #78350f;
-  flex-shrink: 0; background: #fff;
-}
-.lvl-head-meta {
-  padding-left: 10px; flex: 1;
-}
-.lvl-title {
-  font-size: 16.5px; font-weight: 900; color: #78350f; line-height: 1.15;
-}
-.lvl-dur-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10px; font-weight: 800; color: #92400e;
-  background: #fef3c7; border: 1.5px solid #78350f;
-  padding: 1.5px 7px; border-radius: 8px; margin-top: 2px;
-}
-
-/* PRICING */
-.lvl-price-block { text-align: right; flex-shrink: 0; }
-.lvl-price-old {
-  font-size: 10.5px; font-weight: 800; color: #a8a29e;
-  text-decoration: line-through;
-}
-.lvl-price-val {
-  font-size: 18px; font-weight: 900; color: #059669;
-  letter-spacing: -0.4px;
-}
-
-/* POTENSI CUAN STRIP */
-.lvl-potensi-cuan {
-  background: #f0fdf4;
-  border: 1.5px dashed #16a34a;
-  border-radius: 10px;
-  padding: 6px 9px;
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 10.5px; font-weight: 800; color: #166534;
-  margin-bottom: 9px;
-}
-.lvl-roi-pill {
-  background: #dcfce7; color: #166534;
-  border: 1.5px solid #166534;
-  border-radius: 6px; padding: 1.5px 6px;
-  font-size: 9px; font-weight: 900;
-}
-
-/* SPECS MATRIX 2x2 */
-.lvl-specs {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 5.5px;
-  margin-bottom: 11px;
-}
-.lvl-spec-item {
-  background: rgba(255,255,255,0.9);
-  border: 1.5px solid #78350f;
-  border-radius: 9px;
-  padding: 5px 7px;
-  font-size: 10.5px; font-weight: 800; color: #78350f;
-  display: flex; align-items: center; gap: 5px;
-  box-shadow: 0 1.5px 0 rgba(120,53,15,0.15);
-}
-.lvl-spec-item--full { grid-column: 1 / -1; }
-.lvl-spec-item i { font-size: 13px; flex-shrink: 0; }
-
-/* ACTION BUTTON */
-.lvl-btn-cta {
-  display: block; width: 100%;
-  padding: 10.5px; border-radius: 12px;
-  font-size: 12.5px; font-weight: 900;
-  text-align: center; cursor: pointer;
-  border: 2px solid #78350f;
-  transition: transform 0.1s;
-  box-shadow: 0 3.5px 0 #78350f;
-}
-.lvl-btn-cta:active {
-  transform: translateY(2px);
-  box-shadow: 0 1.5px 0 #78350f !important;
-}
-.lvl-btn-cta--starter {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
-}
-.lvl-btn-cta--popular {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #fff;
-}
-.lvl-btn-cta--sultan {
-  background: linear-gradient(135deg, #d97706, #b45309);
-  color: #fff;
-}
-.lvl-btn-cta--disabled {
-  background: #e2e8f0 !important;
-  color: #94a3b8 !important;
-  border-color: #cbd5e1 !important;
-  box-shadow: 0 2.5px 0 #94a3b8 !important;
-  cursor: not-allowed;
-}
-
-/* INFO STEP CARD */
-.info-card {
-  background: #fff;
-  border: 2.5px solid #78350f;
-  border-radius: 18px;
-  padding: 14px;
-  box-shadow: 0 4px 0 #78350f;
-  margin-top: 10px; margin-bottom: 22px;
-}
-.step-item {
-  display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;
-}
-.step-num {
-  width: 22px; height: 22px; border-radius: 6px;
-  background: #fde68a; border: 1.5px solid #78350f;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 900; color: #78350f;
-  box-shadow: 0 1.5px 0 #78350f; flex-shrink: 0;
-}
-.step-text {
-  font-size: 10.5px; font-weight: 800; color: #78350f; line-height: 1.35; padding-top: 2px;
-}
-
-/* MODAL */
-.cg-modal {
-  display: none; position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,0.65); align-items: center; justify-content: center;
-  backdrop-filter: blur(3px); padding: 18px;
-}
-.cg-modal-card {
-  background: #ffffff; border-radius: 22px;
-  border: 3px solid #78350f;
-  width: 100%; max-width: 370px;
-  box-shadow: 0 7px 0 #78350f;
-  padding: 18px;
-  animation: upPopIn 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-@keyframes upPopIn {
-  0% { transform: scale(0.9); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.cg-mc-hdr {
-  font-size: 16px; font-weight: 900; color: #78350f;
-  margin-bottom: 3px; display: flex; align-items: center; gap: 7px;
-}
-.cg-mc-sub {
-  font-size: 11px; font-weight: 700; color: #92400e; margin-bottom: 12px;
-}
-.cg-mc-box {
-  background: #fef8ee; border: 2px solid #78350f;
-  border-radius: 14px; padding: 12px; margin-bottom: 12px;
-}
-.cg-mc-lbl {
-  font-size: 9.5px; font-weight: 800; color: #b45309; text-transform: uppercase;
-  margin-bottom: 2px;
-}
-.cg-mc-val {
-  font-size: 17px; font-weight: 900; color: #78350f; margin-bottom: 6px;
-}
-.cg-mc-price {
-  font-size: 12px; font-weight: 800; color: #78350f;
-}
-.cg-mc-discount {
-  font-size: 11px; font-weight: 800; color: #059669; display: none; margin-top: 2px;
-}
-.cg-mc-total {
-  font-size: 14px; font-weight: 900; color: #d97706; margin-top: 5px;
-  padding-top: 5px; border-top: 1.5px dashed #d97706; display: none;
-}
-.cg-mc-dur {
-  font-size: 10.5px; font-weight: 800; color: #b45309; margin-top: 4px;
-}
-.cg-btn-row {
-  display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px;
-}
-.cg-btn {
-  padding: 10px; border-radius: 11px; font-size: 12px; font-weight: 900;
-  text-align: center; cursor: pointer; border: 2px solid #78350f;
-}
-.cg-btn--cancel {
-  background: #f1f5f9; color: #64748b; border-color: #cbd5e1;
-}
-.cg-btn--confirm {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff; box-shadow: 0 3px 0 #064e3b;
-}
-
-@media (max-width: 360px) {
-  .lvl-specs { grid-template-columns: 1fr; }
-}
+/* Modal */
+.cg-modal { display: none; position: fixed; inset: 0; z-index: 9999; align-items: center; justify-content: center; padding: 20px; background: rgba(30, 27, 46, 0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.cg-modal-card { width: 100%; max-width: 330px; padding: 16px; border: 2px solid #fff; border-radius: 24px; background: var(--reef-card); box-shadow: 0 24px 50px rgba(30, 27, 46, 0.3), inset 3px 3px 6px #fff; animation: pkPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes pkPop { from { transform: scale(0.88); opacity: 0; } to { transform: none; opacity: 1; } }
+.cg-mc-hdr { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 900; }
+.cg-mc-hdr i { color: #e11d48; font-size: 19px; }
+.cg-mc-box { margin: 10px 0; padding: 10px 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.9); box-shadow: inset 1px 1px 3px rgba(251, 146, 60, 0.15); }
+.cg-mc-val { font-size: 16px; font-weight: 900; color: #0e7490; text-align: center; margin-bottom: 6px; }
+.cg-line { display: flex; justify-content: space-between; padding: 3px 0; font-size: 11.5px; font-weight: 800; color: var(--reef-muted); }
+.cg-line b, .cg-line span { font-weight: 900; color: var(--reef-ink); }
+#discount-row { color: #059669; } #discount-row span { color: #059669; }
+#final-price-row { margin-top: 3px; padding-top: 6px; border-top: 1.5px dashed rgba(251, 146, 60, 0.3); font-size: 13px; }
+#final-price-row span { color: #e11d48; }
+.cg-voucher-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: none; background: none; cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 900; color: #0891b2; }
+#voucher-box { margin-top: 6px; gap: 6px; }
+#voucher-input { flex: 1; min-width: 0; padding: 8px 10px; border: 2px solid #fff; border-radius: 12px; outline: none; font-family: inherit; font-size: 11.5px; font-weight: 900; text-transform: uppercase; background: #fff; box-shadow: inset 1px 1px 4px rgba(8, 145, 178, 0.18); }
+.cg-voucher-apply { padding: 8px 12px; border: 2px solid #fff; border-radius: 12px; cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 900; color: #fff; background: linear-gradient(145deg, #67e8f9, #0891b2); }
+#voucher-msg { margin-top: 5px; font-size: 10.5px; font-weight: 800; display: none; }
+#modal-warn { display: none; margin: 8px 0; padding: 7px 9px; border-radius: 12px; background: #fff1f2; font-size: 10.5px; font-weight: 800; color: #be123c; }
+.cg-btn-row { display: flex; gap: 8px; margin-top: 10px; }
+.cg-btn { flex: 1; padding: 11px; border: 2px solid #fff; border-radius: 15px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 900; }
+.cg-btn--cancel { background: #fff; color: var(--reef-muted); box-shadow: inset 1.5px 1.5px 3px #fff, 0 3px 8px rgba(30, 27, 46, 0.08); }
+.cg-btn--confirm { color: #fff; background: linear-gradient(145deg, #6ee7b7, #059669); box-shadow: 0 6px 14px rgba(5, 150, 105, 0.3), inset 2px 2px 3px rgba(255, 255, 255, 0.4); }
+.cg-btn--danger { color: #fff; background: linear-gradient(145deg, #fb7185, #e11d48); box-shadow: 0 6px 14px rgba(225, 29, 72, 0.3), inset 2px 2px 3px rgba(255, 255, 255, 0.4); }
+.cg-sub { margin-top: 4px; text-align: center; font-size: 11px; font-weight: 700; color: var(--reef-muted); line-height: 1.45; }
 </style>
 
-<div class="up-page">
+<?php
+$paid = array_values(array_filter($memberships, fn($m) => (float)$m['price'] > 0));
+usort($paid, fn($a, $b) => (float)$a['price'] <=> (float)$b['price']);
+// Benefit joran mancing: joran ber-syarat pangkat (req_tier = sort_order pangkat), lihat Console › Fish System › Joran
+$rods_by_tier = [];
+try {
+    require_once dirname(__DIR__) . '/lib/fishing.php';
+    foreach (fishing_rod_catalog($pdo) as $rk => $rd) {
+        if ($rd['tier'] > 0) $rods_by_tier[$rd['tier']][] = $rd + ['key' => $rk];
+    }
+} catch (\Throwable $e) { $rods_by_tier = []; }
+$ROD_COLOR = ['biasa' => '#0891b2', 'bagus' => '#059669', 'langka' => '#e11d48', 'super' => '#7c3aed', 'jackpot' => '#d97706'];
+$free_rank  = current(array_filter($memberships, fn($m) => (float)$m['price'] == 0)) ?: null;
+$cur_id     = $active_membership ? (int)$active_membership['id'] : 0;
+$hot_idx    = count($paid) >= 3 ? 1 : -1;
+// Pangkat terpilih awal: satu tingkat di atas pangkat aktif, atau yang populer
+$sel_idx = $hot_idx >= 0 ? $hot_idx : 0;
+foreach ($paid as $i => $m) { if ((int)$m['id'] === $cur_id) { $sel_idx = min($i + 1, count($paid) - 1); break; } }
+$short = static fn(float $n): string => $n >= 1000000 ? rtrim(rtrim(number_format($n / 1000000, 1, ',', '.'), '0'), ',') . 'jt' : ($n >= 1000 ? number_format($n / 1000, 0, ',', '.') . 'rb' : number_format($n, 0, ',', '.'));
+?>
+<div class="pk-wrap">
 
-  <!-- HERO CANOPY WITH DARK FOREST TREES -->
-  <div class="up-hero">
-    <div class="up-hero-top">
-      <a href="/dashboard" class="up-hero-back" title="Kembali">
-        <i class="ph-bold ph-caret-left"></i>
-      </a>
-      <div class="up-hero-badge">
-        <i class="ph-fill ph-crown"></i> Keanggotaan VIP MancingCuan
-      </div>
-      <div style="width:36px;"></div>
+  <?php if ($flash): ?>
+    <div class="pk-flash <?= $flashType === 'error' ? 'error' : 'success' ?>"><span><?= htmlspecialchars($flash) ?></span></div>
+  <?php endif; ?>
+
+  <!-- STATUS -->
+  <div class="pk-status">
+    <div class="pk-st">
+      <span class="ic wal"><i class="ph-fill ph-wallet"></i></span>
+      <span class="tx"><small>Saldo Beli</small><b><?= format_rp((float)$user['balance_dep']) ?></b></span>
+      <a href="/deposit" class="add" aria-label="Isi Saldo Beli"><i class="ph-bold ph-plus"></i></a>
     </div>
-
-    <!-- MASCOT VIP ROW -->
-    <div class="up-mascot-row">
-      <div style="width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,#f59e0b,#b45309);display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;box-shadow:0 8px 20px rgba(245,158,11,0.4);border:2px solid #fff;flex-shrink:0;">
-        <i class="ph-fill ph-crown-simple"></i>
-      </div>
-      <div class="up-mascot-bubble">
-        <div class="up-mascot-bubble-title">
-          <i class="ph-fill ph-sparkle"></i> Upgrade Level VIP Cuan!
-        </div>
-        <div class="up-mascot-bubble-sub">
-          Pilih level keanggotaanmu, nikmati batas penarikan lebih tinggi &amp; prioritas pencairan 24 jam!
-        </div>
-      </div>
-    </div>
-
-    <!-- DARK FOREST PINE TREELINE SILHOUETTE -->
-    <div class="forest-trees-strip">
-      <svg viewBox="0 0 1000 70" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Background Layer: Misty Green Trees -->
-        <path d="M0,70 L0,38 L20,18 L40,38 L65,12 L90,38 L115,22 L140,38 L170,10 L200,38 L225,18 L250,38 L280,14 L310,38 L335,22 L360,38 L390,10 L420,38 L445,20 L470,38 L500,12 L530,38 L555,22 L580,38 L610,10 L640,38 L665,18 L690,38 L720,14 L750,38 L775,20 L800,38 L830,10 L860,38 L885,22 L910,38 L940,14 L970,38 L1000,18 L1000,70 Z" fill="#0d2e1f" opacity="0.45"/>
-        <!-- Foreground Layer: Deep Dark Forest Pine Trees -->
-        <path d="M0,70 L0,48 L15,28 L30,48 L50,20 L70,48 L95,14 L120,48 L140,32 L160,48 L190,12 L220,48 L245,26 L270,48 L310,10 L350,48 L375,30 L400,48 L430,16 L460,48 L485,28 L510,48 L545,12 L580,48 L610,26 L640,48 L675,16 L710,48 L735,30 L760,48 L795,10 L830,48 L855,28 L880,48 L915,16 L950,48 L975,32 L1000,48 L1000,70 Z" fill="#071b12"/>
-      </svg>
+    <div class="pk-st">
+      <span class="ic rank"><i class="ph-fill <?= htmlspecialchars((string)($active_membership['icon'] ?? ($free_rank['icon'] ?? 'ph-fish-simple'))) ?>"></i></span>
+      <span class="tx">
+        <small>Pangkatmu</small>
+        <b><?= htmlspecialchars((string)($active_membership['name'] ?? ($free_rank['name'] ?? 'Nelayan Pemula'))) ?></b>
+        <em><?= $active_membership ? 's/d ' . date('d M Y', strtotime($user['membership_expires_at'])) : 'Gratis' ?></em>
+      </span>
+      <?php if ($can_refund): ?>
+        <button type="button" class="pk-refund" onclick="document.getElementById('refund-modal').style.display='flex'" aria-label="Ajukan refund" title="Ajukan refund"><i class="ph-bold ph-arrow-u-up-left"></i></button>
+      <?php endif; ?>
     </div>
   </div>
 
-  <!-- TRUST STRIP -->
-  <div class="up-trust-strip">
-    <div class="up-trust-pill">
-      <i class="ph-fill ph-shield-check"></i>
-      <span>Saldo 100% Aman</span>
-    </div>
-    <div class="up-trust-pill">
-      <i class="ph-fill ph-lightning"></i>
-      <span>WD Prioritas 24 Jam</span>
-    </div>
-    <div class="up-trust-pill">
-      <i class="ph-fill ph-chart-line-up"></i>
-      <span>Balik Modal Kilat</span>
-    </div>
+  <?php if (!$paid): ?>
+    <div class="pk-empty" style="margin-top:10px">Belum ada pangkat berbayar yang tersedia.</div>
+  <?php else: ?>
+
+  <!-- PEMILIH PANGKAT -->
+  <div class="pk-tiers" role="tablist">
+    <?php foreach ($paid as $i => $m): ?>
+      <button type="button" class="pk-tier t<?= $i % 3 ?> <?= $i === $sel_idx ? 'on' : '' ?>" data-tier="<?= $i ?>" onclick="pickTier(<?= $i ?>)" role="tab">
+        <?php if ($i === $hot_idx): ?><span class="hot">FAVORIT</span><?php endif; ?>
+        <?php if ((int)$m['id'] === $cur_id): ?><i class="ph-fill ph-check-circle cur"></i><?php endif; ?>
+        <i class="ph-fill <?= htmlspecialchars((string)$m['icon']) ?>"></i>
+        <b><?= htmlspecialchars($m['name']) ?></b>
+        <small><?= $short(get_active_price($m, $user)) ?></small>
+      </button>
+    <?php endforeach; ?>
   </div>
 
-  <!-- BODY CONTENT -->
-  <div class="up-body">
+  <form method="POST" id="upgrade-form">
+    <?= csrf_field() ?>
+    <input type="hidden" name="membership_id" id="chosen-id" value="">
+    <input type="hidden" name="voucher_code" id="applied-voucher-code" value="">
+  </form>
 
-    <!-- FLASH MESSAGES -->
-    <?php if ($flash): ?>
-      <div style="padding:10px 12px;border-radius:12px;font-size:11.5px;font-weight:800;margin-bottom:12px;border:2px solid;<?= $flashType==='success' ? 'background:#dcfce7;border-color:#16a34a;color:#166534;' : 'background:#fee2e2;border-color:#ef4444;color:#991b1b;' ?>">
-        <?= htmlspecialchars($flash) ?>
+  <!-- KARTU HARGA -->
+  <?php foreach ($paid as $i => $m):
+    $active_price = get_active_price($m, $user);
+    $can_afford   = (float)$user['balance_dep'] >= $active_price;
+    $h            = get_harvest_calc($m, $avg_video_reward);
+    $orig         = (float)$m['original_price'];
+    $off          = $orig > $active_price && $orig > 0 ? (int)round((1 - $active_price / $orig) * 100) : 0;
+    $is_cur       = (int)$m['id'] === $cur_id;
+    $is_top       = $i === count($paid) - 1;
+  ?>
+    <div class="pk-card t<?= $i % 3 ?> <?= $i === $sel_idx ? 'on' : '' ?>" data-card="<?= $i ?>">
+      <div class="pk-top">
+        <div class="pk-emb"><i class="ph-fill <?= htmlspecialchars((string)$m['icon']) ?>"></i></div>
+        <div class="pk-name">
+          <b><?= htmlspecialchars($m['name']) ?></b>
+          <span><i class="ph-bold ph-hourglass"></i> <?= (int)$m['duration_days'] ?> hari</span>
+        </div>
+        <div class="pk-price">
+          <?php if ($orig > $active_price): ?><s><?= format_rp($orig) ?></s><?php endif; ?>
+          <b><?= format_rp($active_price) ?></b>
+          <?php if ($off > 0): ?><em>-<?= $off ?>%</em><?php endif; ?>
+        </div>
       </div>
-    <?php endif; ?>
-
-    <!-- ACTIVE MEMBERSHIP STATUS -->
-    <?php if ($active_membership): ?>
-      <div class="active-rank-card">
-        <div class="active-rank-hdr">
-          <span class="active-rank-badge"><i class="ph-fill ph-check-circle"></i> Kasta Aktif</span>
-          <?php if ($can_refund): ?>
-            <button type="button" onclick="document.getElementById('refund-modal').style.display='flex'" style="background:none;border:none;color:#dc2626;font-size:10.5px;font-weight:900;cursor:pointer;display:flex;align-items:center;gap:3px;">
-              <i class="ph-bold ph-arrow-u-up-left"></i> Ajukan Refund
-            </button>
-          <?php endif; ?>
+      <div class="pk-body">
+        <div class="pk-nums">
+          <div class="pk-num c1"><i class="ph-fill ph-play-circle"></i><span><b><?= (int)$m['watch_limit'] ?> video</b><small>Per hari</small></span></div>
+          <div class="pk-num c2"><i class="ph-fill ph-trend-up"></i><span><b><?= $h ? '±' . format_rp(round($h['daily_income'] / 1000) * 1000) : '-' ?></b><small>Estimasi / hari</small></span></div>
+          <div class="pk-num c3"><i class="ph-fill ph-arrow-circle-down"></i><span><b><?= format_rp((float)$m['min_wd']) ?></b><small>Min tarik</small></span></div>
+          <div class="pk-num c4"><i class="ph-fill ph-arrow-circle-up"></i><span><b><?= (float)$m['max_wd'] > 0 ? format_rp((float)$m['max_wd']) : 'Tanpa batas' ?></b><small>Maks tarik</small></span></div>
         </div>
-        <div class="active-rank-name"><?= htmlspecialchars($active_membership['name']) ?></div>
-        <div class="active-rank-detail">
-          Berlaku s/d: <strong><?= date('d M Y, H:i', strtotime($user['membership_expires_at'])) ?></strong> (<?= (int)$active_membership['watch_limit'] ?> Video/hari)
+        <?php if (!empty($m['allow_edit_bank']) || $is_top || ($h && $h['break_even_days'] > 0)): ?>
+        <div class="pk-perks">
+          <?php if ($h && $h['break_even_days'] > 0): ?><span><i class="ph-bold ph-lightning"></i> Balik modal ±<?= (int)$h['break_even_days'] ?> hari</span><?php endif; ?>
+          <?php if (!empty($m['allow_edit_bank'])): ?><span><i class="ph-bold ph-pencil-simple"></i> Bebas ganti rekening</span><?php endif; ?>
+          <?php if ($is_top): ?><span><i class="ph-bold ph-crown"></i> Pencairan prioritas</span><?php endif; ?>
         </div>
-      </div>
-    <?php endif; ?>
-
-    <!-- LIVE TICKER -->
-    <div class="live-ticker">
-      <span class="live-dot"></span>
-      <span style="flex:1;"><strong>Live Panen:</strong> Member <code>@cuan***</code> baru bergabung ke <strong>Imperial Amber</strong>!</span>
-    </div>
-
-    <!-- SALDO BELI TILE -->
-    <div class="sh-honey"><div class="sh-honey__title"><i class="ph-fill ph-wallet"></i> Saldo Deposit Aktif</div></div>
-    <div class="saldo-card">
-      <div class="saldo-lbl"><i class="ph-bold ph-coins"></i> Saldo Beli Tersedia</div>
-      <div class="saldo-val"><?= format_rp((float)$user['balance_dep']) ?></div>
-      <div class="saldo-sub">Saldo ini digunakan untuk aktivasi paket keanggotaan VIP.</div>
-    </div>
-
-    <!-- QUICK BUTTONS -->
-    <div class="qa-grid">
-      <a href="/deposit" class="qa-btn qa-btn--dep">
-        <i class="ph-bold ph-plus-circle" style="font-size:15px;"></i> + Isi Saldo Beli
-      </a>
-      <a href="/checkin" class="qa-btn qa-btn--checkin">
-        <i class="ph-bold ph-calendar-check" style="font-size:15px;"></i> Hadiah Check-in
-      </a>
-    </div>
-
-    <!-- PILIH PAKET MEMBERSHIP VIP -->
-    <div class="sh-honey"><div class="sh-honey__title"><i class="ph-fill ph-crown"></i> Pilih Paket VIP</div></div>
-
-    <div style="background:#fffbeb;border:1.5px dashed #f59e0b;border-radius:14px;padding:9px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-      <i class="ph-fill ph-calculator" style="color:#d97706;font-size:18px;flex-shrink:0;"></i>
-      <div style="font-size:11px;font-weight:800;color:#92400e;line-height:1.4;">
-        Estimasi panen dihitung otomatis berdasarkan <b>rata-rata reward video aktif (<?= format_rp($avg_video_reward) ?> / video)</b> dikalikan kuota harian masing-masing kasta.
-      </div>
-    </div>
-
-    <form method="POST" id="upgrade-form">
-      <?= csrf_field() ?>
-      <input type="hidden" name="membership_id" id="chosen-id" value="">
-      <input type="hidden" name="voucher_code" id="applied-voucher-code" value="">
-
-      <?php
-      $paid    = array_values(array_filter($memberships, fn($m) => (float)$m['price'] > 0));
-      usort($paid, fn($a,$b) => (float)$a['price'] <=> (float)$b['price']);
-      $kanopi   = $paid[0] ?? null;
-      $rimba    = $paid[1] ?? null;
-      $ratu     = $paid[2] ?? null;
-
-      $h_kanopi = $kanopi ? get_harvest_calc($kanopi, $avg_video_reward) : null;
-      $h_rimba  = $rimba  ? get_harvest_calc($rimba, $avg_video_reward)  : null;
-      $h_ratu   = $ratu   ? get_harvest_calc($ratu, $avg_video_reward)   : null;
-      ?>
-
-      <!-- TIER 1: GOLDEN AMBER -->
-      <?php if ($kanopi):
-          $m = $kanopi;
-          $active_price = get_active_price($m, $user);
-          $can_afford = (float)$user['balance_dep'] >= $active_price;
-      ?>
-      <div class="lvl-card lvl-card--starter" onclick="openConfirm(<?= $m['id'] ?>, '<?= htmlspecialchars($m['name'], ENT_QUOTES) ?>', <?= $active_price ?>, <?= $m['duration_days'] ?>)">
-        <!-- Honeycomb & Forest Watermark -->
-        <svg class="lvl-card-deco-bg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 0L93.3 25V75L50 100L6.7 75V25L50 0Z" stroke="#78350f" stroke-width="2.5"/>
-          <path d="M50 16L80.3 33.5V66.5L50 84L19.7 66.5V33.5L50 16Z" stroke="#78350f" stroke-width="1.5"/>
-          <path d="M70,80 L75,60 L80,80 L85,55 L90,80 L95,65 L100,80" stroke="#166534" stroke-width="2"/>
-        </svg>
-
-        <div class="lvl-ribbon lvl-ribbon--starter">✨ GOLDEN AMBER</div>
-        
-        <div class="lvl-head">
-          <div class="lvl-icon-box" style="background:#fef3c7;color:#d97706;"><i class="ph-fill ph-sparkle"></i></div>
-          <div class="lvl-head-meta">
-            <div class="lvl-title"><?= htmlspecialchars($m['name']) ?></div>
-            <span class="lvl-dur-badge"><i class="ph-bold ph-hourglass"></i> Aktif <?= $m['duration_days'] ?> Hari</span>
-          </div>
-          <div class="lvl-price-block">
-            <div class="lvl-price-old"><?= format_rp((float)$m['original_price']) ?></div>
-            <div class="lvl-price-val"><?= format_rp($active_price) ?></div>
-          </div>
+        <?php endif; ?>
+        <?php
+          $tier_no   = (int)$m['sort_order'];
+          $tier_rods = $rods_by_tier[$tier_no] ?? [];
+          $all_rods  = 0; foreach ($rods_by_tier as $t => $list) if ($t <= $tier_no) $all_rods += count($list);
+        ?>
+        <?php if ($tier_rods): ?>
+        <div class="pk-rod-ttl"><i class="ph-fill ph-fish-simple"></i> Bonus Joran Mancing<?php if ($all_rods > count($tier_rods)): ?><small>+<?= $all_rods - count($tier_rods) ?> joran pangkat bawah</small><?php endif; ?></div>
+        <?php foreach ($tier_rods as $rd): $rc = $ROD_COLOR[$rd['rarity']] ?? '#0891b2'; ?>
+        <div class="pk-rod" style="--rc: <?= $rc ?>">
+          <span class="pk-rod-ic">
+            <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 28L26 5" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/><circle cx="11.5" cy="21.5" r="3.6" fill="#fde68a" stroke="#fff" stroke-width="1.3"/><path d="M26 5 C29 11 28 17 24 20" stroke="#fff" stroke-width="1.2" fill="none" opacity=".85"/><circle cx="24" cy="21" r="2.2" fill="#fb7185" stroke="#fff" stroke-width="1"/></svg>
+          </span>
+          <span class="pk-rod-tx">
+            <b><?= htmlspecialchars($rd['name']) ?></b>
+            <span class="pk-rod-b"><em><i class="ph-bold ph-arrows-clockwise"></i> Tarik +<?= (int)$rd['reel'] ?>%</em><em><i class="ph-bold ph-timer"></i> Umpan +<?= (int)$rd['bite'] ?>%</em></span>
+          </span>
         </div>
-
-        <div class="lvl-potensi-cuan">
-          <span>🎯 Estimasi Panen: <strong><?= $h_kanopi['harvest_text'] ?></strong></span>
-          <span class="lvl-roi-pill">⚡ <?= $h_kanopi['daily_text'] ?></span>
-        </div>
-
-        <div class="lvl-specs">
-          <div class="lvl-spec-item"><i class="ph-bold ph-video-camera" style="color:#059669;"></i> <strong><?= $m['watch_limit'] ?> Video</strong> / hari</div>
-          <div class="lvl-spec-item"><i class="ph-bold ph-arrow-circle-down" style="color:#10b981;"></i> Min WD: <strong><?= format_rp((float)$m['min_wd']) ?></strong></div>
-          <div class="lvl-spec-item"><i class="ph-bold ph-arrow-circle-up" style="color:#d97706;"></i> Max WD: <strong><?= format_rp((float)$m['max_wd']) ?></strong></div>
-          <div class="lvl-spec-item"><i class="ph-bold ph-clock" style="color:#64748b;"></i> Proses 1-24 Jam</div>
-          <?php if (!empty($m['allow_edit_bank'])): ?>
-          <div class="lvl-spec-item"><i class="ph-bold ph-pencil-simple" style="color:#2563eb;"></i> Bebas Ganti Rekening</div>
-          <?php endif; ?>
-          <div class="lvl-spec-item lvl-spec-item--full" style="background:#fef3c7;border-color:#d97706;color:#92400e;">
-            <i class="ph-fill ph-storefront" style="color:#d97706;"></i> <strong>Bonus: Lapak Golden Amber (Jual Rp 35/ml · Kuota 600 ml/hari)</strong>
-          </div>
-          <?php if ($m['description']): ?>
-          <div class="lvl-spec-item lvl-spec-item--full" style="color:#92400e;"><i class="ph-bold ph-tree" style="color:#166534;"></i> <?= htmlspecialchars($m['description']) ?></div>
-          <?php endif; ?>
-        </div>
-
-        <button type="button" class="lvl-btn-cta lvl-btn-cta--starter <?= !$can_afford ? 'lvl-btn-cta--disabled' : '' ?>">
-          <?= $can_afford ? 'GABUNG LEVEL GOLDEN AMBER' : 'Saldo Kurang — Topup Dulu' ?>
+        <?php endforeach; ?>
+        <?php endif; ?>
+        <button type="button" class="pk-cta <?= $is_cur ? 'is-cur' : (!$can_afford ? 'low' : '') ?>"
+          onclick="<?= !$can_afford && !$is_cur ? "location.href='/deposit'" : 'openConfirm(' . (int)$m['id'] . ", '" . htmlspecialchars($m['name'], ENT_QUOTES) . "', " . $active_price . ', ' . (int)$m['duration_days'] . ')' ?>">
+          <?php if ($is_cur): ?><i class="ph-bold ph-arrows-clockwise"></i> Perpanjang Pangkat
+          <?php elseif ($can_afford): ?><i class="ph-fill ph-rocket-launch"></i> Naik ke <?= htmlspecialchars($m['name']) ?>
+          <?php else: ?><i class="ph-bold ph-plus-circle"></i> Isi Saldo · kurang <?= format_rp($active_price - (float)$user['balance_dep']) ?><?php endif; ?>
         </button>
-      </div>
-      <?php endif; ?>
-
-      <!-- TIER 2: ROYAL AMBER -->
-      <?php if ($rimba):
-          $m = $rimba;
-          $active_price = get_active_price($m, $user);
-          $can_afford = (float)$user['balance_dep'] >= $active_price;
-      ?>
-      <div class="lvl-card lvl-card--popular" onclick="openConfirm(<?= $m['id'] ?>, '<?= htmlspecialchars($m['name'], ENT_QUOTES) ?>', <?= $active_price ?>, <?= $m['duration_days'] ?>)">
-        <!-- Honeycomb & Forest Watermark -->
-        <svg class="lvl-card-deco-bg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 0L93.3 25V75L50 100L6.7 75V25L50 0Z" stroke="#f59e0b" stroke-width="2.5"/>
-          <path d="M50 16L80.3 33.5V66.5L50 84L19.7 66.5V33.5L50 16Z" stroke="#f59e0b" stroke-width="1.5"/>
-          <path d="M70,80 L75,55 L80,80 L85,50 L90,80 L95,60 L100,80" stroke="#d97706" stroke-width="2"/>
-        </svg>
-
-        <div class="lvl-ribbon lvl-ribbon--popular">👑 ROYAL AMBER (FAVORIT)</div>
-
-        <div class="lvl-head">
-          <div class="lvl-icon-box" style="background:#fef3c7;color:#b45309;"><i class="ph-fill ph-crown"></i></div>
-          <div class="lvl-head-meta">
-            <div class="lvl-title"><?= htmlspecialchars($m['name']) ?></div>
-            <span class="lvl-dur-badge" style="background:#fef3c7;"><i class="ph-bold ph-hourglass"></i> Aktif <?= $m['duration_days'] ?> Hari</span>
-          </div>
-          <div class="lvl-price-block">
-            <div class="lvl-price-old"><?= format_rp((float)$m['original_price']) ?></div>
-            <div class="lvl-price-val" style="color:#d97706;"><?= format_rp($active_price) ?></div>
-          </div>
-        </div>
-
-        <div class="lvl-potensi-cuan" style="background:#fffbeb;border-color:#f59e0b;color:#92400e;">
-          <span>🎯 Estimasi Panen: <strong><?= $h_rimba['harvest_text'] ?></strong></span>
-          <span class="lvl-roi-pill" style="background:#fef3c7;color:#92400e;border-color:#b45309;">🔥 <?= $h_rimba['daily_text'] ?></span>
-        </div>
-
-        <div class="lvl-specs">
-          <div class="lvl-spec-item"><i class="ph-bold ph-video-camera" style="color:#d97706;"></i> <strong><?= $m['watch_limit'] ?> Video</strong> / hari</div>
-          <div class="lvl-spec-item"><i class="ph-bold ph-arrow-circle-down" style="color:#10b981;"></i> Min WD: <strong><?= format_rp((float)$m['min_wd']) ?></strong></div>
-          <div class="lvl-spec-item"><i class="ph-bold ph-arrow-circle-up" style="color:#d97706;"></i> Max WD: <strong><?= format_rp((float)$m['max_wd']) ?></strong></div>
-          <?php if (!empty($m['allow_edit_bank'])): ?>
-          <div class="lvl-spec-item"><i class="ph-bold ph-pencil-simple" style="color:#2563eb;"></i> Bebas Ganti Rekening</div>
-          <?php endif; ?>
-          <div class="lvl-spec-item lvl-spec-item--full" style="background:#fef3c7;border-color:#b45309;color:#78350f;">
-            <i class="ph-fill ph-storefront" style="color:#b45309;"></i> <strong>Bonus: Lapak Royal Amber (Jual Rp 55/ml · Kuota 2.000 ml/hari)</strong>
-          </div>
-          <?php if ($m['description']): ?>
-          <div class="lvl-spec-item lvl-spec-item--full" style="color:#78350f;"><i class="ph-bold ph-tree" style="color:#166534;"></i> <?= htmlspecialchars($m['description']) ?></div>
-          <?php endif; ?>
-        </div>
-
-        <button type="button" class="lvl-btn-cta lvl-btn-cta--popular <?= !$can_afford ? 'lvl-btn-cta--disabled' : '' ?>">
-          <?= $can_afford ? 'GABUNG LEVEL ROYAL AMBER' : 'Saldo Kurang — Topup Dulu' ?>
-        </button>
-      </div>
-      <?php endif; ?>
-
-      <!-- TIER 3: IMPERIAL AMBER -->
-      <?php if ($ratu):
-          $m = $ratu;
-          $active_price = get_active_price($m, $user);
-          $can_afford = (float)$user['balance_dep'] >= $active_price;
-      ?>
-      <div class="lvl-card lvl-card--sultan" onclick="openConfirm(<?= $m['id'] ?>, '<?= htmlspecialchars($m['name'], ENT_QUOTES) ?>', <?= $active_price ?>, <?= $m['duration_days'] ?>)">
-        <!-- Honeycomb & Forest Watermark -->
-        <svg class="lvl-card-deco-bg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 0L93.3 25V75L50 100L6.7 75V25L50 0Z" stroke="#78350f" stroke-width="2.5"/>
-          <path d="M50 16L80.3 33.5V66.5L50 84L19.7 66.5V33.5L50 16Z" stroke="#78350f" stroke-width="1.5"/>
-          <path d="M70,80 L75,50 L80,80 L85,45 L90,80 L95,55 L100,80" stroke="#78350f" stroke-width="2.5"/>
-        </svg>
-
-        <div class="lvl-ribbon lvl-ribbon--sultan">🛡️ IMPERIAL AMBER · 60 HARI (2 BULAN)</div>
-
-        <div class="lvl-head">
-          <div class="lvl-icon-box" style="background:#fef08a;color:#78350f;"><i class="ph-fill ph-shield-star"></i></div>
-          <div class="lvl-head-meta">
-            <div class="lvl-title"><?= htmlspecialchars($m['name']) ?></div>
-            <span class="lvl-dur-badge" style="background:#fde68a;font-weight:900;"><i class="ph-bold ph-hourglass"></i> AKTIF 60 HARI (2 BULAN)</span>
-          </div>
-          <div class="lvl-price-block">
-            <div class="lvl-price-old"><?= format_rp((float)$m['original_price']) ?></div>
-            <div class="lvl-price-val" style="color:#78350f;"><?= format_rp($active_price) ?></div>
-          </div>
-        </div>
-
-        <div class="lvl-potensi-cuan" style="background:#fff;border-color:#b45309;color:#78350f;">
-          <span>🎯 Estimasi Panen: <strong><?= $h_ratu['harvest_text'] ?></strong></span>
-          <span class="lvl-roi-pill" style="background:#fde68a;color:#78350f;border-color:#78350f;">👑 <?= $h_ratu['daily_text'] ?></span>
-        </div>
-
-        <div class="lvl-specs">
-          <div class="lvl-spec-item"><i class="ph-bold ph-video-camera" style="color:#b45309;"></i> <strong><?= $m['watch_limit'] ?> Video</strong> / hari</div>
-          <div class="lvl-spec-item"><i class="ph-bold ph-arrow-circle-down" style="color:#10b981;"></i> Min WD: <strong><?= format_rp((float)$m['min_wd']) ?></strong></div>
-          <div class="lvl-spec-item"><i class="ph-bold ph-rocket-launch" style="color:#ea580c;"></i> Max WD: <strong><?= format_rp((float)$m['max_wd']) ?></strong></div>
-          <?php if (!empty($m['allow_edit_bank'])): ?>
-          <div class="lvl-spec-item"><i class="ph-bold ph-pencil-simple" style="color:#2563eb;"></i> Bebas Ganti Rekening</div>
-          <?php endif; ?>
-          <div class="lvl-spec-item lvl-spec-item--full" style="background:#fef08a;border-color:#78350f;color:#78350f;">
-            <i class="ph-fill ph-storefront" style="color:#78350f;"></i> <strong>Bonus: Lapak Imperial Amber (Jual Rp 85/ml · Kuota 6.000 ml/hari)</strong>
-          </div>
-          <div class="lvl-spec-item lvl-spec-item--full" style="background:#fef3c7;border-color:#d97706;color:#78350f;">
-            <i class="ph-fill ph-crown" style="color:#d97706;"></i> <strong>VIP Express (Pencairan Otomatis Tanpa Antre)</strong>
-          </div>
-          <?php if ($m['description']): ?>
-          <div class="lvl-spec-item lvl-spec-item--full" style="color:#92400e;"><i class="ph-bold ph-tree" style="color:#166534;"></i> <?= htmlspecialchars($m['description']) ?></div>
-          <?php endif; ?>
-        </div>
-
-        <button type="button" class="lvl-btn-cta lvl-btn-cta--sultan <?= !$can_afford ? 'lvl-btn-cta--disabled' : '' ?>">
-          <?= $can_afford ? 'KLAIM MAHKOTA IMPERIAL AMBER' : 'Saldo Kurang — Topup Dulu' ?>
-        </button>
-      </div>
-      <?php endif; ?>
-
-    </form>
-
-    <!-- INFO STEP CARD (COMPACT) -->
-    <div class="info-card">
-      <div style="font-size:12px;font-weight:900;color:#78350f;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
-        <i class="ph-bold ph-lightbulb" style="color:#f59e0b;font-size:16px;"></i> 3 Langkah Mudah Panen Nektar
-      </div>
-      <div class="step-item">
-        <div class="step-num">1</div>
-        <div class="step-text"><strong>Isi Saldo Beli</strong> instan via QRIS (DANA, GoPay, OVO, ShopeePay, BCA).</div>
-      </div>
-      <div class="step-item">
-        <div class="step-num">2</div>
-        <div class="step-text"><strong>Pilih Kasta Rimba</strong> yang sesuai dengan target cuan harianmu.</div>
-      </div>
-      <div class="step-item">
-        <div class="step-num">3</div>
-        <div class="step-text"><strong>Konfirmasi &amp; Panen!</strong> Kasta langsung aktif seketika tanpa nunggu lama.</div>
-      </div>
-
-      <div style="background:#fef8ee;border:2px dashed #f59e0b;border-radius:12px;padding:8px 10px;margin-top:10px;">
-        <div style="font-size:10.5px;font-weight:900;color:#78350f;display:flex;align-items:center;gap:4px;margin-bottom:2px;">
-          <i class="ph-fill ph-shield-check" style="color:#16a34a;"></i> Garansi Kepuasan 12 Jam
-        </div>
-        <div style="font-size:10px;font-weight:700;color:#92400e;line-height:1.35;">
-          Perlindungan dana aman. Kamu berhak mengajukan pengembalian saldo beli dalam kurun waktu 12 jam setelah aktivasi jika berubah pikiran.
-        </div>
+        <?php if ($h): ?><div class="pk-note">Estimasi dari rata-rata <?= format_rp($avg_video_reward) ?>/video</div><?php endif; ?>
       </div>
     </div>
+  <?php endforeach; ?>
+  <?php endif; ?>
 
+  <div class="pk-trust">
+    <span><i class="ph-fill ph-shield-check"></i>Garansi 12 jam</span>
+    <span><i class="ph-fill ph-lightning"></i>Aktif instan</span>
+    <span><i class="ph-fill ph-clock"></i>WD 1×24 jam</span>
   </div>
+
+  <details class="pk-guide" open>
+    <summary><i class="ph-fill ph-compass"></i> Cara naik pangkat <i class="ph-bold ph-caret-down chev"></i></summary>
+    <ol class="pk-steps">
+      <li><span>1</span><div><b>Isi Saldo Beli</b><small>Tekan <i class="ph-bold ph-plus"></i> di atas, bayar via QRIS.</small></div></li>
+      <li><span>2</span><div><b>Pilih pangkat</b><small>Geser pilihan di atas, cek harga &amp; bonusnya.</small></div></li>
+      <li><span>3</span><div><b>Tekan tombol &amp; konfirmasi</b><small>Saldo Beli terpotong, pangkat langsung aktif.</small></div></li>
+      <li><span>4</span><div><b>Nikmati bonusnya</b><small>Kuota video naik, joran baru terbuka di menu <b>Joran</b> saat mancing.</small></div></li>
+    </ol>
+  </details>
+
+  <details class="pk-guide">
+    <summary><i class="ph-fill ph-info"></i> Arti angka di kartu <i class="ph-bold ph-caret-down chev"></i></summary>
+    <dl class="pk-glos">
+      <div><dt><i class="ph-fill ph-play-circle" style="color:#0891b2"></i> Video / hari</dt><dd>Jumlah video berhadiah yang bisa ditonton tiap hari.</dd></div>
+      <div><dt><i class="ph-fill ph-trend-up" style="color:#059669"></i> Estimasi / hari</dt><dd>Perkiraan cuan: kuota video × rata-rata hadiah video. Bukan jaminan.</dd></div>
+      <div><dt><i class="ph-fill ph-arrow-circle-down" style="color:#7c3aed"></i> Min &amp; maks tarik</dt><dd>Batas nominal sekali penarikan saldo.</dd></div>
+      <div><dt><i class="ph-bold ph-lightning" style="color:#047857"></i> Balik modal</dt><dd>Perkiraan hari sampai estimasi cuan menutup harga pangkat.</dd></div>
+      <div><dt><i class="ph-bold ph-arrows-clockwise" style="color:#e11d48"></i> Tarik +%</dt><dd>Gulungan joran lebih cepat saat menarik ikan.</dd></div>
+      <div><dt><i class="ph-bold ph-timer" style="color:#d97706"></i> Umpan +%</dt><dd>Ikan lebih cepat menyambar umpan.</dd></div>
+      <div><dt><i class="ph-fill ph-shield-check" style="color:#059669"></i> Garansi 12 jam</dt><dd>Berubah pikiran? Ajukan refund lewat ikon <i class="ph-bold ph-arrow-u-up-left"></i> di kartu pangkatmu (dipotong biaya admin).</dd></div>
+      <div><dt><i class="ph-bold ph-arrows-clockwise" style="color:#0891b2"></i> Perpanjang</dt><dd>Beli lagi pangkat yang sama untuk memulai masa aktif baru.</dd></div>
+    </dl>
+  </details>
 </div>
 
-<!-- CONFIRMATION MODAL -->
+<!-- MODAL KONFIRMASI -->
 <div id="upgrade-modal" class="cg-modal">
   <div class="cg-modal-card">
-    <div class="cg-mc-hdr"><i class="ph-fill ph-crown"></i> Konfirmasi Kasta Rimba</div>
-    <div class="cg-mc-sub">Pastikan kasta pilihanmu sudah sesuai sebelum diproses!</div>
+    <div class="cg-mc-hdr"><i class="ph-fill ph-rocket-launch"></i> Konfirmasi Pangkat</div>
     <div class="cg-mc-box">
-      <div class="cg-mc-lbl">Kasta Dipilih</div>
       <div class="cg-mc-val" id="modal-name">--</div>
-      <div class="cg-mc-price" id="price-row">Biaya: <span id="modal-price">--</span></div>
-      <div class="cg-mc-discount" id="discount-row">Diskon: -<span id="modal-discount">--</span> (<span id="modal-pct">--</span>)</div>
-      <div class="cg-mc-total" id="final-price-row">Total Potong Saldo: <span id="modal-final-price">--</span></div>
-      <div class="cg-mc-dur">Masa Aktif: <strong id="modal-days">--</strong> hari penuh</div>
+      <div class="cg-line" id="price-row">Harga <span id="modal-price">--</span></div>
+      <div class="cg-line" id="discount-row" style="display:none">Diskon (<span id="modal-pct">--</span>) <span>-<span id="modal-discount">--</span></span></div>
+      <div class="cg-line" id="final-price-row" style="display:none">Total bayar <span id="modal-final-price">--</span></div>
+      <div class="cg-line">Masa aktif <b><span id="modal-days">--</span> hari</b></div>
     </div>
-    <div style="margin-bottom:12px;">
-      <button type="button" id="toggle-voucher-btn" onclick="toggleVoucher()" style="background:none;border:none;color:#0284c7;font-weight:900;font-size:11.5px;cursor:pointer;padding:0;display:flex;align-items:center;gap:4px;">
-        <i class="ph-bold ph-tag"></i> Punya Kode Voucher Diskon?
-      </button>
-      <div id="voucher-box" style="display:none;margin-top:6px;gap:6px;">
-        <input type="text" id="voucher-input" placeholder="KODE VOUCHER" style="flex:1;border:2px solid #78350f;border-radius:9px;padding:7px 10px;font-weight:900;text-transform:uppercase;font-size:11px;outline:none;">
-        <button type="button" onclick="applyVoucher()" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:2px solid #78350f;border-radius:9px;padding:7px 12px;font-weight:900;font-size:11px;cursor:pointer;box-shadow:0 2px 0 #78350f;">Gunakan</button>
-      </div>
-      <div id="voucher-msg" style="font-size:10.5px;font-weight:800;margin-top:5px;display:none;"></div>
+    <button type="button" id="toggle-voucher-btn" class="cg-voucher-btn" onclick="toggleVoucher()"><i class="ph-bold ph-tag"></i> Punya voucher?</button>
+    <div id="voucher-box" style="display:none">
+      <input type="text" id="voucher-input" placeholder="KODE VOUCHER">
+      <button type="button" class="cg-voucher-apply" onclick="applyVoucher()">Pakai</button>
     </div>
-    <div id="modal-warn" style="display:none;font-size:10.5px;color:#b91c1c;font-weight:800;margin-bottom:12px;background:#fee2e2;border:2px solid #ef4444;border-radius:9px;padding:7px 9px;"></div>
-    <div style="font-size:10px;color:#92400e;font-weight:800;margin-bottom:12px;text-align:center;">Saldo Beli kamu otomatis terpotong saat konfirmasi.</div>
+    <div id="voucher-msg"></div>
+    <div id="modal-warn"></div>
     <div class="cg-btn-row">
       <button type="button" class="cg-btn cg-btn--cancel" onclick="closeConfirm()">Batal</button>
       <button type="button" id="modal-confirm-btn" class="cg-btn cg-btn--confirm" onclick="submitUpgrade()">YA, AKTIFKAN!</button>
@@ -1237,24 +691,28 @@ body {
   </div>
 </div>
 
-<!-- REFUND MODAL -->
+<!-- MODAL REFUND -->
 <div id="refund-modal" class="cg-modal">
-  <div class="cg-modal-card" style="border-color:#b91c1c;box-shadow:0 7px 0 #b91c1c;">
-    <div class="cg-mc-hdr" style="color:#b91c1c;"><i class="ph-bold ph-warning"></i> Ajukan Refund?</div>
-    <div class="cg-mc-sub">Yakin ingin mengajukan pengembalian kasta aktifmu?</div>
-    <div style="background:#fee2e2;border:2px solid #ef4444;border-radius:12px;padding:10px;margin-bottom:12px;font-size:10.5px;font-weight:800;color:#991b1b;line-height:1.4;">
-      Saldo akan dikembalikan ke <strong>Saldo Beli</strong> setelah verifikasi sistem dengan potongan biaya admin. Level aktif kamu akan ditutup kembali ke Raw Amber!
-    </div>
+  <div class="cg-modal-card">
+    <div class="cg-mc-hdr"><i class="ph-bold ph-arrow-u-up-left"></i> Ajukan Refund?</div>
+    <div class="cg-sub">Saldo kembali ke <b>Saldo Beli</b> setelah dipotong biaya admin. Pangkat kembali ke <b><?= htmlspecialchars((string)($free_rank['name'] ?? 'pangkat awal')) ?></b>.</div>
     <form method="POST">
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="refund_level">
       <div class="cg-btn-row">
         <button type="button" class="cg-btn cg-btn--cancel" onclick="document.getElementById('refund-modal').style.display='none'">Batal</button>
-        <button type="submit" class="cg-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border-color:#b91c1c;box-shadow:0 3px 0 #991b1b;">Ajukan Refund</button>
+        <button type="submit" class="cg-btn cg-btn--danger">Ajukan Refund</button>
       </div>
     </form>
   </div>
 </div>
+
+<script>
+function pickTier(i) {
+  document.querySelectorAll('.pk-tier').forEach((b) => b.classList.toggle('on', +b.dataset.tier === i));
+  document.querySelectorAll('.pk-card').forEach((c) => c.classList.toggle('on', +c.dataset.card === i));
+}
+</script>
 
 <script>
 const userBal = <?= (float)$user['balance_dep'] ?>;
@@ -1324,8 +782,8 @@ function applyVoucher() {
       document.getElementById('modal-discount').textContent=res.discount_amount_formatted;
       document.getElementById('modal-pct').textContent=res.discount_text;
       document.getElementById('modal-final-price').textContent=res.final_price_formatted;
-      document.getElementById('discount-row').style.display='block';
-      document.getElementById('final-price-row').style.display='block';
+      document.getElementById('discount-row').style.display='flex';
+      document.getElementById('final-price-row').style.display='flex';
       document.getElementById('voucher-box').style.display='none';
       document.getElementById('toggle-voucher-btn').style.display='none';
       checkAffordability(res.final_price);
@@ -1341,5 +799,7 @@ function submitUpgrade() {
 document.getElementById('upgrade-modal').addEventListener('click', function(e){ if(e.target===this) closeConfirm(); });
 document.getElementById('refund-modal').addEventListener('click', function(e){ if(e.target===this) e.target.style.display='none'; });
 </script>
+
+<?php require dirname(__DIR__) . '/partials/footer.php'; ?>
 
 <?php require dirname(__DIR__) . '/partials/footer.php'; ?>

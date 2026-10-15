@@ -954,9 +954,9 @@ $_psvg = [
         <span class="pm-ring"><span class="pm-glass pm--gold"><i class="ph-fill ph-crown-simple"></i></span></span>
         <span class="pm-lbl">Upgrade<br>Member</span>
       </a>
-      <a href="/invest" class="pm-item">
+      <a href="/history" class="pm-item">
         <span class="pm-ring"><span class="pm-glass pm--lagoon"><i class="ph-fill ph-chart-line-up"></i></span></span>
-        <span class="pm-lbl">Paket<br>Investasi</span>
+        <span class="pm-lbl">Riwayat<br>Keuangan</span>
       </a>
       <a href="/edit-rekening" class="pm-item">
         <span class="pm-ring"><span class="pm-glass pm--green"><i class="ph-fill ph-credit-card"></i></span></span>
