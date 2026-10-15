@@ -670,6 +670,9 @@ require dirname(__DIR__) . '/partials/header.php';
       <div class="pay-amount-meta">
         <span class="pay-amount-lbl">Total Tagihan Pembayaran</span>
         <span class="pay-amount-val"><?= format_rp((float)$amount) ?></span>
+        <?php if (setting($pdo, 'depo_unique_code_enabled', '0') === '1'): ?>
+          <span style="font-size:9.5px;font-weight:800;color:#b45309;">Bayar persis sampai digit terakhir (sudah termasuk kode unik)</span>
+        <?php endif; ?>
       </div>
       <button type="button" class="pay-copy-btn" id="btn-copy-amt" onclick="copyAmount()">
         <i class="ph-bold ph-copy"></i>

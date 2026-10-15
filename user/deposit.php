@@ -14,7 +14,44 @@ $qris_raw     = $_ENV['QRIS_RAW'] ?? '';
 $u_enabled = setting($pdo, 'depo_unique_code_enabled', '0') === '1';
 $u_min = (int)setting($pdo, 'depo_unique_code_min', '1');
 $u_max = (int)setting($pdo, 'depo_unique_code_max', '999');
-$unique_code = $u_enabled ? random_int(min($u_min, $u_max), max($u_min, $u_max)) : 0;
+$u_start = max(1, min($u_min, $u_max));
+$u_cap   = max(1, $u_min, $u_max);
+
+/**
+ * Kode unik terkecil (mulai +1) yang belum dipakai deposit pending dengan nominal dasar yang sama.
+ * Callback QRIS mencocokkan deposit pending berdasarkan nominal persis, jadi nominal pending harus unik.
+ * Bila semua kode sampai batas maks terpakai, lanjut naik sampai ketemu yang kosong.
+ */
+function depo_next_unique_code(PDO $pdo, int $base, int $start, int $cap): int {
+    $s = $pdo->prepare("SELECT DISTINCT CAST(amount AS UNSIGNED) FROM deposits WHERE status = 'pending' AND amount > ? AND amount <= ?");
+    $s->execute([$base, $base + $cap + 1000]);
+    $used = array_flip(array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN)));
+    for ($c = $start; $c < $cap + 1000; $c++) {
+        if (!isset($used[$base + $c])) return $c;
+    }
+    return $cap + 1000;
+}
+
+/** Simpan deposit dengan kode unik di dalam kunci, supaya dua request bersamaan tidak dapat kode yang sama. */
+function depo_insert_with_code(PDO $pdo, bool $enabled, int $base, int $start, int $cap, callable $insert): array {
+    if (!$enabled) return [$insert($base), 0];
+    $pdo->query("SELECT GET_LOCK('depo_unique_code', 5)");
+    try {
+        $code = depo_next_unique_code($pdo, $base, $start, $cap);
+        return [$insert($base + $code), $code];
+    } finally {
+        $pdo->query("SELECT RELEASE_LOCK('depo_unique_code')");
+    }
+}
+
+// AJAX: pratinjau kode unik untuk nominal tertentu (belum dipesan, final ditentukan saat kirim)
+if (($_GET['action'] ?? '') === 'unique_preview') {
+    header('Content-Type: application/json');
+    $base = (int)preg_replace('/\D/', '', (string)($_GET['amount'] ?? '0'));
+    $code = ($u_enabled && $base > 0) ? depo_next_unique_code($pdo, $base, $u_start, $u_cap) : 0;
+    echo json_encode(['code' => $code, 'total' => $base + $code]);
+    exit;
+}
 
 // ── Double-submit prevention ──────────────────────────────────────────────
 $_ftk = 'dep_form_token';
@@ -37,10 +74,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submit_bank') {
     $amount = (int) preg_replace('/\D/', '', $_POST['amount'] ?? '0');
-    $u_code = (int) preg_replace('/\D/', '', $_POST['unique_code'] ?? '0');
-    if ($u_enabled && $u_code >= min($u_min, $u_max) && $u_code <= max($u_min, $u_max)) {
-        $amount += $u_code;
-    }
     if ($amount < $min_deposit) {
         $flash = 'Minimal deposit ' . format_rp($min_deposit) . ' ya.'; $flashType = 'error';
     } elseif (!$bank_enabled) {
@@ -59,9 +92,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submi
             move_uploaded_file($_FILES['proof']['tmp_name'], $dir . $fname);
             $proof = 'deposits/' . $fname;
         }
-        $pdo->prepare("INSERT INTO deposits (user_id,amount,method,proof_image) VALUES (?,?,?,?)")
-            ->execute([$user['id'], $amount, 'transfer', $proof]);
-        $dep_id = $pdo->lastInsertId();
+        [$dep_id] = depo_insert_with_code($pdo, $u_enabled, $amount, $u_start, $u_cap, function (int $total) use ($pdo, $user, $proof, &$amount) {
+            $amount = $total;
+            $pdo->prepare("INSERT INTO deposits (user_id,amount,method,proof_image) VALUES (?,?,?,?)")
+                ->execute([$user['id'], $total, 'transfer', $proof]);
+            return $pdo->lastInsertId();
+        });
         
         $msg = "<b>📢 DEPOSIT BARU (Transfer)</b>\nUser: {$user['username']}\nAmount: " . format_rp((float)$amount) . "\nStatus: Pending";
         $kb = [
@@ -78,18 +114,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submi
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submit_qris') {
     $amount = (int) preg_replace('/\D/', '', $_POST['amount'] ?? '0');
-    $u_code = (int) preg_replace('/\D/', '', $_POST['unique_code'] ?? '0');
-    if ($u_enabled && $u_code >= min($u_min, $u_max) && $u_code <= max($u_min, $u_max)) {
-        $amount += $u_code;
-    }
     if ($amount < $min_deposit) {
         $flash = 'Minimal deposit ' . format_rp($min_deposit) . ' ya.'; $flashType = 'error';
     } elseif (!$qris_enabled || empty($qris_raw)) {
         $flash = 'QRIS lagi gak tersedia nih.'; $flashType = 'error';
     } else {
-        $pdo->prepare("INSERT INTO deposits (user_id,amount,method,status) VALUES (?,?,'qris','pending')")
-            ->execute([$user['id'], $amount]);
-        $dep_id = $pdo->lastInsertId();
+        [$dep_id] = depo_insert_with_code($pdo, $u_enabled, $amount, $u_start, $u_cap, function (int $total) use ($pdo, $user, &$amount) {
+            $amount = $total;
+            $pdo->prepare("INSERT INTO deposits (user_id,amount,method,status) VALUES (?,?,'qris','pending')")
+                ->execute([$user['id'], $total]);
+            return $pdo->lastInsertId();
+        });
         
         $merchant_name = 'Unknown';
         $idx = 0;
@@ -846,7 +881,7 @@ require dirname(__DIR__) . '/partials/header.php';
     <?php if ($u_enabled): ?>
     <div class="depo-u-pill">
       <i class="ph-fill ph-lightning"></i>
-      <span>Kode unik: <strong>+Rp <?= $unique_code ?></strong> ditambahkan otomatis ke nominal.</span>
+      <span id="u-code-txt">Kode unik <strong>+Rp <?= $u_start ?></strong> ditambahkan otomatis (naik kalau sudah dipakai).</span>
     </div>
     <?php endif; ?>
 
@@ -858,9 +893,6 @@ require dirname(__DIR__) . '/partials/header.php';
         <input type="hidden" name="form_token" value="<?= htmlspecialchars($_form_token) ?>">
         <input type="hidden" name="action" value="submit_qris">
         <input type="hidden" name="amount" id="qris-hidden-amount" value="<?= (int)$min_deposit ?>">
-        <?php if ($u_enabled): ?>
-        <input type="hidden" name="unique_code" value="<?= $unique_code ?>">
-        <?php endif; ?>
 
         <button type="submit" class="depo-action-btn qris no-dbl-submit" id="btn-submit-qris">
           <img src="/assets/qris.png?v=3" alt="QRIS" class="depo-btn-qris-img">
@@ -895,9 +927,6 @@ require dirname(__DIR__) . '/partials/header.php';
         <input type="hidden" name="form_token" value="<?= htmlspecialchars($_form_token) ?>">
         <input type="hidden" name="action" value="submit_bank">
         <input type="hidden" name="amount" id="bank-hidden-amount" value="<?= (int)$min_deposit ?>">
-        <?php if ($u_enabled): ?>
-        <input type="hidden" name="unique_code" value="<?= $unique_code ?>">
-        <?php endif; ?>
 
         <!-- Dropzone Mini Struk -->
         <div class="depo-upload-compact">
@@ -988,8 +1017,25 @@ function switchMethod(method) {
   if (boxBank) boxBank.classList.toggle('active', method === 'bank');
 }
 
+const uniqueEnabled = <?= $u_enabled ? 'true' : 'false' ?>;
+let uniqueTimer = null;
+function previewUniqueCode(val) {
+  const txt = document.getElementById('u-code-txt');
+  if (!uniqueEnabled || !txt || val < minDeposit) return;
+  clearTimeout(uniqueTimer);
+  uniqueTimer = setTimeout(() => {
+    fetch('/deposit?action=unique_preview&amount=' + val, { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(d => {
+        if (!d || !d.code) return;
+        txt.innerHTML = 'Kode unik <strong>+Rp ' + d.code + '</strong> &rarr; bayar <strong>' + formatRp(d.total) + '</strong>';
+      }).catch(() => {});
+  }, 250);
+}
+
 function updateLivePreview(val) {
   const lbl = document.getElementById('live-amount-preview');
+  previewUniqueCode(val);
   if (!lbl) return;
   if (val >= minDeposit) {
     lbl.style.color = '#059669';
