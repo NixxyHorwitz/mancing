@@ -1535,7 +1535,8 @@ require dirname(__DIR__) . '/partials/header.php';
   <?php endif; ?>
 
   <!-- ── 3b. BANNER (Survei, Promo Hub, Threads) dari CMS ── -->
-  <?php $SB = $cms['survey_banner']; $PB = $cms['promo_banner']; $TC = $cms['threads_card']; ?>
+  <?php $SB = $cms['survey_banner']; $PB = $cms['promo_banner']; $TC = $cms['threads_card'];
+        if (setting($pdo, 'survey_enabled', '1') !== '1') $SB['enabled'] = false; // survei ditutup admin ?>
   <?php if (!empty($SB['enabled']) || !empty($PB['enabled']) || !empty($TC['enabled'])): ?>
   <div class="cms-banners">
     <?php if (!empty($SB['enabled'])): ?>

@@ -9,6 +9,19 @@ if (!staff_can('surveys') && !staff_can('analytics') && !staff_can('users')) {
 $flash = '';
 $flashType = '';
 
+// Buka / tutup survei berhadiah untuk user
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_survey'])) {
+    if (!csrf_verify()) {
+        $flash = 'Sesi kedaluwarsa, muat ulang halaman.'; $flashType = 'danger';
+    } else {
+        $open = ($_POST['toggle_survey'] ?? '') === 'open';
+        setting_set($pdo, 'survey_enabled', $open ? '1' : '0');
+        $flash = $open ? 'Survei berhadiah dibuka kembali untuk user.' : 'Survei berhadiah ditutup. Banner di beranda & halaman video disembunyikan.';
+        $flashType = 'success';
+    }
+}
+$surveyOpen = setting($pdo, 'survey_enabled', '1') === '1';
+
 // Handle Takeback Response (Batalkan Survei & Tarik Hadiah Saldo)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['takeback_id'])) {
     $tbId = (int)$_POST['takeback_id'];
@@ -411,6 +424,13 @@ require_once __DIR__ . '/partials/header.php';
     </div>
     
     <div class="d-flex align-items-center gap-2">
+      <form method="POST" class="m-0" onsubmit="return confirm('<?= $surveyOpen ? 'Tutup survei berhadiah untuk user?' : 'Buka kembali survei berhadiah?' ?>');">
+        <?= csrf_field() ?>
+        <input type="hidden" name="toggle_survey" value="<?= $surveyOpen ? 'close' : 'open' ?>">
+        <button type="submit" class="btn btn-sm d-flex align-items-center gap-2 px-3 py-1.5 fw-bold <?= $surveyOpen ? 'btn-success' : 'btn-outline-danger' ?>" style="border-radius:8px;" title="Klik untuk <?= $surveyOpen ? 'menutup' : 'membuka' ?>">
+          <i class="ph-bold <?= $surveyOpen ? 'ph-toggle-right' : 'ph-toggle-left' ?>"></i> Survei: <?= $surveyOpen ? 'Dibuka' : 'Ditutup' ?>
+        </button>
+      </form>
       <a href="/console/surveys.php?export=csv" class="btn btn-outline-warning btn-sm d-flex align-items-center gap-2 px-3 py-1.5 fw-bold" style="border-radius:8px;">
         <i class="ph-bold ph-download-simple"></i> Export CSV
       </a>

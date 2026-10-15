@@ -7,12 +7,21 @@ $checkStmt = $pdo->prepare("SELECT * FROM user_surveys WHERE user_id = ? LIMIT 1
 $checkStmt->execute([$user['id']]);
 $existingSurvey = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
+// Survei bisa ditutup admin (Console › Survei). Yang sudah mengisi tetap bisa melihat jawabannya.
+$survey_open = setting($pdo, 'survey_enabled', '1') === '1';
+if (!$survey_open && !$existingSurvey) {
+    redirect('/home');
+}
+
 $flash = '';
 $flashType = '';
 
 // Proses Submit Survei
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($existingSurvey) {
+    if (!$survey_open) {
+        $flash = 'Survei sedang ditutup.';
+        $flashType = 'info';
+    } elseif ($existingSurvey) {
         $flash = 'Kamu sudah pernah mengisi survei ini dan mengklaim hadiah Rp 15.000!';
         $flashType = 'info';
     } else {

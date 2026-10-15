@@ -267,7 +267,8 @@ $left = max(0, $watch_limit - $watch_today);
     </div>
   </section>
 
-  <!-- Survei berhadiah -->
+  <!-- Survei berhadiah (bisa ditutup admin) -->
+  <?php if (setting($pdo, 'survey_enabled', '1') === '1'): ?>
   <a href="/survey" class="vh-survey <?= $user_has_surveyed ? 'done' : '' ?>">
     <span class="vh-ico <?= $user_has_surveyed ? 'kelp' : 'sun' ?>"><i class="ph-bold <?= $user_has_surveyed ? 'ph-check-circle' : 'ph-clipboard-text' ?>"></i></span>
     <span class="t">
@@ -276,6 +277,7 @@ $left = max(0, $watch_limit - $watch_today);
     </span>
     <span class="amt"><?= $user_has_surveyed ? 'Lihat' : '+Rp 15.000' ?></span>
   </a>
+  <?php endif; ?>
 
   <?php if (!empty($continue_watching)): ?>
   <!-- Lanjutkan menonton -->
