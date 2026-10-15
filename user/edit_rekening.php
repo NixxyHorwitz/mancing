@@ -107,6 +107,13 @@ $rk_tones = ['#0891b2', '#7c3aed', '#e11d48', '#059669', '#ea580c', '#2563eb'];
 $rk_tone  = static fn(string $n): string => $rk_tones[abs(crc32(strtolower($n))) % count($rk_tones)];
 $user_wl  = $channel_logos[strtolower((string)($user['bank_name'] ?? ''))] ?? null;
 $rk_state = $has_pending_bank ? 'pending' : (!$can_edit_bank ? 'locked' : (!$has_enough_balance ? 'saldo' : 'open'));
+// Pangkat yang diizinkan ganti rekening (untuk ditampilkan sebagai aturan)
+try {
+    $rk_allowed = $pdo->query("SELECT name FROM memberships WHERE is_active = 1 AND allow_edit_bank = 1 ORDER BY sort_order ASC")->fetchAll(PDO::FETCH_COLUMN);
+} catch (\Throwable) { $rk_allowed = []; }
+$rk_level_ok = (bool)($user_mem['allow_edit_bank'] ?? 0);
+$rk_saldo_ok = (float)$user['balance_dep'] >= $min_saldo_edit;
+$rk_pct      = $min_saldo_edit > 0 ? min(100, max(0, ((float)$user['balance_dep'] / $min_saldo_edit) * 100)) : 0;
 $rk_flash_tone = $flashType === 'error' ? 'err' : ($flashType === 'warn' ? 'warn' : 'ok');
 ?>
 
@@ -147,12 +154,20 @@ $rk_flash_tone = $flashType === 'error' ? 'err' : ($flashType === 'warn' ? 'warn
 .rk-note .act { margin-left: auto; align-self: center; flex-shrink: 0; padding: 6px 11px; border-radius: 10px; font-size: 11px; font-weight: 900; text-decoration: none; color: #78350f;
   background: linear-gradient(135deg, #fef08a, #f59e0b); border: 1.5px solid #fff; box-shadow: 0 2px 0 #b45309; }
 
-/* Syarat saldo */
-.rk-req { padding: 12px 13px; }
-.rk-req-h { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; font-weight: 900; color: var(--reef-ink); }
-.rk-bar { height: 9px; border-radius: 99px; background: #ffedd5; margin: 8px 0 5px; overflow: hidden; box-shadow: inset 1px 1px 3px rgba(251, 146, 60, .25); }
+/* Syarat ganti rekening */
+.rk-rules { padding: 10px 11px; display: flex; flex-direction: column; gap: 7px; }
+.rk-rules-h { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 900; color: var(--reef-ink); margin: 0 1px 1px; }
+.rk-rules-h > i { color: #0891b2; font-size: 15px; }
+.rk-rule { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border-radius: 13px; background: #fff; box-shadow: 0 2px 6px rgba(30, 27, 46, .05); }
+.rk-rule > i { font-size: 18px; flex-shrink: 0; align-self: flex-start; margin-top: 1px; }
+.rk-rule.ok > i { color: #10b981; } .rk-rule.no > i { color: #f43f5e; } .rk-rule.info > i { color: #0891b2; }
+.rk-rule .tx { flex: 1; min-width: 0; line-height: 1.3; }
+.rk-rule b { display: block; font-size: 11.5px; font-weight: 900; color: var(--reef-ink); }
+.rk-rule span { display: block; font-size: 10px; font-weight: 700; color: var(--reef-muted); }
+.rk-rule .act { flex-shrink: 0; padding: 6px 10px; border-radius: 10px; font-size: 10.5px; font-weight: 900; text-decoration: none; color: #78350f; display: inline-flex; align-items: center; gap: 3px;
+  background: linear-gradient(135deg, #fef08a, #f59e0b); border: 1.5px solid #fff; box-shadow: 0 2px 0 #b45309; }
+.rk-bar { height: 7px; border-radius: 99px; background: #ffedd5; margin: 5px 0 3px; overflow: hidden; box-shadow: inset 1px 1px 3px rgba(251, 146, 60, .25); }
 .rk-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #f59e0b, #10b981); }
-.rk-req-f { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; color: var(--reef-muted); }
 
 /* Form */
 .rk-form { padding: 12px; }
@@ -243,21 +258,40 @@ $rk_flash_tone = $flashType === 'error' ? 'err' : ($flashType === 'warn' ? 'warn
     <div class="rk-note <?= $rk_flash_tone ?>"><i class="ph-fill <?= $rk_flash_tone === 'err' ? 'ph-x-circle' : ($rk_flash_tone === 'warn' ? 'ph-clock' : 'ph-check-circle') ?>"></i><span><?= htmlspecialchars($flash) ?></span></div>
   <?php endif; ?>
 
+  <!-- Syarat ganti rekening (selalu tampil) -->
+  <div class="rk-card rk-rules">
+    <div class="rk-rules-h"><i class="ph-fill ph-list-checks"></i>Syarat ganti rekening
+      <?php if ($is_promotor): ?><span class="rk-chip ok" style="margin-left:auto">Promotor · bebas syarat</span><?php endif; ?></div>
+
+    <div class="rk-rule <?= $rk_level_ok || $is_promotor ? 'ok' : 'no' ?>">
+      <i class="ph-fill <?= $rk_level_ok || $is_promotor ? 'ph-check-circle' : 'ph-x-circle' ?>"></i>
+      <div class="tx"><b>Pangkat yang diizinkan</b>
+        <span><?= $rk_allowed ? htmlspecialchars(implode(', ', $rk_allowed)) : 'Belum ada pangkat yang diizinkan' ?> · kamu: <?= htmlspecialchars($level_name) ?></span></div>
+      <?php if (!$rk_level_ok && !$is_promotor): ?><a href="/upgrade" class="act"><i class="ph-fill ph-crown"></i>Upgrade</a><?php endif; ?>
+    </div>
+
+    <div class="rk-rule <?= $rk_saldo_ok || $is_promotor ? 'ok' : 'no' ?>">
+      <i class="ph-fill <?= $rk_saldo_ok || $is_promotor ? 'ph-check-circle' : 'ph-x-circle' ?>"></i>
+      <div class="tx"><b>Saldo Beli mengendap min. <?= format_rp($min_saldo_edit) ?></b>
+        <div class="rk-bar"><i style="width:<?= round($rk_pct, 1) ?>%"></i></div>
+        <span>Saldo beli kamu <?= format_rp((float)$user['balance_dep']) ?></span></div>
+      <?php if (!$rk_saldo_ok && !$is_promotor): ?><a href="/deposit" class="act"><i class="ph-bold ph-plus"></i>Isi Kas</a><?php endif; ?>
+    </div>
+
+    <div class="rk-rule info">
+      <i class="ph-fill ph-shield-check"></i>
+      <div class="tx"><b>Diverifikasi admin</b><span>Satu pengajuan dalam satu waktu, nama harus sesuai pemilik rekening.</span></div>
+    </div>
+  </div>
+
   <?php if ($rk_state === 'pending'): ?>
     <div class="rk-note warn"><i class="ph-fill ph-hourglass-medium"></i><span><b>Sedang diverifikasi</b>Pengajuan rekening barumu sedang dicek admin.</span></div>
 
   <?php elseif ($rk_state === 'locked'): ?>
-    <div class="rk-note err"><i class="ph-fill ph-lock-key"></i><span><b>Ganti rekening terkunci</b>Level <?= htmlspecialchars($level_name) ?> belum punya izin.</span>
-      <a href="/upgrade" class="act"><i class="ph-fill ph-crown"></i> Upgrade</a></div>
+    <div class="rk-note err"><i class="ph-fill ph-lock-key"></i><span><b>Ganti rekening terkunci</b>Pangkat <?= htmlspecialchars($level_name) ?> belum punya izin ganti rekening.</span></div>
 
-  <?php elseif ($rk_state === 'saldo'):
-    $pct = $min_saldo_edit > 0 ? min(100, max(0, ((float)$user['balance_dep'] / $min_saldo_edit) * 100)) : 0; ?>
-    <div class="rk-card rk-req">
-      <div class="rk-req-h"><span><i class="ph-fill ph-vault" style="color:#f59e0b"></i> Syarat saldo beli mengendap</span>
-        <a href="/deposit" class="rk-chip no" style="text-decoration:none"><i class="ph-bold ph-plus"></i>Top up</a></div>
-      <div class="rk-bar"><i style="width:<?= round($pct, 1) ?>%"></i></div>
-      <div class="rk-req-f"><span>Saldo beli <?= format_rp((float)$user['balance_dep']) ?></span><span>Min. <?= format_rp($min_saldo_edit) ?></span></div>
-    </div>
+  <?php elseif ($rk_state === 'saldo'): ?>
+    <div class="rk-note warn"><i class="ph-fill ph-vault"></i><span><b>Saldo Beli belum cukup</b>Butuh <?= format_rp(max(0, $min_saldo_edit - (float)$user['balance_dep'])) ?> lagi yang mengendap untuk membuka form.</span></div>
 
   <?php else: ?>
     <form method="POST" id="edit-rek-form" class="rk-card rk-form" novalidate>
