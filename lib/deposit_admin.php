@@ -31,7 +31,7 @@ function depo_method_label(array $dep): string {
 function depo_pending_kb(int $id): array {
     return [
         [['text' => '✅ Approve', 'callback_data' => 'depo_approve_' . $id], ['text' => '❌ Reject', 'callback_data' => 'depo_reject_' . $id]],
-        [['text' => '🚫 Acc Tanpa Komisi', 'callback_data' => 'depo_approvenc_' . $id]],
+        [['text' => '✅ Acc V2', 'callback_data' => 'depo_approvenc_' . $id]],
         [['text' => '⚡ Acc Expired', 'callback_data' => 'depo_accexp_' . $id], ['text' => '🔄 Refresh Status', 'callback_data' => 'refresh_depo_' . $id]],
     ];
 }
@@ -68,7 +68,7 @@ function depo_admin_confirm(PDO $pdo, int $id, bool $with_commission, string $vi
         $dep['confirmed_at'] = date('Y-m-d H:i:s');
         $dep['no_commission'] = $with_commission ? 0 : 1;
         $dep['admin_note'] = null;
-        return ['ok' => true, 'message' => $was . ($with_commission ? '' : ' tanpa komisi') . ' berhasil.', 'comm' => $comm, 'dep' => $dep, 'was' => $was];
+        return ['ok' => true, 'message' => $was . ($with_commission ? '' : ' V2') . ' berhasil.', 'comm' => $comm, 'dep' => $dep, 'was' => $was];
     } catch (\Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         return ['ok' => false, 'message' => 'Error: ' . $e->getMessage()];
@@ -152,7 +152,7 @@ function depo_confirmed_tg_text(array $dep, float $comm, string $status_label, s
     $msg .= "👤 <b>User:</b> <code>" . htmlspecialchars((string)$dep['username']) . "</code>\n";
     $msg .= "💵 <b>Amount:</b> <code>" . format_rp((float)$dep['amount']) . "</code>\n";
     if (!empty($dep['no_commission'])) {
-        $msg .= "🚫 <b>Komisi:</b> <code>Tidak ada (acc tanpa komisi)</code>\n";
+        $msg .= "💠 <b>Tipe:</b> <code>Accepted v2</code>\n";
     } elseif ($comm > 0) {
         $msg .= "🎁 <b>Komisi Referral:</b> <code>" . format_rp($comm) . "</code> (dikirim ke upline)\n";
     }

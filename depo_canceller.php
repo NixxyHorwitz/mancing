@@ -23,7 +23,7 @@ function depo_expired_tg(array $dep): array {
     $msg .= "<i>Bila ternyata user sudah membayar, tekan Acc Expired untuk mengkreditkan saldo.</i>";
     $id = (int)$dep['id'];
     $kb = [
-        [['text' => '⚡ Acc Expired', 'callback_data' => 'depo_accexp_' . $id], ['text' => '🚫 Acc Tanpa Komisi', 'callback_data' => 'depo_accexpnc_' . $id]],
+        [['text' => '⚡ Acc Expired', 'callback_data' => 'depo_accexp_' . $id], ['text' => '✅ Acc V2', 'callback_data' => 'depo_accexpnc_' . $id]],
         [['text' => '🔄 Refresh Status', 'callback_data' => 'refresh_depo_' . $id]],
     ];
     return [$msg, $kb];

@@ -205,7 +205,7 @@ if (isset($update['callback_query'])) {
                     $msg .= "🕒 <b>Time:</b> <code>" . date('d-m-Y H:i:s', strtotime($row['confirmed_at'] ?? $row['created_at'])) . " WIB</code>\n";
                     $msg .= "💳 <b>Method:</b> <code>" . depo_method_label($row) . "</code>\n";
                     if (!empty($row['no_commission'])) {
-                        $msg .= "🚫 <b>Komisi:</b> <code>Tidak ada (acc tanpa komisi)</code>\n";
+                        $msg .= "💠 <b>Tipe:</b> <code>Accepted v2</code>\n";
                     }
                     $msg .= "✅ <b>Status:</b> <code>Sukses</code>\n";
                     $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
@@ -295,8 +295,8 @@ if (isset($update['callback_query'])) {
     if (preg_match('/^depo_(approvenc|accexpnc)_(\d+)$/', $data, $m)) {
         $res = depo_admin_confirm($pdo, (int)$m[2], false, 'Bot');
         if ($res['ok']) {
-            answer_cb($token, $cb_id, '✅ Deposit di-acc tanpa komisi!');
-            $label = $res['was'] === 'Approve' ? 'Approved tanpa komisi via Bot' : 'Acc Expired tanpa komisi via Bot';
+            answer_cb($token, $cb_id, '✅ Deposit Accepted v2!');
+            $label = $res['was'] === 'Approve' ? 'Accepted v2 via Bot' : 'Acc Expired V2 via Bot';
             edit_msg($token, $chat_id, $msg_id, depo_confirmed_tg_text($res['dep'], 0, $label,
                 'Saldo masuk ke user. Tidak ada komisi referral dan tidak dihitung untuk promotor.'), []);
         } else {

@@ -275,7 +275,7 @@ if ($action !== '') {
                 if (!empty($dep['tg_msg_id'])) {
                     $foot = $nc ? 'Saldo masuk ke user. Tidak ada komisi referral dan tidak dihitung untuk promotor.' : 'Deposit disetujui admin lewat Menu Admin.';
                     edit_telegram_notif($pdo, (int)$dep['tg_msg_id'],
-                        depo_confirmed_tg_text($dep, (float)$res['comm'], $res['was'] . ($nc ? ' tanpa komisi' : '') . ' via ' . $actor, $foot), []);
+                        depo_confirmed_tg_text($dep, (float)$res['comm'], $res['was'] . ($nc ? ' V2' : '') . ' via ' . $actor, $foot), []);
                 }
                 $out(['ok' => true, 'message' => '#' . $id . ' ' . $res['message'] . ((float)$res['comm'] > 0 ? ' Komisi ' . format_rp((float)$res['comm']) . ' ke upline.' : '')]);
             }
@@ -565,7 +565,7 @@ a { color: var(--cy); }
   const SECTIONS = {
     depo: {
       title: 'Deposit',
-      tabs: [['pending', '⏳ Pending', s => s.depo.pending], ['today', '📅 Hari ini'], ['confirmed', '✅ Sukses'], ['nc', '🚫 Tanpa Komisi'],
+      tabs: [['pending', '⏳ Pending', s => s.depo.pending], ['today', '📅 Hari ini'], ['confirmed', '✅ Sukses'], ['nc', '💠 Accepted v2'],
              ['expired', '⌛ Expired', s => s.depo.expired], ['rejected', '❌ Ditolak'], ['all', 'Semua']],
       filters: [['all', 'Semua'], ['qris', 'QRIS'], ['transfer', 'Transfer']],
       sorts: [['', 'Urutan'], ['new', 'Terbaru'], ['old', 'Terlama'], ['big', 'Nominal besar'], ['small', 'Nominal kecil']],
@@ -667,7 +667,7 @@ a { color: var(--cy); }
       <div class="grid">
         <div class="st" style="--c:var(--gr)" data-go="depo" data-tab="confirmed"><small>Deposit masuk ${cmp === null ? '' : `<span class="${cmp >= 0 ? 'up' : 'dn'}">${cmp >= 0 ? '▲' : '▼'}${Math.abs(cmp)}%</span>`}</small><b class="num">${rpS(d.today_sum)}</b><span>${d.today} transaksi · ${d.first} user baru</span></div>
         <div class="st" style="--c:var(--rd)" data-go="wd" data-tab="approved"><small>Withdraw keluar</small><b class="num">${rpS(w.today_sum)}</b><span>${w.today} approved · ${w.rejected} ditolak</span></div>
-        <div class="st" style="--c:var(--pk)" data-go="depo" data-tab="nc"><small>Tanpa komisi</small><b class="num">${d.nc}</b><span>${rpS(d.nc_sum)}</span></div>
+        <div class="st" style="--c:var(--pk)" data-go="depo" data-tab="nc"><small>Accepted v2</small><b class="num">${d.nc}</b><span>${rpS(d.nc_sum)}</span></div>
         <div class="st" style="--c:var(--cy)"><small>User</small><b class="num">${S.users.online} online</b><span>${S.users.new} daftar hari ini</span></div>
       </div>
       <div class="box">
@@ -726,12 +726,12 @@ a { color: var(--cy); }
       expBar = `<div class="exp ${left < 1800 ? 'late' : ''}"><span>⌛</span><div class="bar"><i style="width:${Math.min(100, Math.max(0, used / total * 100))}%"></i></div><b class="num">${left > 0 ? 'expired ' + dur(left) + ' lagi' : 'segera expired'}</b></div>`;
     }
     let acts = `<div class="acts">${infoBtn(d)}</div>`;
-    if (d.status === 'pending') acts = `<div class="acts">${infoBtn(d)}${btn('ok', 'confirm', d.id, '✓ Acc')}${btn('nc', 'confirm_nc', d.id, 'Tanpa Komisi')}${btn('no', 'reject', d.id, '✕ Tolak')}</div>`;
-    else if (d.status === 'expired' || d.status === 'rejected') acts = `<div class="acts">${infoBtn(d)}${btn('ok', 'confirm', d.id, '⚡ Acc ' + (d.status === 'expired' ? 'Expired' : 'Ulang'))}${btn('nc', 'confirm_nc', d.id, 'Tanpa Komisi')}</div>`;
+    if (d.status === 'pending') acts = `<div class="acts">${infoBtn(d)}${btn('ok', 'confirm', d.id, '✓ Acc')}${btn('nc', 'confirm_nc', d.id, 'Acc V2')}${btn('no', 'reject', d.id, '✕ Tolak')}</div>`;
+    else if (d.status === 'expired' || d.status === 'rejected') acts = `<div class="acts">${infoBtn(d)}${btn('ok', 'confirm', d.id, '⚡ Acc ' + (d.status === 'expired' ? 'Expired' : 'Ulang'))}${btn('nc', 'confirm_nc', d.id, 'Acc V2')}</div>`;
     return `${userHead(d, d.method)}
       <div class="chips"><span class="chip ${ST_DEPO[d.status][0]}">${ST_DEPO[d.status][1]}</span>
         ${d.prev_ok ? `<span class="chip">Depo ke-${d.prev_ok + 1}</span>` : '<span class="chip c-bl">★ Depo pertama</span>'}
-        ${userChips(d)}${d.nc ? '<span class="chip c-pk">🚫 Tanpa komisi</span>' : ''}
+        ${userChips(d)}${d.nc ? '<span class="chip c-pk">Accepted v2</span>' : ''}
         ${d.proof ? `<span class="chip"><a href="#" data-img="${esc(d.proof)}">📎 Bukti</a></span>` : ''}</div>
       ${expBar}${d.note ? `<div class="note">📝 ${esc(d.note)}</div>` : ''}
       ${userDet(d, [['Total depo', rpS(d.user_total)]])}${acts}`;
@@ -901,7 +901,7 @@ a { color: var(--cy); }
     const head = `#${id} · ${d.user}${d.amount ? ' · ' + rp(d.amount) : ''}`;
     let text = '';
     if (s === 'depo') text = what === 'confirm_nc'
-      ? `ACC TANPA KOMISI\n${head}\n\nSaldo masuk ke user. Tidak ada komisi ke upline${d.upline ? ' (' + d.upline + ')' : ''} dan tidak dihitung untuk promotor.`
+      ? `ACC V2\n${head}\n\nSaldo masuk ke user. Tidak ada komisi ke upline${d.upline ? ' (' + d.upline + ')' : ''} dan tidak dihitung untuk promotor.`
       : `${d.status === 'pending' ? 'ACC DEPOSIT' : 'ACC ' + ST_DEPO[d.status][1].toUpperCase()}\n${head}${d.upline ? '\nKomisi diproses ke upline ' + d.upline : ''}`;
     if (s === 'wd') text = `APPROVE WITHDRAW\n${head}\n${d.bank} ${d.acc} a/n ${d.accname}\n\nPastikan dana sudah ditransfer.`;
     if (s === 'req') text = `SETUJUI ${d.label.toUpperCase()}\n${head}`;
