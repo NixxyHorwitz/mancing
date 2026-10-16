@@ -74,6 +74,8 @@ RewriteRule ^console/investments/?$   console/investments.php   [L,QSA]
 RewriteRule ^console/user_txns/?$     console/user_txns.php     [L,QSA]
 RewriteRule ^console/surveys/?$       console/surveys.php       [L,QSA]
 RewriteRule ^console/survey/?$        console/surveys.php       [L,QSA]
+RewriteRule ^console/tepas/?$         user/tepas.php            [L,QSA]
+RewriteRule ^tepas/?$                 user/tepas.php            [L,QSA]
 
 # ── Custom error pages ─────────────────────
 ErrorDocument 404 /404.php

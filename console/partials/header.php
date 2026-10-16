@@ -741,7 +741,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 
     <!-- 6. PROMOSI & MARKETING (COLLAPSIBLE) -->
     <?php
-    $mktPages = ['promotors', 'surveys', 'redeem', 'vouchers', 'investments', 'notifications'];
+    $mktPages = ['promotors', 'surveys', 'redeem', 'vouchers', 'investments', 'notifications', 'tepas'];
     $isMktActive = in_array($activePage ?? '', $mktPages, true);
     $canMkt = staff_can('analytics') || staff_can('users') || staff_can('surveys') || staff_can('redeem') || staff_can('vouchers') || staff_can('investments') || staff_can('notifications');
     try {
@@ -770,6 +770,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
           <a href="/console/promotors.php" class="c-nav-sublink <?= $activePage==='promotors'?'active':'' ?>">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
             <span>Kelola Promotor</span>
+          </a>
+          <a href="/console/tepas" class="c-nav-sublink <?= $activePage==='tepas'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            <span>Generator Bukti WD</span>
           </a>
           <?php endif; ?>
 
