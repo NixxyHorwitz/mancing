@@ -416,7 +416,6 @@ $wd_lv = $user_mem ? wd_level_status($pdo, (int)$user_mem['id']) : null;
         <p><?= htmlspecialchars($wd_lv['message']) ?></p>
         <div class="wx-lvl-meta">
           <span><i class="ph-bold ph-clock"></i> Estimasi <?= htmlspecialchars($wd_lv['eta']) ?></span>
-          <?php if ($wd_lv['queue'] > 0): ?><span><i class="ph-bold ph-users-three"></i> <?= (int)$wd_lv['queue'] ?> antrian di level kamu</span><?php endif; ?>
         </div>
         <?php if ($wd_lv['state'] !== 'normal'): ?>
           <div class="wx-lvl-bar"><i style="width:<?= $wd_lv['state'] === 'overload' ? 100 : 62 ?>%"></i></div>
