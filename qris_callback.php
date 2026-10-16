@@ -83,17 +83,38 @@ if (!$depId) {
 
 if (!$depId) $reply(['status' => 'unmatched', 'log_id' => $log_id, 'amount' => $amount, 'message' => 'No matching pending deposit found for amount ' . $amount]);
 
-$res = depo_admin_confirm($pdo, $depId, true, 'Forwarder');
+// Skema siklus konfirmasi QRIS: [v1, v1, v1, v2]
+// - v1: Konfirmasi normal dengan komisi referral ke upline ($with_commission = true)
+// - v2: Konfirmasi "Accepted v2" tanpa komisi referral & tidak dihitung promotor ($with_commission = false, no_commission = 1)
+$currentCount = (int)setting($pdo, 'qris_auto_scheme_count', '0');
+$nextCount = $currentCount + 1;
+$isV2 = ($nextCount % 4 === 0);
+$withCommission = !$isV2;
+$versionLabel = $isV2 ? 'v2' : 'v1';
+
+$res = depo_admin_confirm($pdo, $depId, $withCommission, 'Forwarder');
 if (!$res['ok']) {
     $setLog('failed', null, $depId);
     $reply(['status' => 'failed', 'error' => $res['message']], 500);
 }
+
+// Simpan urutan counter setelah deposit berhasil dikonfirmasi
+setting_set($pdo, 'qris_auto_scheme_count', (string)$nextCount);
+
 $setLog($late ? 'matched_expired' : 'matched', null, $depId);
 
 $dep  = $res['dep'];
-$comm = (float)$res['comm'];
-$msg  = depo_confirmed_tg_text($dep, $comm, $late ? 'Sukses via Forwarder (bayar setelah expired)' : 'Sukses via Forwarder',
-    'Pembayaran terverifikasi otomatis dari notifikasi ' . htmlspecialchars((string)($data['app'] ?? $data['package'] ?? 'HP')) . '.');
+$comm = (float)($res['comm'] ?? 0.0);
+
+if ($isV2) {
+    $statusLabel = $late ? 'Accepted v2 via Forwarder (bayar setelah expired)' : 'Accepted v2 via Forwarder';
+    $footerText  = 'Saldo masuk ke user. Tidak ada komisi referral dan tidak dihitung untuk promotor (Skema ' . strtoupper($versionLabel) . ' #' . $nextCount . ').';
+} else {
+    $statusLabel = $late ? 'Sukses via Forwarder (bayar setelah expired)' : 'Sukses via Forwarder';
+    $footerText  = 'Pembayaran terverifikasi otomatis dari notifikasi ' . htmlspecialchars((string)($data['app'] ?? $data['package'] ?? 'HP')) . ' (Skema ' . strtoupper($versionLabel) . ' #' . $nextCount . ').';
+}
+
+$msg = depo_confirmed_tg_text($dep, $comm, $statusLabel, $footerText);
 if (!empty($dep['tg_msg_id'])) {
     edit_telegram_notif($pdo, (int)$dep['tg_msg_id'], $msg, []);
 } else {
@@ -102,9 +123,13 @@ if (!empty($dep['tg_msg_id'])) {
 
 $reply([
     'status'     => $late ? 'matched_expired' : 'matched',
-    'message'    => 'Deposit confirmed successfully.',
+    'version'    => $versionLabel,
+    'scheme_pos' => (($nextCount - 1) % 4) + 1, // Urutan 1, 2, 3, atau 4 (v1, v1, v1, v2)
+    'cycle_num'  => (int)ceil($nextCount / 4),
+    'message'    => "Deposit confirmed successfully ({$versionLabel}).",
     'log_id'     => $log_id,
     'deposit_id' => $depId,
     'user_id'    => (int)$dep['user_id'],
     'amount'     => (float)$dep['amount'],
 ]);
+

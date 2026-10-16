@@ -18,7 +18,7 @@ function depo_ensure_schema(PDO $pdo): void {
         $pdo->query("SELECT no_commission FROM deposits LIMIT 0");
     } catch (\Throwable) {
         try {
-            $pdo->exec("ALTER TABLE deposits ADD COLUMN IF NOT EXISTS no_commission TINYINT(1) NOT NULL DEFAULT 0 AFTER admin_note");
+            $pdo->exec("ALTER TABLE deposits ADD COLUMN no_commission TINYINT(1) NOT NULL DEFAULT 0 AFTER admin_note");
         } catch (\Throwable) {}
     }
 }
