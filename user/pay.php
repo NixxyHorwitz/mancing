@@ -17,10 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'check_status') {
     header('Content-Type: application/json; charset=utf-8');
-    $st = $pdo->prepare("SELECT status FROM deposits WHERE id=? AND user_id=?");
+    $st = $pdo->prepare("SELECT status, admin_note, proof_image FROM deposits WHERE id=? AND user_id=?");
     $st->execute([$dep_id, $user['id']]);
-    $row = $st->fetch();
-    echo json_encode(['confirmed' => ($row && $row['status'] === 'confirmed')]);
+    $row = $st->fetch() ?: ['status' => 'rejected', 'admin_note' => '', 'proof_image' => null];
+    echo json_encode([
+        'status'    => $row['status'],
+        'confirmed' => $row['status'] === 'confirmed',
+        'rejected'  => $row['status'] === 'rejected',
+        'proof'     => !empty($row['proof_image']),
+    ]);
     exit;
 }
 
@@ -51,8 +56,11 @@ $fav_url      = $_favicon ? '/' . ltrim($_favicon, '/') : '';
 
 // Upload bukti
 $flash = $flashType = '';
+$is_ajax = ($_POST['ajax'] ?? '') === '1';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'upload_proof') {
-    if (empty($_FILES['proof']['tmp_name'])) {
+    if ($dep['status'] !== 'pending') {
+        $flash = 'Deposit ini sudah tidak menunggu pembayaran.'; $flashType = 'error';
+    } elseif (empty($_FILES['proof']['tmp_name'])) {
         $flash = 'Pilih file bukti pembayaran.'; $flashType = 'error';
     } else {
         $ext = strtolower(pathinfo($_FILES['proof']['name'], PATHINFO_EXTENSION));
@@ -89,6 +97,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'uploa
         }
     }
     $dep2 = $pdo->prepare("SELECT * FROM deposits WHERE id=?"); $dep2->execute([$dep_id]); $dep = $dep2->fetch();
+    if ($is_ajax) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => $flashType === 'success', 'message' => $flash]);
+        exit;
+    }
 }
 
 // Cancel
@@ -102,9 +115,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cance
     }
 }
 
-// Countdown: 1 jam dari created_at, tidak reset saat refresh
+// Countdown sampai deposit expired otomatis (DEPO_EXPIRE_HOURS), tidak reset saat refresh
 $created_ts       = strtotime($dep['created_at']);
-$expire_secs      = max(0, 3600 - (time() - $created_ts));   // sisa waktu 1 jam
+$expire_total     = DEPO_EXPIRE_HOURS * 3600;
+$expire_secs      = max(0, $expire_total - (time() - $created_ts));
 $cancel_secs_left = max(0, 60   - (time() - $created_ts));   // sisa cooldown batal
 
 $qr_url      = !empty($qris_str)
@@ -517,6 +531,31 @@ require dirname(__DIR__) . '/partials/header.php';
   font-family: inherit;
 }
 
+/* ── Kartu upload bukti (mudah dilihat & ditekan) ── */
+.pay-up-card { padding: 13px 14px 14px; border-color: #fecdd3; background: linear-gradient(160deg, #fff1f2 0%, #ffffff 55%); }
+.pay-up-card.pulse { animation: upPulse 1.2s ease 3; }
+@keyframes upPulse {
+  0%, 100% { box-shadow: var(--reef-clay-shadow); }
+  50% { box-shadow: 0 0 0 5px rgba(244, 63, 94, 0.28), var(--reef-clay-shadow); }
+}
+.pay-up-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pay-up-ic { width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; background: linear-gradient(135deg, #fb7185, #e11d48); border: 2px solid #fff; box-shadow: 0 3px 0 #be123c; }
+.pay-up-title { font-size: 13px; font-weight: 900; color: var(--reef-ink); line-height: 1.2; }
+.pay-up-sub { font-size: 10.5px; font-weight: 700; color: var(--reef-muted); margin-top: 1px; }
+.pay-drop { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 96px; padding: 10px; border: 2px dashed #fda4af; border-radius: 16px; background: #fff; cursor: pointer; margin-bottom: 9px; text-align: center; transition: background .15s, border-color .15s; }
+.pay-drop:active { background: #fff1f2; border-color: #f43f5e; }
+.pay-drop img { width: 74px; height: 74px; object-fit: cover; border-radius: 10px; border: 2px solid #fff; box-shadow: 0 3px 10px rgba(30, 27, 46, .12); flex-shrink: 0; }
+.pay-drop-txt { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.pay-drop-txt i { font-size: 28px; color: #f43f5e; }
+.pay-drop-txt b { font-size: 12.5px; font-weight: 900; color: var(--reef-ink); word-break: break-all; }
+.pay-drop-txt small { font-size: 10px; font-weight: 700; color: var(--reef-muted); }
+.pay-drop img:not([hidden]) + .pay-drop-txt { align-items: flex-start; text-align: left; }
+.pay-up-card .pay-btn-upload { padding: 12px; font-size: 13px; border-radius: 14px; box-shadow: 0 4px 12px rgba(244, 63, 94, .3), 0 3px 0 #be123c; }
+.pay-up-card .pay-btn-upload:disabled { background: #e2e8f0; color: #94a3b8; box-shadow: none; cursor: not-allowed; }
+.pay-up-fab { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 60; display: inline-flex; align-items: center; gap: 6px; padding: 11px 18px; border-radius: 999px; border: 2px solid #fff; background: linear-gradient(135deg, #fb7185, #e11d48); color: #fff; font: 900 12.5px/1 inherit; font-family: inherit; box-shadow: 0 8px 20px rgba(225, 29, 72, .35), 0 3px 0 #be123c; cursor: pointer; white-space: nowrap; }
+.pay-up-fab[hidden] { display: none; }
+.pay-up-fab:active { transform: translateX(-50%) translateY(2px); }
+
 /* Cancel Link */
 .pay-btn-cancel {
   background: none;
@@ -613,7 +652,7 @@ require dirname(__DIR__) . '/partials/header.php';
     </div>
     <div class="pay-timer-badge">
       <i class="ph-bold ph-hourglass-medium"></i>
-      <span id="exp-timer">--:--</span>
+      <span id="exp-timer"><?= $dep['status'] === 'pending' ? '--:--' : 'Tidak aktif' ?></span>
     </div>
   </div>
 
@@ -639,7 +678,23 @@ require dirname(__DIR__) . '/partials/header.php';
     </a>
   </div>
 
-  <!-- ── 3. STATE BUKTI TERUPLOAD MENUNGGU VERIFIKASI ── -->
+  <!-- ── 3. STATE DEPOSIT TIDAK AKTIF (EXPIRED / DITOLAK / DIBATALKAN) ── -->
+  <?php elseif ($dep['status'] === 'rejected'): ?>
+  <div class="pay-clay pay-result-card">
+    <div class="pay-res-icon" style="background:linear-gradient(135deg,#fecdd3,#f43f5e);color:#fff;">
+      <i class="ph-fill ph-x-circle"></i>
+    </div>
+    <div class="pay-res-title">Deposit Tidak Aktif</div>
+    <div class="pay-res-desc">
+      <?= htmlspecialchars($dep['admin_note'] ?: 'Deposit ini sudah tidak menunggu pembayaran.') ?><br>
+      Jangan bayar ke QR deposit ini. Buat deposit baru ya.
+    </div>
+    <a href="/deposit" class="pay-btn-act download" style="padding:11px;font-size:13px;">
+      <i class="ph-bold ph-plus-circle"></i> Buat Deposit Baru
+    </a>
+  </div>
+
+  <!-- ── 4. STATE BUKTI TERUPLOAD MENUNGGU VERIFIKASI ── -->
   <?php elseif ($dep['proof_image']): ?>
   <div class="pay-clay pay-result-card">
     <div class="pay-res-icon pending">
@@ -647,22 +702,30 @@ require dirname(__DIR__) . '/partials/header.php';
     </div>
     <div class="pay-res-title">Bukti Sedang Diverifikasi</div>
     <div class="pay-res-desc">
-      Struk pembayaran telah diterima oleh dermaga kasir dan sedang dalam proses verifikasi admin.
+      Struk pembayaran sudah kami terima dan sedang dicek admin. Halaman ini akan berpindah otomatis begitu saldo masuk.
     </div>
     <a href="/history" class="pay-btn-act download" style="padding:11px;font-size:13px;">
       <i class="ph-bold ph-receipt"></i> Cek Riwayat Transaksi
     </a>
   </div>
+  <div class="pay-radar-strip">
+    <div class="pay-radar-left">
+      <div class="pay-radar-dot"></div>
+      <span id="radar-txt">Status diperbarui otomatis</span>
+    </div>
+    <button id="btn-check-status" onclick="manualCheckStatus()" class="pay-btn-check" type="button">
+      <i class="ph-bold ph-arrows-clockwise"></i>
+      <span>Cek Status</span>
+    </button>
+  </div>
 
-  <!-- ── 4. STATE UTAMA: MENUNGGU PEMBAYARAN QRIS ── -->
+  <!-- ── 5. STATE UTAMA: MENUNGGU PEMBAYARAN QRIS ── -->
   <?php else: ?>
 
-  <!-- UNIFIED PAYMENT VAULT CARD (THE OCEAN QRIS BERTH) -->
   <div class="pay-clay pay-qris-card">
     <div class="pay-bubble pay-bubble--1"></div>
     <div class="pay-bubble pay-bubble--2"></div>
 
-    <!-- Amount Header Bar -->
     <div class="pay-amount-header">
       <div class="pay-amount-meta">
         <span class="pay-amount-lbl">Total Tagihan Pembayaran</span>
@@ -677,7 +740,6 @@ require dirname(__DIR__) . '/partials/header.php';
       </button>
     </div>
 
-    <!-- Official QRIS Brand Bar -->
     <div class="pay-qris-brand-bar">
       <div class="pay-qris-brand-txt">
         <i class="ph-fill ph-shield-check" style="font-size:16px;color:#10b981;"></i>
@@ -686,7 +748,6 @@ require dirname(__DIR__) . '/partials/header.php';
       <img src="/assets/qris.png?v=3" alt="QRIS" class="pay-qris-brand-img">
     </div>
 
-    <!-- QR Code Display Frame -->
     <?php if ($qr_url): ?>
     <div class="pay-qr-frame">
       <img id="qr-img" src="<?= htmlspecialchars($qr_url) ?>" alt="QRIS Code">
@@ -696,7 +757,6 @@ require dirname(__DIR__) . '/partials/header.php';
       DANA &bull; OVO &bull; GoPay &bull; ShopeePay &bull; BCA &bull; Mandiri &bull; BRI &bull; BNI
     </div>
 
-    <!-- Quick Action Buttons (Unduh & Perbesar) -->
     <div class="pay-actions-grid">
       <a href="<?= htmlspecialchars($qr_dl_url) ?>" class="pay-btn-act download">
         <i class="ph-bold ph-download-simple"></i>
@@ -714,11 +774,10 @@ require dirname(__DIR__) . '/partials/header.php';
     <?php endif; ?>
   </div>
 
-  <!-- ── 5. REALTIME RADAR MONITOR STRIP ── -->
   <div class="pay-radar-strip">
     <div class="pay-radar-left">
       <div class="pay-radar-dot"></div>
-      <span>Cek otomatis setiap 5 detik</span>
+      <span id="radar-txt">Cek otomatis setiap 5 detik</span>
     </div>
     <button id="btn-check-status" onclick="manualCheckStatus()" class="pay-btn-check" type="button">
       <i class="ph-bold ph-arrows-clockwise"></i>
@@ -726,7 +785,37 @@ require dirname(__DIR__) . '/partials/header.php';
     </button>
   </div>
 
-  <!-- ── 6. ACCORDION 1: PANDUAN RINGKAS ── -->
+  <!-- ── UPLOAD BUKTI: muncul tepat di bawah status, terbuka & mudah ditekan ── -->
+  <?php
+  $pending_secs = time() - $created_ts;
+  $show_upload  = ($confirm_mode !== 'auto' || $pending_secs >= 300);
+  ?>
+  <div class="pay-clay pay-up-card" id="upload-card" style="<?= $show_upload ? '' : 'display:none;' ?>">
+    <div class="pay-up-head">
+      <div class="pay-up-ic"><i class="ph-fill ph-receipt"></i></div>
+      <div>
+        <div class="pay-up-title">Sudah bayar tapi saldo belum masuk?</div>
+        <div class="pay-up-sub">Kirim screenshot bukti bayar, admin cek manual.</div>
+      </div>
+    </div>
+    <form id="upload-form" method="POST" enctype="multipart/form-data">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="upload_proof">
+      <label class="pay-drop" id="drop-zone">
+        <input type="file" name="proof" id="proof-input" accept="image/*" required hidden>
+        <img id="proof-preview" alt="" hidden>
+        <span class="pay-drop-txt" id="drop-txt">
+          <i class="ph-bold ph-image-square"></i>
+          <b>Pilih / foto bukti pembayaran</b>
+          <small>JPG, PNG, atau WEBP</small>
+        </span>
+      </label>
+      <button type="submit" class="pay-btn-upload" id="btn-upload" disabled>
+        <i class="ph-bold ph-paper-plane-tilt"></i> <span>Kirim Bukti Pembayaran</span>
+      </button>
+    </form>
+  </div>
+
   <div class="pay-accordion">
     <div class="pay-acc-header" onclick="toggleAcc('steps')" id="hdr-steps">
       <span style="display:inline-flex;align-items:center;gap:6px;">
@@ -751,164 +840,176 @@ require dirname(__DIR__) . '/partials/header.php';
     </div>
   </div>
 
-  <!-- ── 7. ACCORDION 2: UPLOAD STRUK CADANGAN (OPSIONAL) ── -->
-  <?php 
-  $pending_secs = time() - $created_ts;
-  $show_upload = ($confirm_mode !== 'auto' || $pending_secs >= 300);
-  ?>
-  <div class="pay-accordion" id="upload-acc-wrap" style="<?= $show_upload ? '' : 'display:none;' ?>">
-    <div class="pay-acc-header" onclick="toggleAcc('upload')" id="hdr-upload">
-      <span style="display:inline-flex;align-items:center;gap:6px;">
-        <i class="ph-fill ph-file-arrow-up" style="color:var(--reef-coral-500);font-size:14px;"></i>
-        <span>Upload Struk Cadangan (Opsional)</span>
-      </span>
-      <i class="ph-bold ph-caret-down"></i>
-    </div>
-    <div class="pay-acc-content" id="body-upload">
-      <form method="POST" enctype="multipart/form-data">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="upload_proof">
-        <input class="pay-file-input" type="file" name="proof" accept="image/*" required>
-        <button type="submit" class="pay-btn-upload">
-          <i class="ph-bold ph-paper-plane-tilt"></i> Kirim Bukti Struk
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ── 8. CANCEL DEPOSIT FORM ── -->
   <form method="POST" style="margin: 4px 0 0;">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="cancel_deposit">
     <button id="btn-cancel-dep" type="submit" class="pay-btn-cancel">Batalkan Deposit</button>
   </form>
 
+  <!-- Tombol melayang ke form upload (muncul bila form tidak terlihat di layar) -->
+  <button type="button" class="pay-up-fab" id="upload-fab" onclick="goUpload()" hidden>
+    <i class="ph-bold ph-upload-simple"></i> Upload Bukti Bayar
+  </button>
+  <?php endif; ?>
+
+  <?php if ($dep['status'] === 'pending'): ?>
   <script>
   const DEP_ID      = <?= $dep_id ?>;
   const CSRF_TOK    = '<?= csrf_token() ?>';
   const EXPIRE_SECS = <?= $expire_secs ?>;
+  const EXPIRE_TOTAL = <?= $expire_total ?>;
   const RAW_AMOUNT  = <?= (int)$amount ?>;
+  const HAS_PROOF   = <?= $dep['proof_image'] ? 'true' : 'false' ?>;
   let isChecking    = false;
 
   function toggleAcc(id) {
     const b = document.getElementById('body-' + id);
     const h = document.getElementById('hdr-' + id);
     if (!b || !h) return;
-    const isOpen = b.classList.contains('open');
-    if (isOpen) {
-      b.classList.remove('open');
-      h.classList.remove('open');
-    } else {
-      b.classList.add('open');
-      h.classList.add('open');
-    }
+    b.classList.toggle('open');
+    h.classList.toggle('open');
   }
 
   function copyAmount() {
     const textToCopy = RAW_AMOUNT.toString();
     const btn = document.getElementById('btn-copy-amt');
     const txt = document.getElementById('copy-amt-txt');
-
     function onCopied() {
       if (btn) btn.classList.add('copied');
       if (txt) txt.textContent = '✓ Tersalin!';
-      if (typeof nToast !== 'undefined' && nToast.copy) {
-        nToast.copy(textToCopy, 'Nominal Transfer');
-      } else if (typeof nToast === 'function') {
-        nToast('Nominal Rp ' + Number(textToCopy).toLocaleString('id-ID') + ' disalin!', 'success');
-      }
-      setTimeout(() => {
-        if (btn) btn.classList.remove('copied');
-        if (txt) txt.textContent = 'Salin';
-      }, 2000);
+      if (typeof nToast !== 'undefined' && nToast.copy) nToast.copy(textToCopy, 'Nominal Transfer');
+      else if (typeof nToast === 'function') nToast('Nominal Rp ' + Number(textToCopy).toLocaleString('id-ID') + ' disalin!', 'success');
+      setTimeout(() => { if (btn) btn.classList.remove('copied'); if (txt) txt.textContent = 'Salin'; }, 2000);
     }
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(textToCopy).then(onCopied).catch(onCopied);
-    } else {
-      onCopied();
-    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(textToCopy).then(onCopied).catch(onCopied);
+    else onCopied();
   }
 
-  let expSecs = EXPIRE_SECS;
+  // ── Hitung mundur sampai expired ─────────────────────────────────────────
+  const startedAt = Date.now();
   const timerEl = document.getElementById('exp-timer');
-
+  const secsLeft = () => Math.max(0, EXPIRE_SECS - Math.floor((Date.now() - startedAt) / 1000));
   function updateExpTimer() {
-    if (expSecs <= 0) {
-      if (timerEl) timerEl.textContent = 'Kedaluwarsa';
-      return;
-    }
-    const m = Math.floor(expSecs / 60), s = expSecs % 60;
-    if (timerEl) timerEl.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    const s = secsLeft();
+    if (!timerEl) return;
+    if (s <= 0) { timerEl.textContent = 'Kedaluwarsa'; return; }
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    timerEl.textContent = (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
   }
-  updateExpTimer();
-  const expTimer = setInterval(() => {
-    expSecs--;
-    updateExpTimer();
-    
-    const elapsed = 3600 - expSecs;
-    if (elapsed >= 300) {
-      const upWrap = document.getElementById('upload-acc-wrap');
-      if (upWrap && upWrap.style.display === 'none') {
-        upWrap.style.display = 'block';
-      }
+
+  // ── Form upload: tampil setelah 5 menit, langsung terlihat ──────────────
+  const upCard = document.getElementById('upload-card');
+  const fab = document.getElementById('upload-fab');
+  let upShownLive = false;
+  function showUpload(announce) {
+    if (!upCard || upCard.style.display !== 'none') return;
+    upCard.style.display = '';
+    upShownLive = true;
+    if (announce) {
+      upCard.classList.add('pulse');
+      upCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (typeof nToast === 'function') nToast('Belum terdeteksi? Kamu bisa kirim bukti bayar sekarang.', 'info');
+      setTimeout(() => upCard.classList.remove('pulse'), 4000);
     }
+    watchFab();
+  }
+  function goUpload() {
+    if (!upCard) return;
+    upCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    upCard.classList.add('pulse');
+    setTimeout(() => upCard.classList.remove('pulse'), 2500);
+  }
+  function watchFab() {
+    if (!fab || !upCard || !('IntersectionObserver' in window)) return;
+    new IntersectionObserver(([e]) => { fab.hidden = e.isIntersecting || upCard.style.display === 'none'; }, { threshold: 0.25 }).observe(upCard);
+  }
+  if (upCard && upCard.style.display !== 'none') watchFab();
 
-    if (expSecs <= 0) clearInterval(expTimer);
-  }, 1000);
+  function tick() {
+    updateExpTimer();
+    if (EXPIRE_TOTAL - secsLeft() >= 300) showUpload(true);
+  }
+  tick();
+  const expTimer = setInterval(tick, 1000);
 
-  const pollStatus = () => {
-    if (isChecking) return;
-    fetch('?id=' + DEP_ID, {
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'_csrf=' + CSRF_TOK + '&action=check_status'
-    }).then(r=>r.json()).then(d=>{
-      if(d.confirmed) confirmAndRedirect();
-    }).catch(()=>{});
-  };
-  const pollTimer = setInterval(pollStatus, 5000);
+  // Pilih file → pratinjau + aktifkan tombol
+  const proofInput = document.getElementById('proof-input');
+  if (proofInput) proofInput.addEventListener('change', () => {
+    const f = proofInput.files[0];
+    const prev = document.getElementById('proof-preview');
+    const txt = document.getElementById('drop-txt');
+    document.getElementById('btn-upload').disabled = !f;
+    if (!f) return;
+    prev.src = URL.createObjectURL(f);
+    prev.hidden = false;
+    txt.innerHTML = '<b>' + f.name.replace(/[<>&]/g, '') + '</b><small>Ketuk untuk ganti foto</small>';
+  });
 
+  // Kirim bukti di latar belakang (tanpa reload)
+  const upForm = document.getElementById('upload-form');
+  if (upForm) upForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const btn = document.getElementById('btn-upload');
+    const fd = new FormData(upForm);
+    fd.append('ajax', '1');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> <span>Mengirim…</span>';
+    fetch('?id=' + DEP_ID, { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(d => {
+        if (typeof nToast === 'function') nToast(d.message || (d.ok ? 'Terkirim' : 'Gagal mengirim'), d.ok ? 'success' : 'error');
+        if (d.ok) setTimeout(() => location.reload(), 900);
+        else { btn.disabled = false; btn.innerHTML = '<i class="ph-bold ph-paper-plane-tilt"></i> <span>Kirim Bukti Pembayaran</span>'; }
+      })
+      .catch(() => {
+        if (typeof nToast === 'function') nToast('Gagal mengirim, cek koneksi lalu coba lagi.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ph-bold ph-paper-plane-tilt"></i> <span>Kirim Bukti Pembayaran</span>';
+      });
+  });
+
+  // ── Cek status otomatis di latar belakang ───────────────────────────────
+  const radarTxt = document.getElementById('radar-txt');
+  function checkStatus() {
+    return fetch('?id=' + DEP_ID, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: '_csrf=' + encodeURIComponent(CSRF_TOK) + '&action=check_status',
+      cache: 'no-store'
+    }).then(r => r.json()).then(d => {
+      if (radarTxt) radarTxt.textContent = 'Dicek otomatis · ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (d.confirmed) confirmAndRedirect();
+      else if (d.rejected) { stopAll(); location.reload(); }
+      else if (d.proof && !HAS_PROOF) { stopAll(); location.reload(); }
+      return d;
+    });
+  }
+  let pollTimer = setInterval(() => { if (!isChecking) checkStatus().catch(() => {}); }, 5000);
+  // Kembali ke tab / layar menyala → langsung cek
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); checkStatus().catch(() => {}); } });
+  window.addEventListener('focus', () => checkStatus().catch(() => {}));
+
+  function stopAll() { clearInterval(pollTimer); clearInterval(expTimer); }
   function confirmAndRedirect() {
-    clearInterval(pollTimer);
-    clearInterval(expTimer);
+    stopAll();
     if (timerEl) timerEl.textContent = 'Sukses';
     if (typeof nToast === 'function') nToast('Pembayaran berhasil dikonfirmasi!', 'success');
     setTimeout(() => location.href = '/history?tab=deposit', 1000);
   }
 
-  const manualCheckStatus = () => {
+  function manualCheckStatus() {
     if (isChecking) return;
     isChecking = true;
     const btn = document.getElementById('btn-check-status');
     const orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Cek...';
-
-    fetch('?id=' + DEP_ID, {
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'_csrf=' + CSRF_TOK + '&action=check_status'
-    }).then(r=>r.json()).then(d=>{
-      isChecking = false;
-      btn.disabled = false;
-      btn.innerHTML = orig;
-      if (d.confirmed) {
-        confirmAndRedirect();
-      } else {
-        if (typeof nToast === 'function') {
-          nToast('Pembayaran belum terdeteksi. Silakan coba sesaat lagi.', 'warn');
-        }
-      }
-    }).catch(()=>{
-      isChecking = false;
-      btn.disabled = false;
-      btn.innerHTML = orig;
-      if (typeof nToast === 'function') {
-        nToast('Gagal menghubungi server.', 'error');
-      }
-    });
-  };
+    checkStatus().then(d => {
+      if (!d.confirmed && !d.rejected && typeof nToast === 'function') nToast('Pembayaran belum terdeteksi. Silakan coba sesaat lagi.', 'warn');
+    }).catch(() => {
+      if (typeof nToast === 'function') nToast('Gagal menghubungi server.', 'error');
+    }).finally(() => { isChecking = false; btn.disabled = false; btn.innerHTML = orig; });
+  }
 
   let cancelSecs = <?= $cancel_secs_left ?>;
   const cancelBtn = document.getElementById('btn-cancel-dep');
@@ -918,10 +1019,7 @@ require dirname(__DIR__) . '/partials/header.php';
     const ci = setInterval(() => {
       cancelSecs--;
       cancelBtn.textContent = cancelSecs > 0 ? 'Tunggu ' + cancelSecs + 's untuk membatalkan' : 'Batalkan Deposit';
-      if (cancelSecs <= 0) {
-        clearInterval(ci);
-        cancelBtn.disabled = false;
-      }
+      if (cancelSecs <= 0) { clearInterval(ci); cancelBtn.disabled = false; }
     }, 1000);
   }
   </script>
