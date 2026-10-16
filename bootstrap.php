@@ -575,9 +575,12 @@ function credit_registration_referral_bonus(PDO $pdo, int $new_user_id, string $
     $upline = $stmt->fetch();
     if (!$upline || empty($upline['id'])) return 0.0;
     
-    // Promotor tidak dapat komisi referral per pendaftar: member valid sudah dibayar lewat gaji harian.
-    if ((int)$upline['is_promotor'] === 1) return 0.0;
-    $bonus = (float) setting($pdo, 'referral_bonus', '1000');
+    $bonus = 0.0;
+    if ((int)$upline['is_promotor'] !== 1) {
+        $bonus = (float) setting($pdo, 'referral_bonus', '1000');
+    } else {
+        $bonus = (float) setting($pdo, 'promotor_per_member_bonus', '0');
+    }
     
     if ($bonus > 0) {
         $hold_days = max(0, (int) setting($pdo, 'referral_hold_days', '3'));
@@ -1160,163 +1163,92 @@ if (!empty($_GET['ref'])) {
 }
 
 /**
- * Kolom tambahan promotor_daily_targets (skema target + jaminan, 2026-10-16).
- * valid_regs NULL = baris lama (skema komisi flat).
- */
-function promotor_targets_ensure_schema(PDO $pdo): void {
-    static $done = false;
-    if ($done) return;
-    $done = true;
-    try {
-        $pdo->query("SELECT earned_amount, valid_regs, deposit_count, guarantee_amount FROM promotor_daily_targets LIMIT 0");
-    } catch (\Throwable) {
-        try {
-            $pdo->exec("ALTER TABLE promotor_daily_targets
-                ADD COLUMN IF NOT EXISTS valid_regs INT NULL DEFAULT NULL AFTER actual_regs,
-                ADD COLUMN IF NOT EXISTS deposit_count INT NOT NULL DEFAULT 0 AFTER actual_deposits,
-                ADD COLUMN IF NOT EXISTS guarantee_amount DECIMAL(16,2) NOT NULL DEFAULT 0 AFTER salary_rate,
-                ADD COLUMN IF NOT EXISTS earned_amount DECIMAL(16,2) NOT NULL DEFAULT 0 AFTER guarantee_amount");
-            $pdo->exec("UPDATE promotor_daily_targets
-                SET earned_amount = ROUND(salary_rate * LEAST(100, percentage) / 100)
-                WHERE valid_regs IS NULL AND earned_amount = 0");
-        } catch (\Throwable) {}
-    }
-}
-
-/**
- * Komisi deposit jaminan sesuai skema global (flat / percent / hybrid).
- */
-function promotor_deposit_commission(PDO $pdo, int $count, float $amount): float {
-    $scheme = setting($pdo, 'promotor_deposit_scheme', 'flat');
-    $flat   = (float)setting($pdo, 'promotor_per_deposit_bonus', '0');
-    $pct    = (float)setting($pdo, 'promotor_deposit_percent', '0');
-    return match ($scheme) {
-        'percent' => $amount * $pct / 100,
-        'hybrid'  => $count * $flat + $amount * $pct / 100,
-        default   => $count * $flat,
-    };
-}
-
-/**
- * Hitung capaian & gaji harian promotor.
- *
- * Capaian = rata-rata (member valid / target member, nominal deposit / target deposit),
- *           tiap komponen maks 100%; target 0 tidak ikut dihitung.
- * Gaji target = gaji penuh x capaian.
- * Jaminan     = member valid x bonus per member + komisi deposit (skema global).
- * Gaji        = MAX(gaji target, jaminan), jadi promotor tidak pernah dapat lebih kecil dari komisi.
- *
- * Member valid: daftar di tanggal itu lewat kode promotor, tidak ditandai abuse,
- * dan sudah pernah nonton video atau mancing.
- */
-function promotor_calc_day(PDO $pdo, array $p, string $date): array {
-    $dep = $pdo->prepare(
-        "SELECT COALESCE(SUM(d.amount), 0) AS amt, COUNT(d.id) AS cnt
-         FROM deposits d
-         JOIN users u ON u.id = d.user_id
-         WHERE u.referred_by = ? AND d.status = 'confirmed' AND DATE(d.confirmed_at) = ?"
-    );
-    $dep->execute([$p['referral_code'], $date]);
-    $d = $dep->fetch();
-    $dep_amt = (float)$d['amt'];
-    $dep_cnt = (int)$d['cnt'];
-
-    $reg = $pdo->prepare(
-        "SELECT COUNT(*) AS total,
-                COALESCE(SUM(u.is_flagged_abuse = 0 AND (
-                    EXISTS (SELECT 1 FROM watch_history w WHERE w.user_id = u.id)
-                    OR EXISTS (SELECT 1 FROM fishing_logs f WHERE f.user_id = u.id)
-                )), 0) AS valid
-         FROM users u
-         WHERE u.referred_by = ? AND DATE(u.created_at) = ?"
-    );
-    $reg->execute([$p['referral_code'], $date]);
-    $r = $reg->fetch();
-    $regs  = (int)$r['total'];
-    $valid = (int)$r['valid'];
-
-    $t_regs = max(0, (int)$p['promotor_target_regs']);
-    $t_dep  = max(0.0, (float)$p['promotor_target_deposits']);
-    $rate   = max(0.0, (float)$p['promotor_salary_rate']);
-
-    $parts = [];
-    if ($t_regs > 0) $parts[] = min(1.0, $valid / $t_regs);
-    if ($t_dep > 0)  $parts[] = min(1.0, $dep_amt / $t_dep);
-    $pct = $parts ? round(array_sum($parts) / count($parts) * 100, 2) : 0.0;
-
-    $target_salary = round($rate * $pct / 100);
-    $guarantee = round($valid * (float)setting($pdo, 'promotor_per_member_bonus', '0')
-        + promotor_deposit_commission($pdo, $dep_cnt, $dep_amt));
-
-    return [
-        'actual_regs'      => $regs,
-        'valid_regs'       => $valid,
-        'actual_deposits'  => $dep_amt,
-        'deposit_count'    => $dep_cnt,
-        'target_regs'      => $t_regs,
-        'target_deposits'  => $t_dep,
-        'salary_rate'      => $rate,
-        'percentage'       => $pct,
-        'target_salary'    => $target_salary,
-        'guarantee_amount' => $guarantee,
-        'earned_amount'    => max($target_salary, $guarantee),
-    ];
-}
-
-/**
- * Simpan snapshot harian promotor. Baris yang sudah dibayar tidak diubah nominalnya.
+ * Dynamically computes and updates the snapshot for a promotor's daily performance.
  */
 function sync_promotor_daily_targets(PDO $pdo, int|string $promotor_id, ?string $date = null): void {
     $promotor_id = (int)$promotor_id;
     if (!$date) $date = date('Y-m-d');
-
+    
     try {
-        promotor_targets_ensure_schema($pdo);
-
+        // Get promotor info
         $p_stmt = $pdo->prepare("SELECT referral_code, promotor_target_deposits, promotor_target_regs, promotor_salary_rate FROM users WHERE id=? AND is_promotor=1");
         $p_stmt->execute([$promotor_id]);
         $p = $p_stmt->fetch();
         if (!$p) return;
-
-        $c = promotor_calc_day($pdo, $p, $date);
-
-        $check = $pdo->prepare("SELECT id, is_paid, valid_regs, earned_amount FROM promotor_daily_targets WHERE user_id=? AND date=?");
+        
+        // Calculate actual deposits today from referred users (COUNT and SUM)
+        $dep_stmt = $pdo->prepare(
+            "SELECT COALESCE(SUM(d.amount), 0) as total_amt, COUNT(d.id) as total_cnt
+             FROM deposits d 
+             JOIN users u ON u.id = d.user_id 
+             WHERE u.referred_by = ? AND d.status = 'confirmed' AND DATE(d.confirmed_at) = ?"
+        );
+        $dep_stmt->execute([$p['referral_code'], $date]);
+        $dep_data = $dep_stmt->fetch();
+        $actual_deposits_amt = (float)$dep_data['total_amt'];
+        $actual_deposits_cnt = (int)$dep_data['total_cnt'];
+        
+        // Calculate actual registrations today
+        $reg_stmt = $pdo->prepare(
+            "SELECT COUNT(*) 
+             FROM users 
+             WHERE referred_by = ? AND DATE(created_at) = ?"
+        );
+        $reg_stmt->execute([$p['referral_code'], $date]);
+        $actual_regs = (int)$reg_stmt->fetchColumn();
+        
+        // Flat Rate & Scheme Calculation
+        $bonus_reg  = (float)setting($pdo, 'promotor_per_member_bonus', '0');
+        $scheme = setting($pdo, 'promotor_deposit_scheme', 'flat');
+        $bonus_depo_flat = (float)setting($pdo, 'promotor_per_deposit_bonus', '0');
+        $bonus_depo_pct = (float)setting($pdo, 'promotor_deposit_percent', '0');
+        
+        $earned_from_regs = $actual_regs * $bonus_reg;
+        $earned_from_deposits = 0;
+        
+        if ($scheme === 'flat') {
+            $earned_from_deposits = $actual_deposits_cnt * $bonus_depo_flat;
+        } elseif ($scheme === 'percent') {
+            $earned_from_deposits = $actual_deposits_amt * ($bonus_depo_pct / 100);
+        } elseif ($scheme === 'hybrid') {
+            $earned_from_deposits = ($actual_deposits_cnt * $bonus_depo_flat) + ($actual_deposits_amt * ($bonus_depo_pct / 100));
+        }
+        
+        $earned_amount = $earned_from_regs + $earned_from_deposits;
+        
+        $percentage = 100.0;
+        
+        // We repurpose fields to store flat rate info:
+        // actual_deposits = the sum nominal of deposits
+        // target_deposits = the count of deposits (so we can display it later)
+        // target_regs = the total earned from regs (so we can display it)
+        // percentage = 100
+        // salary_rate = earned_amount
+        
+        // Upsert into promotor_daily_targets
+        $check = $pdo->prepare("SELECT id, is_paid FROM promotor_daily_targets WHERE user_id=? AND date=?");
         $check->execute([$promotor_id, $date]);
         $exist = $check->fetch();
-
-        if ($exist && (int)$exist['is_paid'] === 1) {
-            // Sudah dibayar: hanya angka capaian yang diperbarui
-            $pdo->prepare(
-                "UPDATE promotor_daily_targets SET actual_deposits=?, deposit_count=?, actual_regs=?, valid_regs=? WHERE id=?"
-            )->execute([$c['actual_deposits'], $c['deposit_count'], $c['actual_regs'], $c['valid_regs'], $exist['id']]);
-            return;
-        }
-
-        $earned = $c['earned_amount'];
-        // Baris skema lama yang belum dibayar: jangan sampai lebih kecil dari hitungan lama
-        if ($exist && $exist['valid_regs'] === null) {
-            $earned = max($earned, (float)$exist['earned_amount']);
-        }
-
-        $vals = [
-            $c['target_deposits'], $c['actual_deposits'], $c['deposit_count'],
-            $c['target_regs'], $c['actual_regs'], $c['valid_regs'],
-            $c['percentage'], $c['salary_rate'], $c['guarantee_amount'], $earned,
-        ];
+        
         if ($exist) {
-            $pdo->prepare(
-                "UPDATE promotor_daily_targets
-                 SET target_deposits=?, actual_deposits=?, deposit_count=?, target_regs=?, actual_regs=?, valid_regs=?,
-                     percentage=?, salary_rate=?, guarantee_amount=?, earned_amount=?
-                 WHERE id=?"
-            )->execute([...$vals, $exist['id']]);
+            if ((int)$exist['is_paid'] === 0) {
+                $pdo->prepare(
+                    "UPDATE promotor_daily_targets 
+                     SET actual_deposits=?, actual_regs=?, percentage=?, target_deposits=?, target_regs=?, salary_rate=?
+                     WHERE id=?"
+                )->execute([$actual_deposits_amt, $actual_regs, $percentage, $actual_deposits_cnt, ($actual_regs * $bonus_reg), $earned_amount, $exist['id']]);
+            } else {
+                $pdo->prepare(
+                    "UPDATE promotor_daily_targets 
+                     SET actual_deposits=?, actual_regs=?, percentage=? 
+                     WHERE id=?"
+                )->execute([$actual_deposits_amt, $actual_regs, $percentage, $exist['id']]);
+            }
         } else {
             $pdo->prepare(
-                "INSERT INTO promotor_daily_targets
-                    (user_id, date, target_deposits, actual_deposits, deposit_count, target_regs, actual_regs, valid_regs,
-                     percentage, salary_rate, guarantee_amount, earned_amount, is_paid)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)"
-            )->execute([$promotor_id, $date, ...$vals]);
+                "INSERT INTO promotor_daily_targets (user_id, date, target_deposits, actual_deposits, target_regs, actual_regs, percentage, salary_rate, is_paid) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)"
+            )->execute([$promotor_id, $date, $actual_deposits_cnt, $actual_deposits_amt, ($actual_regs * $bonus_reg), $actual_regs, $percentage, $earned_amount]);
         }
     } catch (\Throwable $th) {
         // Silently fail to not block requests

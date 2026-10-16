@@ -67,38 +67,28 @@ $today_clicks = (int)$c_today->fetchColumn();
 $t_stmt = $pdo->prepare("SELECT * FROM promotor_daily_targets WHERE user_id=? AND date=CURDATE()");
 $t_stmt->execute([$user['id']]);
 $today_target = $t_stmt->fetch() ?: [
-    'target_deposits' => $user['promotor_target_deposits'],
+    'target_deposits' => 0,
     'actual_deposits' => 0.0,
-    'deposit_count' => 0,
-    'target_regs' => $user['promotor_target_regs'],
+    'target_regs' => 0,
     'actual_regs' => 0,
-    'valid_regs' => 0,
     'percentage' => 0.0,
-    'salary_rate' => $user['promotor_salary_rate'],
-    'guarantee_amount' => 0.0,
-    'earned_amount' => 0.0,
+    'salary_rate' => 0.0,
     'is_paid' => 0
 ];
-$today_earned = (float)($today_target['earned_amount'] ?? 0);
+$today_earned = (float)round(($today_target['salary_rate'] * min(100.0, (float)$today_target['percentage'])) / 100.0);
 
-// Rincian capaian hari ini
-$t_regs   = (int)$today_target['target_regs'];
-$t_dep    = (float)$today_target['target_deposits'];
-$v_regs   = (int)($today_target['valid_regs'] ?? $today_target['actual_regs']);
-$a_dep    = (float)$today_target['actual_deposits'];
-$pct_regs = $t_regs > 0 ? min(100.0, $v_regs / $t_regs * 100) : 0.0;
-$pct_dep  = $t_dep > 0 ? min(100.0, $a_dep / $t_dep * 100) : 0.0;
-$today_pct       = min(100.0, (float)$today_target['percentage']);
-$today_rate      = (float)$today_target['salary_rate'];
-$today_target_pay = round($today_rate * $today_pct / 100);
-$today_guarantee = (float)($today_target['guarantee_amount'] ?? 0);
-$today_by_guarantee = $today_guarantee > $today_target_pay;
+// Rincian komisi hari ini (sync menyimpan: target_deposits = jumlah transaksi deposit, target_regs = komisi member dalam Rp)
+$today_regs     = (int)$today_target['actual_regs'];
+$today_reg_comm = (float)$today_target['target_regs'];
+$today_dep_cnt  = (int)$today_target['target_deposits'];
+$today_dep_amt  = (float)$today_target['actual_deposits'];
+$today_dep_comm = max(0.0, $today_earned - $today_reg_comm);
 
 // 3b. Fetch Pending Salary (Hari ini TIDAK dihitung, akumulasi riwayat target date < CURDATE() yang is_paid = 0)
 $pending_stmt = $pdo->prepare("
     SELECT
-        COALESCE(SUM(earned_amount), 0) as total_pending_salary,
-        COUNT(CASE WHEN earned_amount > 0 THEN 1 END) as pending_days,
+        COALESCE(SUM(ROUND((salary_rate * LEAST(100.0, percentage)) / 100.0)), 0) as total_pending_salary,
+        COUNT(CASE WHEN ROUND((salary_rate * LEAST(100.0, percentage)) / 100.0) > 0 THEN 1 END) as pending_days,
         MIN(date) as oldest_pending_date,
         MAX(date) as newest_pending_date
     FROM promotor_daily_targets 
@@ -112,16 +102,18 @@ $pending_days   = (int)($pending_row['pending_days'] ?? 0);
 // Fetch list of pending history logs for detail display
 $pending_history_stmt = $pdo->prepare("
     SELECT * FROM promotor_daily_targets 
-    WHERE user_id = ? AND date < CURDATE() AND is_paid = 0 AND earned_amount > 0
+    WHERE user_id = ? AND date < CURDATE() AND is_paid = 0 AND ROUND((salary_rate * LEAST(100.0, percentage)) / 100.0) > 0
     ORDER BY date DESC
 ");
 $pending_history_stmt->execute([$user['id']]);
 $pending_history_list = $pending_history_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Calculate all-time average daily target percentage achieved
-$avg_stmt = $pdo->prepare("SELECT COALESCE(AVG(percentage), 0) FROM promotor_daily_targets WHERE user_id=?");
-$avg_stmt->execute([$user['id']]);
-$avg_percentage = (float)$avg_stmt->fetchColumn();
+// Total gaji yang sudah dicairkan
+$paid_stmt = $pdo->prepare("SELECT COALESCE(SUM(paid_amount), 0) FROM promotor_daily_targets WHERE user_id=? AND is_paid=1");
+$paid_stmt->execute([$user['id']]);
+$total_paid = (float)$paid_stmt->fetchColumn();
+
+$log_earned = static fn(array $l): float => (float)round(((float)$l['salary_rate'] * min(100.0, (float)$l['percentage'])) / 100.0);
 
 // 4. Fetch paginated daily target history
 $limit = 5;
@@ -193,11 +185,7 @@ $downline_stmt = $pdo->prepare("
     SELECT 
         u.id, u.username, u.created_at, u.balance_wd,
         (SELECT name FROM memberships WHERE id = u.membership_id) as membership_name,
-        (SELECT COUNT(*) FROM deposits d WHERE d.user_id = u.id AND d.status = 'confirmed') as dep_count,
-        (u.is_flagged_abuse = 0 AND (
-            EXISTS (SELECT 1 FROM watch_history w WHERE w.user_id = u.id)
-            OR EXISTS (SELECT 1 FROM fishing_logs f WHERE f.user_id = u.id)
-        )) as is_valid
+        (SELECT COUNT(*) FROM deposits d WHERE d.user_id = u.id AND d.status = 'confirmed') as dep_count
     FROM users u
     WHERE u.referred_by = ?
     ORDER BY u.created_at DESC
@@ -376,8 +364,8 @@ require dirname(__DIR__) . '/partials/header.php';
 </style>
 
 <?php
-$hist_status = static function (array $log): array {
-    $earned = (float)($log['earned_amount'] ?? 0);
+$hist_status = static function (array $log) use ($log_earned): array {
+    $earned = $log_earned($log);
     if ($log['date'] === date('Y-m-d')) return ['run', 'BERJALAN', 'ph-arrows-clockwise'];
     if ((int)$log['is_paid'] === 1)     return ['paid', 'DIBAYAR', 'ph-check-circle'];
     if ($earned > 0)                     return ['wait', 'PENDING', 'ph-hourglass-high'];
@@ -409,45 +397,23 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
           <?php else: ?>
             <span class="pm-tag run"><i class="ph-bold ph-clock"></i> Berjalan s/d 23:59</span>
           <?php endif; ?>
-          <?php if ($today_by_guarantee): ?>
-            <span class="pm-tag grt"><i class="ph-bold ph-shield-check"></i> Jaminan komisi</span>
-          <?php endif; ?>
         </div>
       </div>
-      <div class="pm-ring" style="--p: <?= round($today_pct, 1) ?>;">
-        <div><strong><?= number_format($today_pct, 0) ?>%</strong><span>Capaian</span></div>
-      </div>
-    </div>
-
-    <div class="pm-meters">
-      <div>
-        <div class="pm-m-head">
-          <span><i class="ph-fill ph-users-three" style="color:#10b981"></i> Member Valid</span>
-          <em><b><?= number_format($v_regs, 0, ',', '.') ?></b> / <?= $t_regs > 0 ? number_format($t_regs, 0, ',', '.') : '—' ?></em>
-        </div>
-        <div class="pm-bar mem"><i style="width: <?= round($pct_regs, 1) ?>%"></i></div>
-        <div class="pm-m-sub"><?= number_format((int)$today_target['actual_regs'], 0, ',', '.') ?> pendaftar hari ini &bull; valid = sudah nonton/mancing &amp; bukan akun abuse</div>
-      </div>
-      <div>
-        <div class="pm-m-head">
-          <span><i class="ph-fill ph-wallet" style="color:#0284c7"></i> Deposit Member</span>
-          <em><b><?= format_rp($a_dep) ?></b> / <?= $t_dep > 0 ? format_rp($t_dep) : '—' ?></em>
-        </div>
-        <div class="pm-bar dep"><i style="width: <?= round($pct_dep, 1) ?>%"></i></div>
-        <div class="pm-m-sub"><?= number_format((int)($today_target['deposit_count'] ?? 0)) ?> transaksi deposit terkonfirmasi hari ini</div>
+      <div class="pm-ring" style="--p: 100;">
+        <div><strong><?= number_format($today_regs, 0, ',', '.') ?></strong><span>Member</span></div>
       </div>
     </div>
 
     <div class="pm-cmp">
-      <div class="<?= $today_by_guarantee ? '' : 'on' ?>">
-        <small>Gaji Target</small>
-        <b><?= format_rp($today_target_pay) ?></b>
-        <span><?= number_format($today_pct, 1, ',', '.') ?>% × <?= format_rp($today_rate) ?></span>
+      <div>
+        <small><i class="ph-fill ph-users-three" style="color:#10b981"></i> Komisi Member</small>
+        <b><?= format_rp($today_reg_comm) ?></b>
+        <span><?= number_format($today_regs, 0, ',', '.') ?> daftar × <?= format_rp($g_member) ?></span>
       </div>
-      <div class="<?= $today_by_guarantee ? 'on' : '' ?>">
-        <small>Jaminan Komisi</small>
-        <b><?= format_rp($today_guarantee) ?></b>
-        <span>member valid + komisi deposit</span>
+      <div>
+        <small><i class="ph-fill ph-wallet" style="color:#0284c7"></i> Komisi Deposit</small>
+        <b><?= format_rp($today_dep_comm) ?></b>
+        <span><?= number_format($today_dep_cnt) ?>x &bull; <?= format_rp($today_dep_amt) ?></span>
       </div>
     </div>
   </div>
@@ -455,11 +421,9 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
   <details class="pm-how">
     <summary><i class="ph-fill ph-calculator" style="color:#f97316"></i> Cara gaji dihitung <i class="ph-bold ph-caret-down go"></i></summary>
     <ol>
-      <li><b>Capaian</b> = rata-rata % member valid terhadap target member dan % nominal deposit terhadap target deposit (masing-masing maks 100%).</li>
-      <li><b>Gaji target</b> = capaian × gaji penuh harian (<?= format_rp($today_rate) ?>).</li>
-      <li><b>Jaminan komisi</b> = <?= format_rp($g_member) ?> per member valid + <?= htmlspecialchars($g_dep_txt) ?>.</li>
-      <li>Yang dibayar adalah <b>nilai terbesar</b> dari gaji target dan jaminan komisi, jadi gajimu tidak pernah di bawah komisi.</li>
-      <li>Hitungan ditutup pukul 23:59, lalu dicairkan admin ke Saldo Penarikan.</li>
+      <li><b>Komisi member</b> = <?= format_rp($g_member) ?> untuk setiap member yang daftar lewat linkmu hari itu.</li>
+      <li><b>Komisi deposit</b> = <?= htmlspecialchars($g_dep_txt) ?> dari deposit member yang terkonfirmasi hari itu.</li>
+      <li>Gaji harian = komisi member + komisi deposit. Hitungan ditutup pukul 23:59, lalu dicairkan admin ke Saldo Penarikan.</li>
     </ol>
   </details>
 
@@ -475,7 +439,7 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
     <div class="pm-st a"><b><?= number_format($today_clicks, 0, ',', '.') ?></b><span>Klik hari ini</span></div>
     <div class="pm-st b"><b><?= number_format($total_clicks, 0, ',', '.') ?></b><span>Total klik</span></div>
     <div class="pm-st c"><b><?= number_format($downline_total, 0, ',', '.') ?></b><span>Total member</span></div>
-    <div class="pm-st d"><b><?= number_format($avg_percentage, 0) ?>%</b><span>Rata capaian</span></div>
+    <div class="pm-st d"><b><?= $total_paid >= 1000000 ? number_format($total_paid / 1000000, 1, ',', '.') . 'jt' : ($total_paid >= 1000 ? number_format($total_paid / 1000, 0, ',', '.') . 'rb' : number_format($total_paid, 0, ',', '.')) ?></b><span>Gaji cair</span></div>
   </div>
 
   <!-- GAJI PENDING -->
@@ -497,9 +461,9 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
       <div class="pm-row">
         <div class="pm-row-tx">
           <b><?= date('d M Y', strtotime($plog['date'])) ?></b>
-          <span><?= number_format((float)$plog['percentage'], 1, ',', '.') ?>% &bull; <?= number_format((int)($plog['valid_regs'] ?? $plog['actual_regs'])) ?> member &bull; <?= format_rp((float)$plog['actual_deposits']) ?></span>
+          <span><?= number_format((int)$plog['actual_regs']) ?> member &bull; <?= (int)$plog['target_deposits'] ?>x depo &bull; <?= format_rp((float)$plog['actual_deposits']) ?></span>
         </div>
-        <div class="pm-row-r"><b style="color:#b45309">+<?= format_rp((float)$plog['earned_amount']) ?></b></div>
+        <div class="pm-row-r"><b style="color:#b45309">+<?= format_rp($log_earned($plog)) ?></b></div>
       </div>
       <?php endforeach; ?>
     </div>
@@ -521,23 +485,16 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
       <div class="pm-list">
         <?php foreach ($history_logs as $log):
           [$st, $st_lbl, $st_ic] = $hist_status($log);
-          $amt = (int)$log['is_paid'] === 1 && (float)$log['paid_amount'] > 0 ? (float)$log['paid_amount'] : (float)$log['earned_amount'];
-          $is_new = isset($log['valid_regs']);
+          $amt = (int)$log['is_paid'] === 1 && (float)$log['paid_amount'] > 0 ? (float)$log['paid_amount'] : $log_earned($log);
         ?>
         <div class="pm-row">
           <div class="pm-row-ic ic-<?= $st ?>"><i class="ph-bold <?= $st_ic ?>"></i></div>
           <div class="pm-row-tx">
             <b><?= date('d M Y', strtotime($log['date'])) ?></b>
-            <?php if ($is_new): ?>
-              <span><?= number_format((int)$log['valid_regs']) ?>/<?= number_format((int)$log['target_regs']) ?> member &bull; <?= format_rp((float)$log['actual_deposits']) ?></span>
-              <div class="pm-mini-bar"><i style="width: <?= min(100, (float)$log['percentage']) ?>%"></i></div>
-            <?php else: ?>
-              <span><?= number_format((int)$log['actual_regs']) ?> member &bull; <?= format_rp((float)$log['actual_deposits']) ?> &bull; skema lama</span>
-            <?php endif; ?>
+            <span><?= number_format((int)$log['actual_regs']) ?> member &bull; <?= (int)$log['target_deposits'] ?>x depo &bull; <?= format_rp((float)$log['actual_deposits']) ?></span>
           </div>
           <div class="pm-row-r">
             <b><?= format_rp($amt) ?></b>
-            <?php if ($is_new): ?><span style="font-size:9.5px;font-weight:800;color:var(--reef-muted)"><?= number_format((float)$log['percentage'], 0) ?>% </span><?php endif; ?>
             <span class="pm-pill pl-<?= $st ?>"><?= $st_lbl ?></span>
           </div>
         </div>
@@ -580,12 +537,7 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
             <span><?= date('d M Y, H:i', strtotime($dl['created_at'])) ?><?= (int)$dl['dep_count'] > 0 ? ' &bull; ' . (int)$dl['dep_count'] . 'x deposit' : '' ?></span>
           </div>
           <div class="pm-row-r">
-            <span class="pm-pill pl-tier"><?= htmlspecialchars($dl['membership_name'] ?: 'Gratis') ?></span><br>
-            <?php if ((int)$dl['is_valid'] === 1): ?>
-              <span class="pm-pill pl-paid">VALID</span>
-            <?php else: ?>
-              <span class="pm-pill pl-off">BELUM AKTIF</span>
-            <?php endif; ?>
+            <span class="pm-pill pl-tier"><?= htmlspecialchars($dl['membership_name'] ?: 'Gratis') ?></span>
           </div>
         </div>
         <?php endforeach; ?>
