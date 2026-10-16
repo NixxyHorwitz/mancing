@@ -208,7 +208,7 @@ foreach ($deposits as $d) {
         'amount'      => (float)$d['amount'],
         'is_income'   => true,
         'status'      => $d['status'],
-        'admin_note'  => $d['admin_note'],
+        'admin_note'  => $d['status'] === 'confirmed' ? null : $d['admin_note'], // deposit sukses tanpa keterangan
         'time'        => $d['created_at'],
         'icon'        => strtolower((string)$d['method']) === 'qris' ? 'ph-qr-code' : 'ph-wallet',
         'logo'        => $channel_logos[strtolower((string)$d['method'])] ?? null,

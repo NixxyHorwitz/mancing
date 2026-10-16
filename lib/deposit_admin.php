@@ -57,9 +57,9 @@ function depo_admin_confirm(PDO $pdo, int $id, bool $with_commission, string $vi
         }
 
         $was = $dep['status'] === 'pending' ? 'Approve' : 'Acc Expired';
-        $note = $with_commission ? "Dikonfirmasi manual oleh Admin ({$via})" : "Dikonfirmasi tanpa komisi oleh Admin ({$via})";
-        $pdo->prepare("UPDATE deposits SET status = 'confirmed', confirmed_at = NOW(), admin_note = ?, no_commission = ? WHERE id = ?")
-            ->execute([$note, $with_commission ? 0 : 1, $id]);
+        // Deposit sukses tidak diberi catatan apa pun (catatan tampil di riwayat user)
+        $pdo->prepare("UPDATE deposits SET status = 'confirmed', confirmed_at = NOW(), admin_note = NULL, no_commission = ? WHERE id = ?")
+            ->execute([$with_commission ? 0 : 1, $id]);
         $pdo->prepare("UPDATE users SET balance_dep = balance_dep + ? WHERE id = ?")->execute([$dep['amount'], $dep['user_id']]);
         $comm = $with_commission ? credit_deposit_referral_commission($pdo, (int)$dep['user_id'], (float)$dep['amount']) : 0.0;
         $pdo->commit();
@@ -67,7 +67,7 @@ function depo_admin_confirm(PDO $pdo, int $id, bool $with_commission, string $vi
         $dep['status'] = 'confirmed';
         $dep['confirmed_at'] = date('Y-m-d H:i:s');
         $dep['no_commission'] = $with_commission ? 0 : 1;
-        $dep['admin_note'] = $note;
+        $dep['admin_note'] = null;
         return ['ok' => true, 'message' => $was . ($with_commission ? '' : ' tanpa komisi') . ' berhasil.', 'comm' => $comm, 'dep' => $dep, 'was' => $was];
     } catch (\Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();

@@ -255,7 +255,7 @@ if (isset($update['callback_query'])) {
                     if (!empty($row['no_commission'])) {
                         $msg .= "🚫 <b>Komisi:</b> <code>Tidak ada (acc tanpa komisi)</code>\n";
                     }
-                    $msg .= "✅ <b>Status:</b> <code>" . htmlspecialchars((string)($row['admin_note'] ?: 'Sukses via Callback')) . "</code>\n";
+                    $msg .= "✅ <b>Status:</b> <code>Sukses</code>\n";
                     $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
                     $msg .= "<i>Pembayaran terverifikasi otomatis oleh sistem. Saldo telah ditambahkan ke akun pengguna.</i>";
                 } else {
@@ -364,7 +364,7 @@ if (isset($update['callback_query'])) {
                 // 1. Credit balance_dep to user
                 $pdo->prepare("UPDATE users SET balance_dep=balance_dep+? WHERE id=?")->execute([$dep['amount'], $dep['user_id']]);
                 // 2. Mark deposit as confirmed
-                $pdo->prepare("UPDATE deposits SET status='confirmed', admin_note='Dikonfirmasi manual oleh Admin', confirmed_at=NOW() WHERE id=?")->execute([$id]);
+                $pdo->prepare("UPDATE deposits SET status='confirmed', admin_note=NULL, confirmed_at=NOW() WHERE id=?")->execute([$id]);
                 
                 // 3. Process referral commission
                 $comm = credit_deposit_referral_commission($pdo, (int)$dep['user_id'], (float)$dep['amount']);

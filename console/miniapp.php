@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($type === 'approve') {
                 $pdo->prepare("UPDATE users SET balance_dep=balance_dep+? WHERE id=?")->execute([$d['amount'], $d['user_id']]);
-                $pdo->prepare("UPDATE deposits SET status='confirmed', admin_note='Dikonfirmasi oleh Admin', confirmed_at=NOW() WHERE id=?")->execute([$id]);
+                $pdo->prepare("UPDATE deposits SET status='confirmed', admin_note=NULL, confirmed_at=NOW() WHERE id=?")->execute([$id]);
             } else {
                 $pdo->prepare("UPDATE deposits SET status='rejected', admin_note='Ditolak oleh Admin' WHERE id=?")->execute([$id]);
             }
