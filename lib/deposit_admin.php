@@ -75,6 +75,83 @@ function depo_admin_confirm(PDO $pdo, int $id, bool $with_commission, string $vi
     }
 }
 
+/**
+ * Batalkan deposit yang sudah dikonfirmasi: saldo ditarik kembali dari user
+ * (Saldo Beli dulu, kekurangan dari Saldo WD, sisanya membuat Saldo Beli minus),
+ * komisi referral yang masih terkunci ikut dihapus.
+ * @return array{ok:bool, message:string, dep?:array}
+ */
+function depo_admin_cancel(PDO $pdo, int $id, string $reason): array {
+    depo_ensure_schema($pdo);
+    $pdo->beginTransaction();
+    try {
+        $st = $pdo->prepare("SELECT d.*, u.username, u.balance_dep, u.balance_wd FROM deposits d JOIN users u ON u.id = d.user_id WHERE d.id = ? FOR UPDATE");
+        $st->execute([$id]);
+        $dep = $st->fetch();
+        if (!$dep || $dep['status'] !== 'confirmed') {
+            $pdo->rollBack();
+            return ['ok' => false, 'message' => 'Deposit tidak ditemukan atau belum berstatus sukses.'];
+        }
+
+        $amount   = (float)$dep['amount'];
+        $from_dep = min($amount, max(0.0, (float)$dep['balance_dep']));
+        $from_wd  = min($amount - $from_dep, max(0.0, (float)$dep['balance_wd']));
+        $minus    = $amount - $from_dep - $from_wd; // sisa yang tidak tertutup saldo → Saldo Beli minus
+        $pdo->prepare("UPDATE users SET balance_dep = balance_dep - ?, balance_wd = balance_wd - ? WHERE id = ?")
+            ->execute([$from_dep + $minus, $from_wd, $dep['user_id']]);
+
+        // Komisi referral dari deposit ini (dibuat saat konfirmasi) — hapus bila belum dicairkan
+        $comm_note = '';
+        if ((int)($dep['no_commission'] ?? 0) === 0 && !empty($dep['confirmed_at'])) {
+            $c = $pdo->prepare("
+                SELECT rc.id, rc.amount, rc.status FROM referral_commissions rc
+                JOIN users u ON u.id = ? JOIN users up ON up.id = rc.user_id AND up.referral_code = u.referred_by
+                WHERE rc.from_user_id = ? AND rc.created_at BETWEEN ? - INTERVAL 2 MINUTE AND ? + INTERVAL 2 MINUTE
+                ORDER BY ABS(TIMESTAMPDIFF(SECOND, rc.created_at, ?)) LIMIT 1 FOR UPDATE");
+            $c->execute([$dep['user_id'], $dep['user_id'], $dep['confirmed_at'], $dep['confirmed_at'], $dep['confirmed_at']]);
+            if ($rc = $c->fetch()) {
+                if ($rc['status'] === 'locked') {
+                    $pdo->prepare("DELETE FROM referral_commissions WHERE id = ?")->execute([$rc['id']]);
+                    $comm_note = ' Komisi upline ' . format_rp((float)$rc['amount']) . ' dibatalkan.';
+                } else {
+                    $comm_note = ' Komisi upline ' . format_rp((float)$rc['amount']) . ' sudah dicairkan (tidak ditarik).';
+                }
+            }
+        }
+
+        $note = $reason !== '' ? $reason : 'Deposit dibatalkan oleh admin';
+        $pdo->prepare("UPDATE deposits SET status = 'rejected', admin_note = ?, confirmed_at = NULL WHERE id = ?")->execute([$note, $id]);
+        $pdo->commit();
+
+        $parts = [];
+        if ($from_dep > 0) $parts[] = format_rp($from_dep) . ' dari Saldo Beli';
+        if ($from_wd > 0)  $parts[] = format_rp($from_wd) . ' dari Saldo WD';
+        if ($minus > 0)    $parts[] = format_rp($minus) . ' jadi minus di Saldo Beli';
+        $dep['status'] = 'rejected';
+        $dep['admin_note'] = $note;
+        $dep['taken'] = ['dep' => $from_dep, 'wd' => $from_wd, 'minus' => $minus];
+        return ['ok' => true, 'message' => "Deposit #{$id} dibatalkan. Saldo ditarik: " . implode(', ', $parts) . '.' . $comm_note, 'dep' => $dep];
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        return ['ok' => false, 'message' => 'Error: ' . $e->getMessage()];
+    }
+}
+
+/** Teks Telegram untuk deposit yang dibatalkan setelah sukses. */
+function depo_cancelled_tg_text(array $dep, string $via): string {
+    $t = $dep['taken'] ?? ['dep' => 0, 'wd' => 0, 'minus' => 0];
+    $msg  = "↩️ <b>DEPOSIT DIBATALKAN (SALDO DITARIK)</b>\n";
+    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+    $msg .= "👤 <b>User:</b> <code>" . htmlspecialchars((string)$dep['username']) . "</code>\n";
+    $msg .= "💵 <b>Amount:</b> <code>" . format_rp((float)$dep['amount']) . "</code>\n";
+    $msg .= "➖ <b>Ditarik:</b> <code>Beli " . format_rp((float)$t['dep']) . " · WD " . format_rp((float)$t['wd']) . ($t['minus'] > 0 ? ' · minus ' . format_rp((float)$t['minus']) : '') . "</code>\n";
+    $msg .= "🕒 <b>Time:</b> <code>" . date('d-m-Y H:i:s') . " WIB</code>\n";
+    $msg .= "❌ <b>Status:</b> <code>Dibatalkan via {$via}</code>\n";
+    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
+    $msg .= "<i>Alasan: " . htmlspecialchars((string)$dep['admin_note']) . "</i>";
+    return $msg;
+}
+
 /** Tolak deposit pending. */
 function depo_admin_reject(PDO $pdo, int $id, string $reason): array {
     $pdo->beginTransaction();

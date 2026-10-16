@@ -285,6 +285,13 @@ if ($action !== '') {
                 if (!empty($res['dep']['tg_msg_id'])) edit_telegram_notif($pdo, (int)$res['dep']['tg_msg_id'], depo_rejected_tg_text($res['dep'], $actor), []);
                 $out(['ok' => true, 'message' => 'Deposit #' . $id . ' ditolak.']);
             }
+            if ($do === 'cancel') {
+                $res = depo_admin_cancel($pdo, $id, $reason);
+                if (!$res['ok']) $out(['ok' => false, 'error' => $res['message']]);
+                if (!empty($res['dep']['tg_msg_id'])) edit_telegram_notif($pdo, (int)$res['dep']['tg_msg_id'], depo_cancelled_tg_text($res['dep'], $actor), []);
+                send_telegram_notif($pdo, depo_cancelled_tg_text($res['dep'], $actor), [], 'log');
+                $out(['ok' => true, 'message' => $res['message']]);
+            }
         }
 
         if ($s === 'wd') {
@@ -487,7 +494,7 @@ a { color: var(--cy); }
 .sheet-bg.on { display: flex; }
 .sheet { width: 100%; max-width: 520px; background: var(--card); border: 1px solid var(--line); border-bottom: 0; border-radius: 16px 16px 0 0; padding: 14px 12px calc(14px + env(safe-area-inset-bottom)); }
 .sheet h3 { margin: 0 0 3px; font-size: 14px; }
-.sheet p { margin: 0 0 9px; font-size: 12px; color: var(--dim); }
+.sheet p { margin: 0 0 9px; font-size: 12px; color: var(--dim); white-space: pre-line; }
 .sheet textarea { width: 100%; min-height: 64px; padding: 9px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); resize: vertical; outline: none; }
 .quick { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 11px; }
 .quick button { border: 1px solid var(--line); background: var(--card2); border-radius: 999px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
@@ -734,6 +741,7 @@ a { color: var(--cy); }
     let acts = `<div class="acts">${infoBtn(d)}</div>`;
     if (d.status === 'pending') acts = `<div class="acts">${infoBtn(d)}${btn('ok', 'confirm', d.id, '✓ Acc')}${btn('nc', 'confirm_nc', d.id, 'Acc V2')}${btn('no', 'reject', d.id, '✕ Tolak')}</div>`;
     else if (d.status === 'expired' || d.status === 'rejected') acts = `<div class="acts">${infoBtn(d)}${btn('ok', 'confirm', d.id, '⚡ Acc ' + (d.status === 'expired' ? 'Expired' : 'Ulang'))}${btn('nc', 'confirm_nc', d.id, 'Acc V2')}</div>`;
+    else if (d.status === 'confirmed') acts = `<div class="acts">${infoBtn(d)}${btn('no', 'cancel', d.id, '↩️ Batalkan & Tarik Saldo')}</div>`;
     return `${userHead(d, d.method)}
       <div class="chips"><span class="chip ${ST_DEPO[d.status][0]}">${ST_DEPO[d.status][1]}</span>
         ${d.prev_ok ? `<span class="chip">Depo ke-${d.prev_ok + 1}</span>` : '<span class="chip c-bl">★ Depo pertama</span>'}
@@ -858,6 +866,7 @@ a { color: var(--cy); }
   // Sheet alasan (tolak / hold / refund)
   const REASONS = {
     'depo:reject': ['❌ Tolak deposit', 'Tolak Deposit', 'no', ['Dana belum masuk', 'Nominal tidak sesuai', 'Bukti tidak valid', 'Deposit ganda', 'Kode unik salah']],
+    'depo:cancel': ['↩️ Batalkan deposit sukses (saldo ditarik kembali)', 'Batalkan & Tarik Saldo', 'no', ['Salah acc, dana tidak masuk', 'Deposit ganda', 'Terindikasi penipuan', 'Dana dikembalikan ke user']],
     'wd:reject':   ['❌ Tolak withdraw (saldo dikembalikan)', 'Tolak & Kembalikan', 'no', ['Data rekening tidak sesuai', 'Nama rekening tidak cocok', 'Rekening tidak aktif', 'Terindikasi abuse']],
     'wd:hold':     ['⏸ Hold withdraw (saldo TIDAK dikembalikan)', 'Hold Withdraw', 'hd', ['Peninjauan antrean audit keuangan', 'Verifikasi aktivitas akun', 'Menunggu konfirmasi data']],
     'wd:refund':   ['↩️ Refund saldo WD hold', 'Refund Saldo', 'rf', ['Refund saldo dari status Hold', 'Hasil peninjauan selesai']],
@@ -869,7 +878,8 @@ a { color: var(--cy); }
     const [title, okLabel, cls, quick] = REASONS[key];
     sheetCtx = { id: d.id, what: key.split(':')[1] };
     $('sh-t').textContent = title;
-    $('sh-p').textContent = `#${d.id} · ${d.user}${d.amount ? ' · ' + rp(d.amount) : ''}`;
+    $('sh-p').textContent = `#${d.id} · ${d.user}${d.amount ? ' · ' + rp(d.amount) : ''}`
+      + (key === 'depo:cancel' ? `\nSaldo user sekarang: Beli ${rp(d.bal_dep)} · WD ${rp(d.bal_wd)}. Ditarik dari Saldo Beli dulu, kurangnya dari Saldo WD, sisanya jadi minus. Komisi upline yang belum cair ikut dibatalkan.` : '');
     $('sh-r').value = ''; $('sh-r').placeholder = 'Alasan / catatan (opsional, terlihat oleh user)';
     $('sh-q').innerHTML = quick.map(q => `<button type="button">${esc(q)}</button>`).join('');
     $('sh-ok').textContent = okLabel; $('sh-ok').className = 'b ' + cls;
