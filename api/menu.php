@@ -137,7 +137,7 @@ if ($action !== '') {
             [$sw, $params] = $search($q, ['u.username', 'up.username'], ['x.id', 'x.user_id', 'LIKE:CAST(x.amount AS UNSIGNED)']);
             $order = match ($sort) {
                 'old' => 'x.id ASC', 'new' => 'x.id DESC', 'big' => 'x.amount DESC, x.id DESC', 'small' => 'x.amount ASC, x.id DESC',
-                default => $tab === 'pending' ? 'x.id ASC' : (in_array($tab, ['confirmed', 'nc'], true) ? 'x.confirmed_at DESC' : 'x.id DESC'),
+                default => in_array($tab, ['confirmed', 'nc'], true) ? 'x.confirmed_at DESC' : 'x.id DESC', // default: terbaru
             };
             $st = $pdo->prepare("
                 SELECT x.id, x.user_id, x.amount, x.method, x.status, x.admin_note, x.proof_image, x.no_commission, x.tg_msg_id,
@@ -555,6 +555,12 @@ a { color: var(--cy); }
     return Math.floor(s / 86400) + 'h ' + Math.floor((s % 86400) / 3600) + 'j';
   };
   const ago = ts => ts ? dur(nowS() - ts) + ' lalu' : '-';
+  // Jam (HH:MM); tambah tanggal bila bukan hari ini
+  const clock = ts => {
+    if (!ts) return '-';
+    const d = new Date(ts * 1000), t = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    return d.toDateString() === new Date().toDateString() ? t : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) + ' ' + t;
+  };
   const dt = ts => {
     if (!ts) return '-';
     const d = new Date(ts * 1000);
@@ -568,7 +574,7 @@ a { color: var(--cy); }
       tabs: [['pending', '⏳ Pending', s => s.depo.pending], ['today', '📅 Hari ini'], ['confirmed', '✅ Sukses'], ['nc', '💠 Accepted v2'],
              ['expired', '⌛ Expired', s => s.depo.expired], ['rejected', '❌ Ditolak'], ['all', 'Semua']],
       filters: [['all', 'Semua'], ['qris', 'QRIS'], ['transfer', 'Transfer']],
-      sorts: [['', 'Urutan'], ['new', 'Terbaru'], ['old', 'Terlama'], ['big', 'Nominal besar'], ['small', 'Nominal kecil']],
+      sorts: [['', 'Terbaru'], ['old', 'Terlama'], ['big', 'Nominal besar'], ['small', 'Nominal kecil']],
       ph: 'Cari user, upline, ID, nominal…',
     },
     wd: {
@@ -702,7 +708,7 @@ a { color: var(--cy); }
   const userHead = (d, amountLabel) => `
     <div class="r1">
       <div class="av" style="background:${COLORS[d.uid % COLORS.length]}">${esc((d.user || '?').slice(0, 1))}</div>
-      <div class="who"><b>${esc(d.user)}</b><span class="num">#${d.id} · ${d.done ? '✓ ' + ago(d.done) : ago(d.created)}</span></div>
+      <div class="who"><b>${esc(d.user)}</b><span class="num">#${d.id} · 🕒 ${clock(d.done || d.created)} · ${d.done ? '✓ ' + ago(d.done) : ago(d.created)}</span></div>
       ${d.amount ? `<div class="amt" data-copy="${Math.round(d.amount)}"><b class="num">${rp(d.amount)}</b><span>${amountLabel}</span></div>` : `<div class="amt"><span>${amountLabel}</span></div>`}
     </div>`;
   const userChips = d => [
