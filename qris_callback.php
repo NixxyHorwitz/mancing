@@ -1,144 +1,110 @@
 <?php
 declare(strict_types=1);
+/**
+ * Callback pembayaran QRIS dari aplikasi Cuan Forwarder (notifikasi HP).
+ * Nominal di notifikasi (sudah termasuk kode unik) dicocokkan ke deposit pending.
+ *
+ * JSON: { token, uid, package, app, title, text, posted_at, device }
+ */
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/lib/forwarder.php';
 
-// Accept only POST requests
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Content-Type: application/json; charset=utf-8');
-    http_response_code(405);
-    echo json_encode(['error' => 'Method Not Allowed']);
+header('Content-Type: application/json; charset=utf-8');
+
+$reply = static function (array $data, int $code = 200): never {
+    http_response_code($code);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
-}
+};
 
-// Read raw request body
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') $reply(['error' => 'Method Not Allowed'], 405);
+
 $rawBody = file_get_contents('php://input');
-$data = json_decode($rawBody, true);
+$data = json_decode((string)$rawBody, true);
+if (!is_array($data)) $reply(['error' => 'Invalid JSON Payload'], 400);
 
-if (!$data) {
-    header('Content-Type: application/json; charset=utf-8');
-    http_response_code(400);
-    echo json_encode(['error' => 'Invalid JSON Payload']);
-    exit;
+if (!forwarder_authorized($pdo, $data)) $reply(['status' => 'unauthorized', 'error' => 'Token forwarder salah atau belum diatur.'], 401);
+
+// Jangan simpan token di log
+unset($data['token']);
+$logPayload = json_encode($data, JSON_UNESCAPED_UNICODE);
+
+// Notifikasi yang sama terkirim ulang (retry) → abaikan
+$uid = (string)($data['uid'] ?? '');
+if ($uid !== '') {
+    $dup = $pdo->prepare("SELECT id, status, deposit_id FROM payment_gateway_logs WHERE created_at >= NOW() - INTERVAL 2 DAY AND payload LIKE ? ORDER BY id DESC LIMIT 1");
+    $dup->execute(['%"uid":' . json_encode($uid) . '%']);
+    if ($row = $dup->fetch()) {
+        $reply(['status' => 'duplicate', 'log_id' => (int)$row['id'], 'previous_status' => $row['status'], 'deposit_id' => $row['deposit_id']]);
+    }
 }
 
-// Log incoming payload to payment_gateway_logs first
 try {
-    $pdo->prepare("INSERT INTO payment_gateway_logs (payload, status) VALUES (?, 'unmatched')")
-        ->execute([$rawBody]);
+    $pdo->prepare("INSERT INTO payment_gateway_logs (payload, status) VALUES (?, 'unmatched')")->execute([$logPayload]);
     $log_id = (int)$pdo->lastInsertId();
 } catch (\Throwable $e) {
-    header('Content-Type: application/json; charset=utf-8');
-    http_response_code(500);
-    echo json_encode(['error' => 'Failed to initialize log record', 'details' => $e->getMessage()]);
-    exit;
+    $reply(['error' => 'Failed to initialize log record', 'details' => $e->getMessage()], 500);
 }
+$setLog = static function (string $status, ?float $amount = null, ?int $depId = null) use ($pdo, $log_id): void {
+    $pdo->prepare("UPDATE payment_gateway_logs SET status = ?, extracted_amount = COALESCE(?, extracted_amount), deposit_id = COALESCE(?, deposit_id) WHERE id = ?")
+        ->execute([$status, $amount, $depId, $log_id]);
+};
 
-// Parse amount from gateway text field (e.g. "Rp5.000 berhasil diterima" or "Rp50.123 berhasil diterima.")
-$text = $data['text'] ?? '';
+// Nominal: cari di teks, lalu judul & big text
 $amount = 0.0;
-if (preg_match('/Rp\s*([0-9.]+)/i', $text, $matches)) {
-    // Remove dots as thousand separators (e.g., "5.000" -> 5000)
-    $amount = (float)str_replace('.', '', $matches[1]);
+foreach (['text', 'big_text', 'title'] as $f) {
+    $amount = forwarder_parse_amount((string)($data[$f] ?? ''));
+    if ($amount > 0) break;
+}
+if ($amount <= 0) {
+    $setLog('failed', 0.0);
+    $reply(['status' => 'ignored', 'message' => 'No valid amount found in text.']);
+}
+$setLog('unmatched', $amount);
+
+if (setting($pdo, 'depo_unique_code_enabled', '0') !== '1') {
+    $setLog('disabled');
+    $reply(['status' => 'ignored', 'message' => 'Auto deposit disabled (unique code setting is off).']);
 }
 
-// If no valid amount could be parsed, terminate as failed log
-if ($amount <= 0.0) {
-    $pdo->prepare("UPDATE payment_gateway_logs SET status = 'failed', extracted_amount = 0.00 WHERE id = ?")
-        ->execute([$log_id]);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['status' => 'ignored', 'message' => 'No valid amount found in text.']);
-    exit;
+// 1) Deposit pending dengan nominal persis sama (sudah termasuk kode unik)
+$st = $pdo->prepare("SELECT id FROM deposits WHERE amount = ? AND status = 'pending' ORDER BY created_at ASC LIMIT 1");
+$st->execute([$amount]);
+$depId = (int)$st->fetchColumn();
+$late = false;
+
+// 2) Bayar telat: deposit expired (≤ 6 jam sejak dibuat) dengan nominal sama
+if (!$depId) {
+    $st = $pdo->prepare("SELECT id FROM deposits WHERE amount = ? AND status = 'rejected' AND admin_note = ? AND created_at >= NOW() - INTERVAL 6 HOUR ORDER BY created_at DESC LIMIT 1");
+    $st->execute([$amount, DEPO_EXPIRED_NOTE]);
+    $depId = (int)$st->fetchColumn();
+    $late = $depId > 0;
 }
 
-// Update the extracted amount in log record
-$pdo->prepare("UPDATE payment_gateway_logs SET extracted_amount = ? WHERE id = ?")
-    ->execute([$amount, $log_id]);
+if (!$depId) $reply(['status' => 'unmatched', 'log_id' => $log_id, 'amount' => $amount, 'message' => 'No matching pending deposit found for amount ' . $amount]);
 
-// Check if unique code option is active in settings
-$uniqueEnabled = setting($pdo, 'depo_unique_code_enabled', '0') === '1';
+$res = depo_admin_confirm($pdo, $depId, true, 'Forwarder');
+if (!$res['ok']) {
+    $setLog('failed', null, $depId);
+    $reply(['status' => 'failed', 'error' => $res['message']], 500);
+}
+$setLog($late ? 'matched_expired' : 'matched', null, $depId);
 
-if (!$uniqueEnabled) {
-    $pdo->prepare("UPDATE payment_gateway_logs SET status = 'disabled' WHERE id = ?")
-        ->execute([$log_id]);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['status' => 'ignored', 'message' => 'Auto deposit disabled (unique code setting is off).']);
-    exit;
+$dep  = $res['dep'];
+$comm = (float)$res['comm'];
+$msg  = depo_confirmed_tg_text($dep, $comm, $late ? 'Sukses via Forwarder (bayar setelah expired)' : 'Sukses via Forwarder',
+    'Pembayaran terverifikasi otomatis dari notifikasi ' . htmlspecialchars((string)($data['app'] ?? $data['package'] ?? 'HP')) . '.');
+if (!empty($dep['tg_msg_id'])) {
+    edit_telegram_notif($pdo, (int)$dep['tg_msg_id'], $msg, []);
+} else {
+    send_telegram_notif($pdo, $msg, [], 'depo');
 }
 
-// Find oldest pending deposit with the exact matching amount (which includes the unique code!)
-$stmt = $pdo->prepare("SELECT * FROM deposits WHERE amount = ? AND status = 'pending' ORDER BY created_at ASC LIMIT 1");
-$stmt->execute([$amount]);
-$dep = $stmt->fetch();
-
-if (!$dep) {
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['status' => 'unmatched', 'message' => 'No matching pending deposit found for amount ' . $amount]);
-    exit;
-}
-
-// Matching deposit found! Let's process the confirmation transaction
-$pdo->beginTransaction();
-try {
-    // 1. Credit deposit balance to user
-    $pdo->prepare("UPDATE users SET balance_dep = balance_dep + ? WHERE id = ?")
-        ->execute([$dep['amount'], $dep['user_id']]);
-
-    // 2. Mark deposit as confirmed
-    $pdo->prepare("UPDATE deposits SET status = 'confirmed', confirmed_at = NOW() WHERE id = ?")
-        ->execute([$dep['id']]);
-
-
-    // 3. Process referral commission
-    $comm = credit_deposit_referral_commission($pdo, (int)$dep['user_id'], (float)$dep['amount']);
-
-    // 4. Update the payment gateway log to matched and link the deposit
-    $pdo->prepare("UPDATE payment_gateway_logs SET deposit_id = ?, status = 'matched' WHERE id = ?")
-        ->execute([$dep['id'], $log_id]);
-
-    $pdo->commit();
-
-    // Get username and tg_msg_id for notification
-    $dep_info = $pdo->prepare("SELECT d.tg_msg_id, u.username FROM deposits d JOIN users u ON u.id = d.user_id WHERE d.id = ?");
-    $dep_info->execute([$dep['id']]);
-    $dep_data = $dep_info->fetch();
-    $username = $dep_data['username'] ?? 'User';
-    $tg_msg_id = $dep_data['tg_msg_id'] ?? null;
-
-    $msg = "✅ <b>DEPOSIT QRIS BERHASIL (CONFIRMED)</b>\n";
-    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-    $msg .= "👤 <b>User:</b> <code>" . htmlspecialchars($username) . "</code>\n";
-    $msg .= "💵 <b>Amount:</b> <code>" . format_rp((float)$dep['amount']) . "</code>\n";
-    if ($comm > 0) {
-        $msg .= "🎁 <b>Komisi Referral:</b> <code>" . format_rp($comm) . "</code> (dikirim ke upline)\n";
-    }
-    $msg .= "🕒 <b>Time:</b> <code>" . date('d-m-Y H:i:s') . " WIB</code>\n";
-    $msg .= "💳 <b>Method:</b> <code>QRIS Otomatis</code>\n";
-    $msg .= "✅ <b>Status:</b> <code>Sukses via Callback</code>\n";
-    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-    $msg .= "<i>Pembayaran terverifikasi otomatis oleh sistem. Saldo telah ditambahkan ke akun pengguna.</i>";
-
-    if ($tg_msg_id) {
-        edit_telegram_notif($pdo, (int)$tg_msg_id, $msg, []);
-    } else {
-        send_telegram_notif($pdo, $msg, [], 'depo');
-    }
-
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'status' => 'matched',
-        'message' => 'Deposit confirmed successfully.',
-        'deposit_id' => $dep['id'],
-        'user_id' => $dep['user_id'],
-        'amount' => $dep['amount']
-    ]);
-} catch (\Throwable $e) {
-    $pdo->rollBack();
-    
-    // Log the failed status
-    $pdo->prepare("UPDATE payment_gateway_logs SET status = 'failed' WHERE id = ?")
-        ->execute([$log_id]);
-
-    header('Content-Type: application/json; charset=utf-8');
-    http_response_code(500);
-    echo json_encode(['error' => 'Database Transaction Failed', 'details' => $e->getMessage()]);
-}
+$reply([
+    'status'     => $late ? 'matched_expired' : 'matched',
+    'message'    => 'Deposit confirmed successfully.',
+    'log_id'     => $log_id,
+    'deposit_id' => $depId,
+    'user_id'    => (int)$dep['user_id'],
+    'amount'     => (float)$dep['amount'],
+]);
