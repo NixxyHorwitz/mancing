@@ -7,6 +7,12 @@ csrf_enforce();
 $flash = $flashType = '';
 $tab = $_GET['tab'] ?? 'list';
 
+promotor_targets_ensure_schema($pdo);
+foreach ($pdo->query("SELECT id FROM users WHERE is_promotor = 1")->fetchAll(PDO::FETCH_COLUMN) as $pid) {
+    sync_promotor_daily_targets($pdo, (int)$pid, date('Y-m-d', strtotime('-1 day')));
+    sync_promotor_daily_targets($pdo, (int)$pid, date('Y-m-d'));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
@@ -65,11 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $log = $log->fetch();
             
             if ($log && !$log['is_paid']) {
-                // Calculate proportional pay amount based on percentage (capped at 100%)
-                $pay_amount = (float)round(($log['salary_rate'] * min(100.0, (float)$log['percentage'])) / 100.0);
+                // Gaji = MAX(gaji target, jaminan komisi), dihitung di sync_promotor_daily_targets
+                $pay_amount = (float)round((float)$log['earned_amount']);
                 
                 if ($pay_amount <= 0) {
-                    throw new \Exception("Jumlah gaji yang diperoleh adalah Rp 0 karena pencapaian target 0%.");
+                    throw new \Exception("Jumlah gaji yang diperoleh Rp 0 (tidak ada capaian maupun komisi).");
                 }
                 
                 // 1. Mark target log as paid and save actual paid amount
@@ -85,11 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->commit();
                 
                 // Send Telegram Notification
-                $msg = "<b>💸 GAJI PROMOTOR DICAIRKAN (PROPORSIAL)</b>\n"
+                $msg = "<b>💸 GAJI PROMOTOR DICAIRKAN</b>\n"
                      . "👤 Promotor: <b>@{$username}</b>\n"
                      . "📅 Tanggal Target: " . date('d M Y', strtotime($log['date'])) . "\n"
                      . "🎯 Pencapaian: <b>" . number_format((float)$log['percentage'], 1) . "%</b>\n"
-                     . "💰 Gaji Diperoleh: <b>" . format_rp($pay_amount) . "</b> (dari total " . format_rp((float)$log['salary_rate']) . ")\n"
+                     . "💰 Gaji Diperoleh: <b>" . format_rp($pay_amount) . "</b> (gaji penuh " . format_rp((float)$log['salary_rate']) . ", jaminan " . format_rp((float)$log['guarantee_amount']) . ")\n"
                      . "✅ Status: Berhasil dicairkan langsung ke Saldo Penarikan.";
                 send_telegram_notif($pdo, $msg, [], 'log');
                 
@@ -135,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $update_stmt = $pdo->prepare("UPDATE promotor_daily_targets SET is_paid = 1, paid_amount = ? WHERE id = ?");
                 
                 foreach ($pending_targets as $pt) {
-                    $earned = (float)round(($pt['salary_rate'] * min(100.0, (float)$pt['percentage'])) / 100.0);
+                    $earned = (float)round((float)$pt['earned_amount']);
                     if ($earned > 0) {
                         $total_pay += $earned;
                         $paid_count++;
@@ -148,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 if ($total_pay <= 0) {
-                    throw new \Exception("Total akumulasi gaji pending adalah Rp 0 (pencapaian target 0%).");
+                    throw new \Exception("Total akumulasi gaji pending Rp 0.");
                 }
                 
                 // Credit to promotor's balance_wd
@@ -215,8 +221,8 @@ $promotors = $pdo->query("
 $pending_stmt = $pdo->query("
     SELECT 
         user_id,
-        COALESCE(SUM(ROUND((salary_rate * LEAST(100.0, percentage)) / 100.0)), 0) as total_pending,
-        COUNT(CASE WHEN ROUND((salary_rate * LEAST(100.0, percentage)) / 100.0) > 0 THEN 1 END) as pending_days,
+        COALESCE(SUM(earned_amount), 0) as total_pending,
+        COUNT(CASE WHEN earned_amount > 0 THEN 1 END) as pending_days,
         MIN(date) as oldest_pending_date,
         MAX(date) as newest_pending_date
     FROM promotor_daily_targets
@@ -238,13 +244,13 @@ $pending_logs_stmt = $pdo->query("
     SELECT pt.*, u.username, u.bank_name, u.account_number, u.account_name
     FROM promotor_daily_targets pt
     JOIN users u ON u.id = pt.user_id
-    WHERE pt.date < CURDATE() AND pt.is_paid = 0 AND ROUND((pt.salary_rate * LEAST(100.0, pt.percentage)) / 100.0) > 0
+    WHERE pt.date < CURDATE() AND pt.is_paid = 0 AND pt.earned_amount > 0
     ORDER BY pt.date DESC
 ");
 $pending_logs_by_user = [];
 foreach ($pending_logs_stmt->fetchAll(PDO::FETCH_ASSOC) as $pl) {
     $uid = (int)$pl['user_id'];
-    $earned = (float)round(($pl['salary_rate'] * min(100.0, (float)$pl['percentage'])) / 100.0);
+    $earned = (float)$pl['earned_amount'];
     $pl['earned'] = $earned;
     $pending_logs_by_user[$uid][] = $pl;
 }
@@ -851,8 +857,8 @@ if ($tab === 'commission_panel') {
             SELECT 
                 COALESCE(SUM(CASE WHEN is_paid = 1 THEN paid_amount ELSE 0 END), 0) as total_paid,
                 COALESCE(SUM(CASE WHEN is_paid = 1 THEN 1 ELSE 0 END), 0) as count_paid,
-                COALESCE(SUM(CASE WHEN is_paid = 0 AND date < CURDATE() AND percentage > 0 THEN (salary_rate * LEAST(100, percentage) / 100) ELSE 0 END), 0) as total_pending,
-                COALESCE(SUM(CASE WHEN is_paid = 0 AND date < CURDATE() AND percentage > 0 THEN 1 ELSE 0 END), 0) as count_pending,
+                COALESCE(SUM(CASE WHEN is_paid = 0 AND date < CURDATE() THEN earned_amount ELSE 0 END), 0) as total_pending,
+                COALESCE(SUM(CASE WHEN is_paid = 0 AND date < CURDATE() AND earned_amount > 0 THEN 1 ELSE 0 END), 0) as count_pending,
                 COALESCE(SUM(CASE WHEN percentage >= 100 THEN 1 ELSE 0 END), 0) as count_100
             FROM promotor_daily_targets 
             WHERE user_id = ?
@@ -1771,7 +1777,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="row g-3">
   <div class="col-md-6">
     <div class="c-card">
-      <div class="c-card-header"><span class="c-card-title">⚙️ Konfigurasi Skenario Komisi</span></div>
+      <div class="c-card-header"><span class="c-card-title">⚙️ Jaminan Komisi (Gaji Minimum Harian)</span></div>
       <div class="c-card-body p-3">
         <form method="POST">
           <?= csrf_field() ?>
@@ -1788,7 +1794,7 @@ document.addEventListener('DOMContentLoaded', function () {
           </div>
           
           <div class="c-form-group">
-            <label class="c-label">Bonus Per-Member Baru Daftar (Rp)</label>
+            <label class="c-label">Bonus Per-Member Valid (Rp)</label>
             <input type="number" name="promotor_per_member_bonus" id="cfg_reg" class="c-form-control" value="<?= setting($pdo, 'promotor_per_member_bonus', '0') ?>" min="0" oninput="runSim()">
           </div>
           
@@ -1913,7 +1919,7 @@ setTimeout(runSim, 100);
         <tbody>
           <?php foreach ($logs as $log): 
             $is_today_log = ($log['date'] === date('Y-m-d'));
-            $earned = (float)round(($log['salary_rate'] * min(100.0, (float)$log['percentage'])) / 100.0);
+            $earned = (float)$log['earned_amount'];
             $is_pending = (!$log['is_paid'] && !$is_today_log && $earned > 0);
           ?>
             <tr style="vertical-align: middle;">
@@ -1930,15 +1936,15 @@ setTimeout(runSim, 100);
                 </span>
               </td>
               <td style="color:#aaa;">
-                Depo: <?= format_rp((float)$log['actual_deposits']) ?> <br>
-                Reg: <?= $log['actual_regs'] ?> member
+                Depo: <?= format_rp((float)$log['actual_deposits']) ?> (<?= (int)($log['deposit_count'] ?? 0) ?>x)<br>
+                Reg: <?= isset($log['valid_regs']) ? (int)$log['valid_regs'] . ' valid / ' : '' ?><?= $log['actual_regs'] ?> daftar
               </td>
               <td style="color:#666; font-size:11px;">
                 Depo: <?= format_rp((float)$log['target_deposits']) ?> <br>
                 Reg: <?= $log['target_regs'] ?> member
               </td>
               <td>
-                <div style="font-size:11px;color:#aaa">Rate: <?= format_rp((float)$log['salary_rate']) ?></div>
+                <div style="font-size:11px;color:#aaa">Rate: <?= format_rp((float)$log['salary_rate']) ?> &bull; Jaminan: <?= format_rp((float)($log['guarantee_amount'] ?? 0)) ?></div>
                 <?php if ($log['is_paid']): ?>
                   <div style="font-weight:700;color:#4CAF82;font-size:12.5px">Paid: <?= format_rp((float)$log['paid_amount']) ?></div>
                 <?php else: ?>
@@ -2064,13 +2070,13 @@ setTimeout(runSim, 100);
           <div class="c-form-group mt-3">
             <label class="c-label">Target Registrasi Harian (Jumlah Member)</label>
             <input type="number" name="target_regs" id="f_target_regs" class="c-form-control" min="0" required placeholder="Contoh: 5">
-            <span style="font-size:10px;color:#666">Reset harian. Jumlah member baru mendaftar pakai kode promotor hari itu.</span>
+            <span style="font-size:10px;color:#666">Reset harian. Hanya member VALID yang dihitung: daftar hari itu, bukan abuse, sudah nonton/mancing.</span>
           </div>
           
           <div class="c-form-group mt-3">
-            <label class="c-label">Gaji / Rate Harian ketika Target Tercapai (Rp)</label>
+            <label class="c-label">Gaji Penuh Harian saat Capaian 100% (Rp)</label>
             <input type="number" name="salary_rate" id="f_salary_rate" class="c-form-control" min="0" step="any" required placeholder="Contoh: 50000">
-            <span style="font-size:10px;color:#666">Akan dirilis ke balance WD promotor setelah divalidasi admin.</span>
+            <span style="font-size:10px;color:#666">Gaji = rate × capaian (rata-rata % member &amp; % deposit, maks 100%). Jika jaminan komisi lebih besar, jaminan yang dibayar.</span>
           </div>
         </div>
         <div class="modal-footer border-0">
@@ -2337,7 +2343,7 @@ function openPendingModal(data) {
       tr.innerHTML = `
         <td class="fw-bold text-white">${item.date}</td>
         <td>Rp ${actDepo.toLocaleString('id-ID')} / ${tgtDepo.toLocaleString('id-ID')}</td>
-        <td>${item.actual_regs} / ${item.target_regs} member</td>
+        <td>${item.valid_regs ?? item.actual_regs} / ${item.target_regs} member</td>
         <td><span class="badge ${pct >= 100 ? 'bg-success' : 'bg-warning text-dark'}">${pct.toFixed(1)}%</span></td>
         <td class="text-end fw-bold" style="color:#4CAF82;">Rp ${earned.toLocaleString('id-ID')}</td>
       `;
@@ -2353,4 +2359,4 @@ function openPendingModal(data) {
 }
 </script>
 
-<?php require __DIR__ . '/partials/footer.php'; ?>
+<?php require __DIR__ . '/partials/footer.php'; ?>

@@ -69,19 +69,36 @@ $t_stmt->execute([$user['id']]);
 $today_target = $t_stmt->fetch() ?: [
     'target_deposits' => $user['promotor_target_deposits'],
     'actual_deposits' => 0.0,
+    'deposit_count' => 0,
     'target_regs' => $user['promotor_target_regs'],
     'actual_regs' => 0,
+    'valid_regs' => 0,
     'percentage' => 0.0,
     'salary_rate' => $user['promotor_salary_rate'],
+    'guarantee_amount' => 0.0,
+    'earned_amount' => 0.0,
     'is_paid' => 0
 ];
-$today_earned = (float)round(($today_target['salary_rate'] * min(100.0, (float)$today_target['percentage'])) / 100.0);
+$today_earned = (float)($today_target['earned_amount'] ?? 0);
+
+// Rincian capaian hari ini
+$t_regs   = (int)$today_target['target_regs'];
+$t_dep    = (float)$today_target['target_deposits'];
+$v_regs   = (int)($today_target['valid_regs'] ?? $today_target['actual_regs']);
+$a_dep    = (float)$today_target['actual_deposits'];
+$pct_regs = $t_regs > 0 ? min(100.0, $v_regs / $t_regs * 100) : 0.0;
+$pct_dep  = $t_dep > 0 ? min(100.0, $a_dep / $t_dep * 100) : 0.0;
+$today_pct       = min(100.0, (float)$today_target['percentage']);
+$today_rate      = (float)$today_target['salary_rate'];
+$today_target_pay = round($today_rate * $today_pct / 100);
+$today_guarantee = (float)($today_target['guarantee_amount'] ?? 0);
+$today_by_guarantee = $today_guarantee > $today_target_pay;
 
 // 3b. Fetch Pending Salary (Hari ini TIDAK dihitung, akumulasi riwayat target date < CURDATE() yang is_paid = 0)
 $pending_stmt = $pdo->prepare("
-    SELECT 
-        COALESCE(SUM(ROUND((salary_rate * LEAST(100.0, percentage)) / 100.0)), 0) as total_pending_salary,
-        COUNT(CASE WHEN ROUND((salary_rate * LEAST(100.0, percentage)) / 100.0) > 0 THEN 1 END) as pending_days,
+    SELECT
+        COALESCE(SUM(earned_amount), 0) as total_pending_salary,
+        COUNT(CASE WHEN earned_amount > 0 THEN 1 END) as pending_days,
         MIN(date) as oldest_pending_date,
         MAX(date) as newest_pending_date
     FROM promotor_daily_targets 
@@ -95,7 +112,7 @@ $pending_days   = (int)($pending_row['pending_days'] ?? 0);
 // Fetch list of pending history logs for detail display
 $pending_history_stmt = $pdo->prepare("
     SELECT * FROM promotor_daily_targets 
-    WHERE user_id = ? AND date < CURDATE() AND is_paid = 0 AND ROUND((salary_rate * LEAST(100.0, percentage)) / 100.0) > 0
+    WHERE user_id = ? AND date < CURDATE() AND is_paid = 0 AND earned_amount > 0
     ORDER BY date DESC
 ");
 $pending_history_stmt->execute([$user['id']]);
@@ -176,1111 +193,452 @@ $downline_stmt = $pdo->prepare("
     SELECT 
         u.id, u.username, u.created_at, u.balance_wd,
         (SELECT name FROM memberships WHERE id = u.membership_id) as membership_name,
-        (SELECT COUNT(*) FROM deposits d WHERE d.user_id = u.id AND d.status = 'confirmed') as dep_count
+        (SELECT COUNT(*) FROM deposits d WHERE d.user_id = u.id AND d.status = 'confirmed') as dep_count,
+        (u.is_flagged_abuse = 0 AND (
+            EXISTS (SELECT 1 FROM watch_history w WHERE w.user_id = u.id)
+            OR EXISTS (SELECT 1 FROM fishing_logs f WHERE f.user_id = u.id)
+        )) as is_valid
     FROM users u
     WHERE u.referred_by = ?
     ORDER BY u.created_at DESC
+    LIMIT 200
 ");
 $downline_stmt->execute([$user['referral_code']]);
 $downlines = $downline_stmt->fetchAll();
 
-$pageTitle  = 'Promotor Dashboard  ';
+$dl_tot = $pdo->prepare("SELECT COUNT(*) FROM users WHERE referred_by = ?");
+$dl_tot->execute([$user['referral_code']]);
+$downline_total = (int)$dl_tot->fetchColumn();
+
+$ref_url = base_url('register/' . $user['referral_code']);
+
+// Skema komisi jaminan (untuk penjelasan di halaman)
+$g_member  = (float)setting($pdo, 'promotor_per_member_bonus', '0');
+$g_scheme  = setting($pdo, 'promotor_deposit_scheme', 'flat');
+$g_flat    = (float)setting($pdo, 'promotor_per_deposit_bonus', '0');
+$g_pct     = (float)setting($pdo, 'promotor_deposit_percent', '0');
+$g_dep_txt = match ($g_scheme) {
+    'percent' => rtrim(rtrim(number_format($g_pct, 2, ',', '.'), '0'), ',') . '% nominal deposit',
+    'hybrid'  => format_rp($g_flat) . '/deposit + ' . rtrim(rtrim(number_format($g_pct, 2, ',', '.'), '0'), ',') . '% nominal',
+    default   => format_rp($g_flat) . '/deposit',
+};
+
+$pageTitle  = 'Promotor Hub';
 $activePage = 'referral';
 require dirname(__DIR__) . '/partials/header.php';
 ?>
 
 <style>
-/* ══════════════════════════════════════════════════════════
-   PROMOTOR HUB — MANCINGCUAN THEME
-   ══════════════════════════════════════════════════════════ */
-body {
-  background: #fef8ee !important;
-  font-family: 'Nunito', sans-serif;
-  color: #1e293b;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-}
+/* ══ PROMOTOR HUB — compact · living coral reef clay ══ */
+.pm { width: 100%; max-width: 460px; margin: 0 auto; padding: 6px 12px 30px; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; }
+.pm *, .pm *::before, .pm *::after { box-sizing: border-box; }
 
-/* ── HERO BANNER ── */
-.p-hero {
-  background: linear-gradient(180deg, #78350f 0%, #92400e 35%, #b45309 70%, #d97706 100%);
-  padding: 16px 14px 20px;
-  position: relative;
-  overflow: hidden;
-  border-bottom: 3.5px solid #78350f;
-  box-shadow: 0 8px 24px rgba(120,53,15,0.3);
-}
-.p-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.18) 15%, transparent 16%), radial-gradient(rgba(255,255,255,0.18) 15%, transparent 16%);
-  background-size: 22px 22px;
-  background-position: 0 0, 11px 11px;
-  opacity: 0.16;
-  pointer-events: none;
-}
-.p-hero-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  position: relative;
-  z-index: 2;
-}
-.p-badge-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(16,185,129,0.22);
-  border: 1.5px solid rgba(52,211,153,0.6);
-  color: #a7f3d0;
-  font-size: 10px;
-  font-weight: 900;
-  padding: 3px 9px;
-  border-radius: 12px;
-  letter-spacing: 0.3px;
-}
-.p-dot-pulse {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #34d399;
-  box-shadow: 0 0 6px #34d399;
-  animation: pulseDot 1.8s infinite;
-}
-@keyframes pulseDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(1.3); }
-}
-.p-user-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(255,255,255,0.15);
-  border: 1.5px solid rgba(255,255,255,0.25);
-  color: #ffffff;
-  font-size: 10.5px;
-  font-weight: 800;
-  padding: 3px 9px;
-  border-radius: 12px;
-}
-.p-hero-title {
-  position: relative;
-  z-index: 2;
-  font-size: 20px;
-  font-weight: 900;
-  color: #ffffff;
-  text-shadow: 0 2px 0 #78350f;
-  margin-bottom: 2px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.p-hero-sub {
-  position: relative;
-  z-index: 2;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fef08a;
-  line-height: 1.35;
-}
+.pm-top { display: flex; align-items: center; gap: 8px; }
+.pm-top-ic { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; background: linear-gradient(135deg, #fb7185, #f97316); border: 2px solid #fff; box-shadow: 0 3px 0 #c2410c; flex-shrink: 0; }
+.pm-top-tx { flex: 1; min-width: 0; line-height: 1.2; }
+.pm-top-tx h1 { margin: 0; font-size: 15px; font-weight: 900; color: var(--reef-ink); letter-spacing: -.2px; }
+.pm-top-tx span { font-size: 10.5px; font-weight: 800; color: var(--reef-muted); }
+.pm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 900; color: #065f46; background: #d1fae5; border: 1.5px solid #fff; white-space: nowrap; }
+.pm-chip i { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.2); }
 
-/* ── BODY WRAPPER ── */
-.p-body {
-  padding: 14px 14px 90px;
-  max-width: 640px;
-  margin: 0 auto;
-}
+.pm-card { border: 2px solid #fff; border-radius: 20px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); overflow: hidden; }
 
-/* ── VIP INCOME CARD (FLEX TARGET) ── */
-.p-card-income {
-  background: linear-gradient(145deg, #ffffff 0%, #fffbeb 40%, #fef3c7 100%);
-  border: 3px solid #78350f;
-  border-radius: 20px;
-  padding: 16px 14px 14px;
-  box-shadow: 0 6px 0 #78350f, 0 12px 24px rgba(120,53,15,0.18);
-  margin-bottom: 14px;
-  position: relative;
-  overflow: hidden;
-}
-.p-card-income::after {
-  content: '';
-  position: absolute;
-  right: -10px;
-  bottom: -10px;
-  width: 90px;
-  height: 90px;
-  background: transparent;
-}
-.p-income-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.p-income-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 900;
-  color: #78350f;
-  background: #fde68a;
-  border: 1px solid #f59e0b;
-  padding: 2px 8px;
-  border-radius: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-.p-income-payout-status {
-  font-size: 10.5px;
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 8px;
-}
-.p-income-payout-status.paid {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid #86efac;
-}
-.p-income-payout-status.pending {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-}
+/* Gaji hari ini */
+.pm-pay { padding: 14px 15px 12px; background: linear-gradient(140deg, #fff7ed 0%, #ffffff 65%); display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+.pm-pay small { display: flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 900; color: var(--reef-muted); }
+.pm-pay b { display: block; font-size: 27px; font-weight: 900; color: #9a3412; letter-spacing: -.7px; line-height: 1.15; margin: 2px 0 6px; }
+.pm-pay b em { font-style: normal; font-size: 14px; color: #f97316; margin-right: 3px; }
+.pm-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 900; border: 1.5px solid #fff; }
+.pm-tag.run  { background: #e0f2fe; color: #0369a1; }
+.pm-tag.paid { background: #d1fae5; color: #065f46; }
+.pm-tag.grt  { background: #ede9fe; color: #5b21b6; }
+.pm-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 
-.p-income-val {
-  font-size: 28px;
-  font-weight: 900;
-  color: #b45309;
-  line-height: 1;
-  letter-spacing: -0.5px;
-  margin-bottom: 10px;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.7);
-}
-.p-income-val span.curr {
-  font-size: 16px;
-  color: #78350f;
-  font-weight: 800;
-}
+.pm-ring { --p: 0; width: 82px; height: 82px; border-radius: 50%; background: conic-gradient(#f97316 calc(var(--p) * 1%), #ffedd5 0); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(249,115,22,.22); }
+.pm-ring div { width: 64px; height: 64px; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+.pm-ring strong { font-size: 17px; font-weight: 900; color: #9a3412; letter-spacing: -.4px; }
+.pm-ring span { font-size: 8.5px; font-weight: 900; color: var(--reef-muted); text-transform: uppercase; letter-spacing: .3px; }
 
-/* Progress bar target */
-.p-target-box {
-  background: rgba(255,255,255,0.85);
-  border: 1.5px solid #fde68a;
-  border-radius: 12px;
-  padding: 10px 12px;
-}
-.p-target-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 11px;
-  font-weight: 800;
-  color: #78350f;
-  margin-bottom: 6px;
-}
-.p-target-bar {
-  height: 8px;
-  background: #f1f5f9;
-  border-radius: 8px;
-  overflow: hidden;
-  position: relative;
-  border: 1px solid #e2e8f0;
-}
-.p-target-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #f59e0b, #10b981);
-  border-radius: 8px;
-  transition: width 0.4s ease;
-}
-.p-target-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 10px;
-  font-weight: 800;
-  color: #64748b;
-  margin-top: 5px;
-}
+/* Meter target */
+.pm-meters { padding: 10px 15px 12px; border-top: 1.5px dashed #fed7aa; display: grid; gap: 9px; }
+.pm-m-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: 11px; font-weight: 900; color: var(--reef-ink); }
+.pm-m-head span { display: inline-flex; align-items: center; gap: 4px; }
+.pm-m-head em { font-style: normal; font-size: 10.5px; font-weight: 800; color: var(--reef-muted); white-space: nowrap; }
+.pm-m-head em b { color: var(--reef-ink); }
+.pm-bar { height: 9px; border-radius: 999px; background: #f1f5f9; overflow: hidden; margin-top: 4px; box-shadow: inset 0 1px 2px rgba(30,27,46,.08); }
+.pm-bar i { display: block; height: 100%; border-radius: 999px; }
+.pm-bar.mem i { background: linear-gradient(90deg, #34d399, #10b981); }
+.pm-bar.dep i { background: linear-gradient(90deg, #38bdf8, #0284c7); }
+.pm-m-sub { font-size: 9.5px; font-weight: 800; color: var(--reef-muted); margin-top: 3px; }
 
-/* ── VIP PENDING SALARY CARD ── */
-.p-card-pending-salary {
-  background: linear-gradient(145deg, #fffdf8 0%, #fef3c7 40%, #fde68a 100%);
-  border: 3px solid #b45309;
-  border-radius: 20px;
-  padding: 16px 14px 14px;
-  box-shadow: 0 6px 0 #92400e, 0 12px 24px rgba(180,83,9,0.18);
-  margin-bottom: 14px;
-  position: relative;
-  overflow: hidden;
-}
-.p-card-pending-salary::after {
-  content: '';
-  position: absolute;
-  right: -10px;
-  bottom: -10px;
-  width: 85px;
-  height: 85px;
-  background: transparent;
-}
-.p-pending-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  position: relative;
-  z-index: 2;
-}
-.p-pending-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10.5px;
-  font-weight: 900;
-  color: #78350f;
-  background: rgba(255,255,255,0.75);
-  border: 1.5px solid #d97706;
-  padding: 3px 9px;
-  border-radius: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-.p-pending-badge {
-  font-size: 10px;
-  font-weight: 900;
-  padding: 3px 9px;
-  border-radius: 10px;
-}
-.p-pending-badge.active {
-  background: #fef08a;
-  color: #854d0e;
-  border: 1.5px solid #ca8a04;
-  box-shadow: 0 0 8px rgba(234,179,8,0.3);
-}
-.p-pending-badge.settled {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1.5px solid #86efac;
-}
-.p-pending-val-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-  position: relative;
-  z-index: 2;
-}
-.p-pending-val {
-  font-size: 27px;
-  font-weight: 900;
-  color: #92400e;
-  line-height: 1;
-  letter-spacing: -0.5px;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.8);
-}
-.p-pending-val span.curr {
-  font-size: 16px;
-  color: #78350f;
-  font-weight: 800;
-}
-.p-btn-pending-detail {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #ffffff;
-  border: 2px solid #b45309;
-  color: #92400e;
-  font-size: 10.5px;
-  font-weight: 900;
-  padding: 5px 11px;
-  border-radius: 10px;
-  cursor: pointer;
-  box-shadow: 0 2px 0 #92400e;
-  transition: all 0.12s ease;
-}
-.p-btn-pending-detail:active {
-  transform: translateY(2px);
-  box-shadow: 0 0 0 #92400e;
-}
-.p-pending-desc {
-  font-size: 11px;
-  font-weight: 700;
-  color: #78350f;
-  line-height: 1.45;
-  background: rgba(255,255,255,0.7);
-  border: 1.5px solid rgba(217,119,6,0.35);
-  border-radius: 12px;
-  padding: 9px 12px;
-  position: relative;
-  z-index: 2;
-}
-.p-pending-note {
-  display: block;
-  font-size: 10px;
-  font-weight: 800;
-  color: #b45309;
-  margin-top: 5px;
-  padding-top: 5px;
-  border-top: 1px dashed rgba(217,119,6,0.3);
-}
-.p-pending-breakdown {
-  margin-top: 10px;
-  background: #ffffff;
-  border: 2px solid #b45309;
-  border-radius: 14px;
-  padding: 11px 12px;
-  box-shadow: 0 3px 0 #b45309;
-  position: relative;
-  z-index: 2;
-}
-.p-breakdown-title {
-  font-size: 10.5px;
-  font-weight: 900;
-  color: #78350f;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.p-breakdown-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.p-breakdown-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 10px;
-  background: #fffbeb;
-  border: 1.5px solid #fde68a;
-  border-radius: 10px;
-  font-size: 11px;
-}
-.p-b-date {
-  font-weight: 900;
-  color: #78350f;
-}
-.p-b-sub {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #92400e;
-}
-.p-b-amt {
-  font-weight: 900;
-  color: #059669;
-  font-size: 12px;
-  text-align: right;
-}
+/* Perbandingan gaji target vs jaminan */
+.pm-cmp { display: grid; grid-template-columns: 1fr 1fr; border-top: 1.5px dashed #fed7aa; }
+.pm-cmp > div { padding: 9px 12px; position: relative; }
+.pm-cmp > div + div { border-left: 1.5px dashed #fed7aa; }
+.pm-cmp small { display: block; font-size: 9.5px; font-weight: 900; color: var(--reef-muted); }
+.pm-cmp b { display: block; font-size: 14px; font-weight: 900; color: var(--reef-ink); margin-top: 1px; }
+.pm-cmp span { display: block; font-size: 9px; font-weight: 800; color: var(--reef-muted); margin-top: 1px; }
+.pm-cmp .on { background: #fffbeb; }
+.pm-cmp .on b { color: #b45309; }
+.pm-cmp .on::after { content: 'DIPAKAI'; position: absolute; top: 8px; right: 9px; font-size: 8px; font-weight: 900; color: #fff; background: #f59e0b; padding: 2px 5px; border-radius: 5px; }
 
-/* ── QUICK METRICS GRID ── */
-.p-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 14px;
-}
-.p-stat-card {
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 14px;
-  padding: 10px 8px;
-  text-align: center;
-  box-shadow: 0 3px 0 #78350f;
-}
-.p-stat-val {
-  font-size: 15px;
-  font-weight: 900;
-  line-height: 1.2;
-}
-.p-stat-val.amber { color: #d97706; }
-.p-stat-val.emerald { color: #059669; }
-.p-stat-val.purple { color: #7c3aed; }
-.p-stat-lbl {
-  font-size: 9px;
-  font-weight: 900;
-  color: #64748b;
-  margin-top: 3px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
+/* Cara hitung */
+.pm-how { border: 2px solid #fff; border-radius: 16px; background: #fff; box-shadow: 0 2px 8px rgba(30,27,46,.05); }
+.pm-how summary { list-style: none; cursor: pointer; padding: 10px 12px; display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 900; color: var(--reef-ink); }
+.pm-how summary::-webkit-details-marker { display: none; }
+.pm-how summary i.go { margin-left: auto; color: var(--reef-muted); transition: transform .2s; }
+.pm-how[open] summary i.go { transform: rotate(180deg); }
+.pm-how ol { margin: 0; padding: 0 12px 11px 30px; display: grid; gap: 5px; font-size: 10.5px; font-weight: 700; color: #475569; line-height: 1.45; }
+.pm-how ol b { color: var(--reef-ink); }
 
-/* ── SEGMENTED TAB BAR ── */
-.p-tab-bar {
-  display: flex;
-  background: #ffffff;
-  border: 2.5px solid #78350f;
-  border-radius: 16px;
-  padding: 4px;
-  gap: 4px;
-  box-shadow: 0 4px 0 #78350f;
-  margin-bottom: 14px;
-}
-.p-tab-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 8px 4px;
-  font-size: 11px;
-  font-weight: 900;
-  color: #64748b;
-  border-radius: 10px;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-.p-tab-btn i { font-size: 14px; }
-.p-tab-btn.active {
-  background: linear-gradient(180deg, #f59e0b, #d97706);
-  color: #ffffff;
-  box-shadow: 0 2px 0 #78350f;
-  text-shadow: 0 1px 1px #78350f;
-}
+/* Link referral */
+.pm-link { display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 12px; border: 2px solid #fff; border-radius: 16px; background: linear-gradient(135deg, #ecfeff, #ffffff); box-shadow: 0 2px 8px rgba(30,27,46,.05); }
+.pm-link-tx { flex: 1; min-width: 0; line-height: 1.25; }
+.pm-link-tx small { display: block; font-size: 9.5px; font-weight: 900; color: #0e7490; }
+.pm-link-tx code { display: block; font: 800 11px/1.3 inherit; font-family: inherit; color: var(--reef-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-copy { padding: 8px 11px; border-radius: 11px; border: 1.5px solid #fff; background: linear-gradient(135deg, #22d3ee, #0891b2); color: #fff; font: 900 11px/1 inherit; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; box-shadow: 0 2px 0 #0e7490; flex-shrink: 0; }
+.pm-copy:active { transform: translateY(2px); box-shadow: none; }
 
-/* Tab panes */
-.p-pane { display: none; }
-.p-pane.active { display: block; animation: paneFade 0.2s ease; }
-@keyframes paneFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+/* Ringkasan angka */
+.pm-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.pm-st { padding: 8px 4px; border-radius: 14px; border: 1.5px solid #fff; background: #fff; text-align: center; box-shadow: 0 2px 6px rgba(30,27,46,.05); min-width: 0; }
+.pm-st b { display: block; font-size: 14px; font-weight: 900; letter-spacing: -.3px; }
+.pm-st span { display: block; font-size: 9px; font-weight: 800; color: var(--reef-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-st.a b { color: #d97706; } .pm-st.b b { color: #0284c7; } .pm-st.c b { color: #059669; } .pm-st.d b { color: #7c3aed; }
 
-/* ── MODERN LIST ITEMS ── */
-.p-card-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.p-list-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 14px;
-  padding: 10px 12px;
-  box-shadow: 0 3px 0 #78350f;
-  transition: transform 0.1s ease;
-}
-.p-list-ico {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1.5px solid #78350f;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 17px;
-  flex-shrink: 0;
-}
-.p-list-ico.amber { background: #fef3c7; color: #d97706; }
-.p-list-ico.emerald { background: #dcfce7; color: #059669; }
-.p-list-ico.purple { background: #ede9fe; color: #7c3aed; }
-.p-list-ico.bank { background: #f8fafc; overflow: hidden; padding: 4px; }
-.p-list-ico.bank img { width: 100%; height: 100%; object-fit: contain; }
+/* Gaji pending */
+.pm-pend { padding: 11px 13px; display: flex; align-items: center; gap: 10px; }
+.pm-pend-ic { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; background: #fef3c7; color: #b45309; }
+.pm-pend-ic.ok { background: #d1fae5; color: #059669; }
+.pm-pend-tx { flex: 1; min-width: 0; line-height: 1.25; }
+.pm-pend-tx small { display: block; font-size: 10px; font-weight: 900; color: var(--reef-muted); }
+.pm-pend-tx b { display: block; font-size: 17px; font-weight: 900; color: var(--reef-ink); letter-spacing: -.3px; }
+.pm-pend-tx span { display: block; font-size: 9.5px; font-weight: 800; color: var(--reef-muted); }
+.pm-btn-sm { padding: 7px 10px; border-radius: 10px; border: 1.5px solid #fde68a; background: #fffbeb; color: #92400e; font: 900 10.5px/1 inherit; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.pm-pend-list { border-top: 1.5px dashed #fde68a; }
 
-.p-list-main {
-  flex: 1;
-  min-width: 0;
-}
-.p-list-title {
-  font-size: 12px;
-  font-weight: 900;
-  color: #78350f;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 2px;
-}
-.p-list-sub {
-  font-size: 10px;
-  font-weight: 700;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.p-list-right {
-  text-align: right;
-  flex-shrink: 0;
-}
-.p-list-amt {
-  font-size: 12.5px;
-  font-weight: 900;
-  color: #059669;
-  margin-bottom: 2px;
-}
-.p-pill-status {
-  display: inline-block;
-  font-size: 8.5px;
-  font-weight: 900;
-  padding: 2px 6px;
-  border-radius: 6px;
-  text-transform: uppercase;
-}
-.p-pill-status.success {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #86efac;
-}
-.p-pill-status.warn {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-}
-.p-pill-status.free {
-  background: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
-}
+/* Tab */
+.pm-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 15px; background: rgba(255,255,255,.65); border: 1.5px solid #fff; }
+.pm-tab { padding: 8px 2px; border: 0; border-radius: 11px; background: transparent; font: 900 10.5px/1 inherit; font-family: inherit; color: var(--reef-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.pm-tab i { font-size: 15px; }
+.pm-tab.active { background: #fff; color: var(--reef-coral-500); box-shadow: 0 2px 6px rgba(30,27,46,.08); }
+.pm-pane { display: none; flex-direction: column; gap: 8px; }
+.pm-pane.active { display: flex; }
 
-/* ── CHARTS CONTAINER ── */
-.p-chart-card {
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 16px;
-  padding: 14px 12px;
-  box-shadow: 0 4px 0 #78350f;
-  margin-bottom: 14px;
-}
-.p-chart-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 900;
-  color: #78350f;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-}
-.p-chart-head i { font-size: 16px; color: #d97706; }
-.p-chart-card canvas { width: 100% !important; height: 165px !important; }
+/* Baris daftar */
+.pm-list { border: 2px solid #fff; border-radius: 16px; background: #fff; box-shadow: 0 2px 8px rgba(30,27,46,.05); overflow: hidden; }
+.pm-row { display: flex; align-items: center; gap: 9px; padding: 9px 12px; }
+.pm-row + .pm-row { border-top: 1px solid #f1f5f9; }
+.pm-row-ic { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.pm-row-ic img { width: 22px; height: 22px; object-fit: contain; }
+.ic-paid { background: #d1fae5; color: #059669; }
+.ic-run  { background: #e0f2fe; color: #0284c7; }
+.ic-wait { background: #fef3c7; color: #b45309; }
+.ic-zero { background: #f1f5f9; color: #94a3b8; }
+.ic-user { background: #ede9fe; color: #7c3aed; }
+.pm-row-tx { flex: 1; min-width: 0; line-height: 1.3; }
+.pm-row-tx b { display: block; font-size: 12px; font-weight: 900; color: var(--reef-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-row-tx span { display: block; font-size: 10px; font-weight: 750; color: var(--reef-muted); }
+.pm-row-r { text-align: right; flex-shrink: 0; line-height: 1.3; }
+.pm-row-r b { display: block; font-size: 12px; font-weight: 900; color: var(--reef-ink); }
+.pm-pill { display: inline-block; margin-top: 2px; padding: 2px 6px; border-radius: 6px; font-size: 8.5px; font-weight: 900; letter-spacing: .2px; }
+.pl-paid { background: #d1fae5; color: #065f46; }
+.pl-run  { background: #e0f2fe; color: #0369a1; }
+.pl-wait { background: #fef3c7; color: #92400e; }
+.pl-zero { background: #f1f5f9; color: #64748b; }
+.pl-off  { background: #fff1f2; color: #be123c; }
+.pl-tier { background: #f5f3ff; color: #6d28d9; }
+.pm-mini-bar { height: 4px; border-radius: 999px; background: #f1f5f9; margin-top: 4px; overflow: hidden; max-width: 160px; }
+.pm-mini-bar i { display: block; height: 100%; background: #f97316; border-radius: 999px; }
 
-/* ── PAGINATION BAR ── */
-.p-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 10px;
-  padding: 0 2px;
-}
-.p-btn-page {
-  padding: 6px 12px;
-  background: #ffffff;
-  border: 2px solid #78350f;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 900;
-  color: #78350f;
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: 0 2px 0 #78350f;
-  transition: all 0.1s ease;
-}
-.p-btn-page:active {
-  transform: translateY(2px);
-  box-shadow: 0 0 0 #78350f;
-}
-.p-btn-page:disabled,
-.p-btn-page.disabled {
-  opacity: 0.4;
-  pointer-events: none;
-}
-.p-page-info {
-  font-size: 11px;
-  font-weight: 800;
-  color: #78350f;
-}
+.pm-empty { padding: 22px 12px; text-align: center; font-size: 11px; font-weight: 800; color: var(--reef-muted); border: 2px dashed #e2e8f0; border-radius: 16px; background: rgba(255,255,255,.6); }
+.pm-empty i { display: block; font-size: 26px; margin-bottom: 5px; color: #cbd5e1; }
 
-/* ── FAKE WD FORM ── */
-.p-fwd-card {
-  background: #ffffff;
-  border: 2.5px solid #78350f;
-  border-radius: 18px;
-  padding: 16px 14px;
-  box-shadow: 0 5px 0 #78350f;
-  margin-bottom: 16px;
-}
-.p-account-box {
-  background: linear-gradient(135deg, #fffbeb, #fef3c7);
-  border: 1.5px solid #fde68a;
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin-bottom: 14px;
-}
-.p-account-lbl {
-  font-size: 9.5px;
-  font-weight: 900;
-  color: #92400e;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.p-account-val {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #78350f;
-  line-height: 1.4;
-}
+.pm-pager { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.pm-pager a, .pm-pager button { padding: 7px 11px; border-radius: 10px; border: 1.5px solid #fff; background: #fff; font: 900 10.5px/1 inherit; font-family: inherit; color: var(--reef-ink); text-decoration: none; cursor: pointer; box-shadow: 0 2px 5px rgba(30,27,46,.05); }
+.pm-pager .off { opacity: .45; pointer-events: none; }
+.pm-pager span { font-size: 10.5px; font-weight: 800; color: var(--reef-muted); }
 
-.p-form-group {
-  margin-bottom: 12px;
-}
-.p-form-label {
-  display: block;
-  font-size: 10.5px;
-  font-weight: 900;
-  color: #78350f;
-  margin-bottom: 5px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.p-form-input {
-  width: 100%;
-  background: #f8fafc;
-  border: 2px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 9px 12px;
-  font-size: 12.5px;
-  font-weight: 800;
-  color: #1e293b;
-  font-family: 'Nunito', sans-serif;
-  box-sizing: border-box;
-  transition: all 0.15s ease;
-}
-.p-form-input:focus {
-  outline: none;
-  border-color: #d97706;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(217,119,6,0.15);
-}
-.p-btn-submit {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 900;
-  color: #ffffff;
-  background: linear-gradient(180deg, #f59e0b, #d97706);
-  border: 2.5px solid #78350f;
-  box-shadow: 0 4px 0 #78350f;
-  cursor: pointer;
-  text-shadow: 0 1px 2px #78350f;
-  transition: transform 0.1s ease;
-}
-.p-btn-submit:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 #78350f;
-}
+.pm-chart { padding: 11px 12px 8px; }
+.pm-chart h3 { margin: 0 0 6px; font-size: 11px; font-weight: 900; color: var(--reef-ink); display: flex; align-items: center; gap: 5px; }
+.pm-chart .cv { position: relative; height: 150px; }
 
-/* Empty State */
-.p-empty-state {
-  text-align: center;
-  padding: 24px 16px;
-  background: #ffffff;
-  border: 2px dashed #fcd34d;
-  border-radius: 16px;
-  margin-bottom: 12px;
-}
-.p-empty-icon {
-  font-size: 36px;
-  color: #d97706;
-  margin-bottom: 6px;
-}
-.p-empty-text {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #78350f;
-}
-
-/* Section Title */
-.p-sec-heading {
-  font-size: 12px;
-  font-weight: 900;
-  color: #78350f;
-  text-transform: uppercase;
-  margin: 16px 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.p-sec-heading i { color: #d97706; font-size: 16px; }
-
-/* Alert Flash */
-.p-alert {
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-size: 11.5px;
-  font-weight: 800;
-  margin-bottom: 12px;
-  border: 2px solid;
-}
-.p-alert.success {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #4ade80;
-}
-.p-alert.error {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #f87171;
-}
+/* Bukti WD (fitur lama, tampilan disederhanakan) */
+.pm-note { padding: 8px 11px; border-radius: 13px; font-size: 11px; font-weight: 800; border: 1.5px solid #fff; }
+.pm-note.success { background: #ecfdf5; color: #065f46; }
+.pm-note.error { background: #fff1f2; color: #9f1239; }
+.pm-form { padding: 12px; display: grid; gap: 8px; }
+.pm-form label { font-size: 10px; font-weight: 900; color: var(--reef-muted); margin-bottom: -4px; }
+.pm-form input, .pm-form select { width: 100%; padding: 8px 11px; border-radius: 11px; border: 1.5px solid #e2e8f0; background: #fff; font: 700 12px/1.2 inherit; font-family: inherit; color: var(--reef-ink); outline: none; }
+.pm-form .acc { font-size: 11px; font-weight: 800; color: var(--reef-ink); padding: 8px 10px; border-radius: 11px; background: #f8fafc; }
+.pm-form button { padding: 10px; border-radius: 12px; border: 1.5px solid #fff; background: #334155; color: #fff; font: 900 12px/1 inherit; font-family: inherit; cursor: pointer; }
+.pm-sec { font-size: 11px; font-weight: 900; color: var(--reef-ink); padding: 2px 2px 0; }
 </style>
 
-<!-- HERO TOP BANNER -->
-<div class="p-hero">
-  <div class="p-hero-top">
-    <div class="p-badge-status">
-      <span class="p-dot-pulse"></span>
-      <span>MITRA PROMOTOR AKTIF</span>
-    </div>
-    <div class="p-user-chip">
-      <i class="ph-bold ph-identification-badge"></i>
-      <span>ID #<?= $user['id'] ?></span>
-    </div>
-  </div>
-  <div class="p-hero-title">
-    <i class="ph-fill ph-megaphone-simple" style="color:#fef08a;"></i>
-    <span>Promotor Hub MancingCuan</span>
-  </div>
-  <div class="p-hero-sub">
-    Analisis traffic, target harian & manajemen bukti pencairan komisi.
-  </div>
-</div>
+<?php
+$hist_status = static function (array $log): array {
+    $earned = (float)($log['earned_amount'] ?? 0);
+    if ($log['date'] === date('Y-m-d')) return ['run', 'BERJALAN', 'ph-arrows-clockwise'];
+    if ((int)$log['is_paid'] === 1)     return ['paid', 'DIBAYAR', 'ph-check-circle'];
+    if ($earned > 0)                     return ['wait', 'PENDING', 'ph-hourglass-high'];
+    return ['zero', 'NIHIL', 'ph-minus-circle'];
+};
+$dl_pages = max(1, (int)ceil(count($downlines) / 5));
+?>
 
-<div class="p-body">
-  <!-- PENDAPATAN HARI INI -->
-  <div class="p-card-income">
-    <div class="p-income-head">
-      <div class="p-income-tag">
-        <i class="ph-fill ph-coins"></i> Gaji Target Hari Ini
-      </div>
-      <div class="p-income-payout-status <?= !empty($today_target['is_paid']) ? 'paid' : 'pending' ?>">
-        <?= !empty($today_target['is_paid']) ? '✓ Sudah Cair ke WD' : '⏳ Menunggu Validasi' ?>
-      </div>
-    </div>
-    
-    <div class="p-income-val">
-      <span class="curr">Rp</span> <?= number_format((float)$today_target['salary_rate'], 0, ',', '.') ?>
-    </div>
+<div class="pm">
 
-    <!-- Progress Capaian Target -->
-    <div class="p-target-box">
-      <div class="p-target-head">
-        <span><i class="ph-fill ph-users-three"></i> Target Member Terdaftar</span>
-        <span><strong><?= number_format((int)$today_target['actual_regs']) ?></strong> / <?= number_format((int)$today_target['target_regs']) ?> Member</span>
-      </div>
-      <div class="p-target-bar">
-        <div class="p-target-fill" style="width: <?= min(100.0, (float)$today_target['percentage']) ?>%;"></div>
-      </div>
-      <div class="p-target-foot">
-        <span>Capaian: <strong><?= number_format((float)$today_target['percentage'], 1) ?>%</strong></span>
-        <span>Estimasi: <strong><?= format_rp($today_earned) ?></strong></span>
-      </div>
+  <div class="pm-top">
+    <div class="pm-top-ic"><i class="ph-fill ph-megaphone-simple"></i></div>
+    <div class="pm-top-tx">
+      <h1>Promotor Hub</h1>
+      <span>ID #<?= (int)$user['id'] ?> &bull; <?= date('d M Y') ?></span>
     </div>
+    <span class="pm-chip"><i></i> Aktif</span>
   </div>
 
-  <!-- QUICK METRICS GRID -->
-  <div class="p-stats-grid">
-    <div class="p-stat-card">
-      <div class="p-stat-val amber"><?= number_format($today_clicks) ?></div>
-      <div class="p-stat-lbl">Klik Hari Ini</div>
-    </div>
-    <div class="p-stat-card">
-      <div class="p-stat-val emerald"><?= number_format($total_clicks) ?></div>
-      <div class="p-stat-lbl">Total Klik</div>
-    </div>
-    <div class="p-stat-card">
-      <div class="p-stat-val purple"><?= number_format($avg_percentage, 1) ?>%</div>
-      <div class="p-stat-lbl">Rata-rata Target</div>
-    </div>
-  </div>
-
-  <!-- KARTU GAJI PENDING (HARI INI TIDAK DIHITUNG) -->
-  <div class="p-card-pending-salary">
-    <div class="p-pending-head">
-      <div class="p-pending-tag">
-        <i class="ph-fill ph-hourglass-high"></i> Total Gaji Pending
-      </div>
-      <?php if ($pending_days > 0): ?>
-        <span class="p-pending-badge active">⏳ <?= $pending_days ?> Hari Tertunda</span>
-      <?php else: ?>
-        <span class="p-pending-badge settled">✓ Lunas Semua</span>
-      <?php endif; ?>
-    </div>
-
-    <div class="p-pending-val-row">
-      <div class="p-pending-val">
-        <span class="curr">Rp</span> <?= number_format($pending_salary, 0, ',', '.') ?>
-      </div>
-      <?php if (!empty($pending_history_list)): ?>
-        <button type="button" class="p-btn-pending-detail" onclick="togglePendingDetail()">
-          <i class="ph-bold ph-list-dashes"></i> Rincian Hari
-        </button>
-      <?php endif; ?>
-    </div>
-    
-    <div class="p-pending-desc">
-      <?php if ($pending_salary > 0): ?>
-        Akumulasi komisi dari <strong><?= $pending_days ?> hari</strong> target sebelumnya yang telah selesai dan sedang menunggu pencairan oleh Admin ke Saldo Penarikan.
-      <?php else: ?>
-        Tidak ada gaji pending dari hari-hari sebelumnya. Semua riwayat target telah lunas dicairkan ke Saldo Penarikan.
-      <?php endif; ?>
-      <span class="p-pending-note">
-        <i class="ph-bold ph-info"></i> Catatan: Hari ini (<?= date('d M Y') ?>) tidak dihitung dalam gaji pending karena target harian masih berlangsung.
-      </span>
-    </div>
-
-    <?php if (!empty($pending_history_list)): ?>
-    <div id="pending-breakdown-box" class="p-pending-breakdown" style="display:none;">
-      <div class="p-breakdown-title">
-        <i class="ph-bold ph-clock-counter-clockwise"></i> Riwayat Tanggal Gaji Pending (Belum Cair):
-      </div>
-      <div class="p-breakdown-list">
-        <?php foreach ($pending_history_list as $plog): 
-          $plog_earned = (float)round(($plog['salary_rate'] * min(100.0, (float)$plog['percentage'])) / 100.0);
-        ?>
-        <div class="p-breakdown-item">
-          <div>
-            <div class="p-b-date"><?= date('d M Y', strtotime($plog['date'])) ?></div>
-            <div class="p-b-sub">Capaian: <?= number_format((float)$plog['percentage'], 1) ?>% &bull; <?= number_format((int)$plog['actual_regs']) ?> Reg &bull; <?= format_rp((float)$plog['actual_deposits']) ?> Depo</div>
-          </div>
-          <div class="p-b-amt">+<?= format_rp($plog_earned) ?></div>
-        </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-    <?php endif; ?>
-  </div>
-
-  <!-- SEGMENTED TAB BAR -->
-  <div class="p-tab-bar">
-    <button type="button" class="p-tab-btn active" onclick="switchTab('tab-stats')">
-      <i class="ph-bold ph-calendar-check"></i> Riwayat
-    </button>
-    <button type="button" class="p-tab-btn" onclick="switchTab('tab-chart')">
-      <i class="ph-bold ph-chart-line-up"></i> Grafik
-    </button>
-    <button type="button" class="p-tab-btn" onclick="switchTab('tab-dl')">
-      <i class="ph-bold ph-users-three"></i> Downline
-    </button>
-    <button type="button" class="p-tab-btn" onclick="switchTab('tab-fwd')">
-      <i class="ph-bold ph-receipt"></i> Bukti WD
-    </button>
-  </div>
-
-  <!-- TAB 1: RIWAYAT TARGET -->
-  <div id="tab-stats" class="p-pane active">
-    <?php if (empty($history_logs)): ?>
-      <div class="p-empty-state">
-        <div class="p-empty-icon"><i class="ph-bold ph-calendar-blank"></i></div>
-        <div class="p-empty-text">Belum ada catatan riwayat target harian.</div>
-      </div>
-    <?php else: ?>
-      <div class="p-card-list">
-        <?php foreach ($history_logs as $log): 
-          $is_today_log = ($log['date'] === date('Y-m-d'));
-          $log_earned = (float)round(($log['salary_rate'] * min(100.0, (float)$log['percentage'])) / 100.0);
-        ?>
-        <div class="p-list-item">
-          <div class="p-list-ico <?= $log['is_paid'] ? 'emerald' : ($is_today_log ? 'purple' : ($log_earned > 0 ? 'amber' : 'purple')) ?>">
-            <i class="ph-bold <?= $log['is_paid'] ? 'ph-check-circle' : ($is_today_log ? 'ph-arrows-clockwise' : ($log_earned > 0 ? 'ph-hourglass-high' : 'ph-x-circle')) ?>"></i>
-          </div>
-          <div class="p-list-main">
-            <div class="p-list-title">
-              <?= date('d M Y', strtotime($log['date'])) ?>
-              <?php if ($is_today_log): ?>
-                <span style="font-size:9px;color:#0284c7;background:#e0f2fe;border:1px solid #bae6fd;padding:1px 5px;border-radius:5px;margin-left:4px;">HARI INI</span>
-              <?php endif; ?>
-            </div>
-            <div class="p-list-sub">
-              Capaian: <?= number_format((float)$log['percentage'], 1) ?>% &bull; <?= number_format((int)$log['actual_regs']) ?>/<?= number_format((int)$log['target_regs']) ?> Member
-            </div>
-          </div>
-          <div class="p-list-right">
-            <div class="p-list-amt" style="color:<?= $log['is_paid'] ? '#059669' : ($log_earned > 0 ? '#b45309' : '#64748b') ?>;">
-              <?= format_rp($log['is_paid'] && (float)$log['paid_amount'] > 0 ? (float)$log['paid_amount'] : $log_earned) ?>
-            </div>
-            <?php if ($is_today_log): ?>
-              <span class="p-pill-status" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;">BERJALAN</span>
-            <?php elseif ($log['is_paid']): ?>
-              <span class="p-pill-status success">DIBAYAR</span>
-            <?php elseif ($log_earned > 0): ?>
-              <span class="p-pill-status warn">PENDING</span>
-            <?php else: ?>
-              <span class="p-pill-status" style="background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;">0% TERCAPAI</span>
-            <?php endif; ?>
-          </div>
-        </div>
-        <?php endforeach; ?>
-      </div>
-
-      <!-- Pagination -->
-      <?php if ($total_pages > 1): ?>
-      <div class="p-pagination">
-        <a href="?page=<?= max(1, $page-1) ?>" class="p-btn-page <?= $page <= 1 ? 'disabled' : '' ?>">
-          ← Sebelumnya
-        </a>
-        <span class="p-page-info">Halaman <strong><?= $page ?></strong> dari <?= $total_pages ?></span>
-        <a href="?page=<?= min($total_pages, $page+1) ?>" class="p-btn-page <?= $page >= $total_pages ? 'disabled' : '' ?>">
-          Berikutnya →
-        </a>
-      </div>
-      <?php endif; ?>
-    <?php endif; ?>
-  </div>
-
-  <!-- TAB 2: GRAFIK ANALISIS -->
-  <div id="tab-chart" class="p-pane">
-    <div class="p-chart-card">
-      <div class="p-chart-head">
-        <i class="ph-bold ph-cursor-click"></i> Volume Klik Referral (7 Hari Terakhir)
-      </div>
-      <canvas id="clicksChart"></canvas>
-    </div>
-    <div class="p-chart-card">
-      <div class="p-chart-head">
-        <i class="ph-bold ph-user-plus"></i> Registrasi Member Baru (7 Hari Terakhir)
-      </div>
-      <canvas id="regsChart"></canvas>
-    </div>
-  </div>
-
-  <!-- TAB 3: DOWNLINE / MEMBER -->
-  <div id="tab-dl" class="p-pane">
-    <?php if (empty($downlines)): ?>
-      <div class="p-empty-state">
-        <div class="p-empty-icon"><i class="ph-bold ph-users"></i></div>
-        <div class="p-empty-text">Belum ada member yang mendaftar melalui referralmu.</div>
-      </div>
-    <?php else: ?>
-      <div class="p-card-list">
-        <?php foreach ($downlines as $idx => $dl): ?>
-        <div class="p-list-item dl-item-row" style="<?= $idx >= 5 ? 'display:none;' : '' ?>">
-          <div class="p-list-ico purple"><i class="ph-bold ph-user"></i></div>
-          <div class="p-list-main">
-            <div class="p-list-title"><?= htmlspecialchars($dl['username']) ?></div>
-            <div class="p-list-sub">
-              Bergabung: <?= date('d M Y', strtotime($dl['created_at'])) ?>
-            </div>
-          </div>
-          <div class="p-list-right">
-            <span class="p-pill-status free">
-              <?= htmlspecialchars($dl['membership_name'] ?: 'Member Gratis') ?>
-            </span>
-            <?php if ((int)$dl['dep_count'] > 0): ?>
-            <div style="font-size:9px;font-weight:800;color:#059669;margin-top:2px;">
-              ✓ <?= $dl['dep_count'] ?>x Deposit
-            </div>
-            <?php endif; ?>
-          </div>
-        </div>
-        <?php endforeach; ?>
-      </div>
-
-      <?php if (count($downlines) > 5): ?>
-      <div class="p-pagination">
-        <button type="button" onclick="dlPrev()" id="dl-btn-prev" class="p-btn-page" style="opacity:0.5;pointer-events:none;">
-          ← Sebelumnya
-        </button>
-        <span id="dl-page-info" class="p-page-info">1/<?= ceil(count($downlines) / 5) ?></span>
-        <button type="button" onclick="dlNext()" id="dl-btn-next" class="p-btn-page">
-          Berikutnya →
-        </button>
-      </div>
-      <?php endif; ?>
-    <?php endif; ?>
-  </div>
-
-  <!-- TAB 4: BUAT BUKTI WD FAKE -->
-  <div id="tab-fwd" class="p-pane">
-    <?php if ($fwd_flash): ?>
-    <div class="p-alert <?= $fwd_flashType ?>"><?= htmlspecialchars($fwd_flash) ?></div>
-    <?php endif; ?>
-
-    <!-- Form Input Bukti WD -->
-    <div class="p-fwd-card">
-      <form method="POST" id="fwd-form">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="fake_wd">
-
-        <!-- Rekening Promotor -->
-        <div class="p-account-box">
-          <div class="p-account-lbl">
-            <i class="ph-bold ph-bank"></i> Rekening Penerima Pencairan
-          </div>
-          <?php if (!empty($user['bank_name'])): ?>
-          <div class="p-account-val">
-            <strong><?= htmlspecialchars($user['bank_name']) ?></strong> · <?= htmlspecialchars(mask_account($user['account_number'] ?? '')) ?><br>
-            a/n <?= htmlspecialchars($user['account_name'] ?? '') ?>
-          </div>
+  <!-- GAJI HARI INI -->
+  <div class="pm-card">
+    <div class="pm-pay">
+      <div>
+        <small><i class="ph-fill ph-coins"></i> Estimasi Gaji Hari Ini</small>
+        <b><em>Rp</em><?= number_format($today_earned, 0, ',', '.') ?></b>
+        <div class="pm-tags">
+          <?php if (!empty($today_target['is_paid'])): ?>
+            <span class="pm-tag paid"><i class="ph-bold ph-check"></i> Sudah cair</span>
           <?php else: ?>
-          <div style="font-size:11px;font-weight:800;color:#ea580c;">
-            ⚠️ Rekening belum diisi. <a href="/edit-rekening" style="color:#c2410c;font-weight:900;">Lengkapi sekarang &rarr;</a>
-          </div>
+            <span class="pm-tag run"><i class="ph-bold ph-clock"></i> Berjalan s/d 23:59</span>
+          <?php endif; ?>
+          <?php if ($today_by_guarantee): ?>
+            <span class="pm-tag grt"><i class="ph-bold ph-shield-check"></i> Jaminan komisi</span>
           <?php endif; ?>
         </div>
+      </div>
+      <div class="pm-ring" style="--p: <?= round($today_pct, 1) ?>;">
+        <div><strong><?= number_format($today_pct, 0) ?>%</strong><span>Capaian</span></div>
+      </div>
+    </div>
 
-        <div class="p-form-group">
-          <label class="p-form-label">Nominal Penarikan (Rp)</label>
-          <input class="p-form-input" type="number" name="fwd_amount" placeholder="Contoh: 250000" min="1000" step="1000" required>
+    <div class="pm-meters">
+      <div>
+        <div class="pm-m-head">
+          <span><i class="ph-fill ph-users-three" style="color:#10b981"></i> Member Valid</span>
+          <em><b><?= number_format($v_regs, 0, ',', '.') ?></b> / <?= $t_regs > 0 ? number_format($t_regs, 0, ',', '.') : '—' ?></em>
         </div>
-
-        <div class="p-form-group">
-          <label class="p-form-label">Tanggal Penarikan</label>
-          <input class="p-form-input" type="date" name="fwd_date" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required>
+        <div class="pm-bar mem"><i style="width: <?= round($pct_regs, 1) ?>%"></i></div>
+        <div class="pm-m-sub"><?= number_format((int)$today_target['actual_regs'], 0, ',', '.') ?> pendaftar hari ini &bull; valid = sudah nonton/mancing &amp; bukan akun abuse</div>
+      </div>
+      <div>
+        <div class="pm-m-head">
+          <span><i class="ph-fill ph-wallet" style="color:#0284c7"></i> Deposit Member</span>
+          <em><b><?= format_rp($a_dep) ?></b> / <?= $t_dep > 0 ? format_rp($t_dep) : '—' ?></em>
         </div>
+        <div class="pm-bar dep"><i style="width: <?= round($pct_dep, 1) ?>%"></i></div>
+        <div class="pm-m-sub"><?= number_format((int)($today_target['deposit_count'] ?? 0)) ?> transaksi deposit terkonfirmasi hari ini</div>
+      </div>
+    </div>
 
-        <div class="p-form-group">
-          <label class="p-form-label">Status Bukti</label>
-          <select class="p-form-input" name="fwd_status">
-            <option value="approved">✅ Berhasil / Disetujui (Approved)</option>
-            <option value="pending">⏳ Menunggu Diproses (Pending)</option>
-          </select>
+    <div class="pm-cmp">
+      <div class="<?= $today_by_guarantee ? '' : 'on' ?>">
+        <small>Gaji Target</small>
+        <b><?= format_rp($today_target_pay) ?></b>
+        <span><?= number_format($today_pct, 1, ',', '.') ?>% × <?= format_rp($today_rate) ?></span>
+      </div>
+      <div class="<?= $today_by_guarantee ? 'on' : '' ?>">
+        <small>Jaminan Komisi</small>
+        <b><?= format_rp($today_guarantee) ?></b>
+        <span>member valid + komisi deposit</span>
+      </div>
+    </div>
+  </div>
+
+  <details class="pm-how">
+    <summary><i class="ph-fill ph-calculator" style="color:#f97316"></i> Cara gaji dihitung <i class="ph-bold ph-caret-down go"></i></summary>
+    <ol>
+      <li><b>Capaian</b> = rata-rata % member valid terhadap target member dan % nominal deposit terhadap target deposit (masing-masing maks 100%).</li>
+      <li><b>Gaji target</b> = capaian × gaji penuh harian (<?= format_rp($today_rate) ?>).</li>
+      <li><b>Jaminan komisi</b> = <?= format_rp($g_member) ?> per member valid + <?= htmlspecialchars($g_dep_txt) ?>.</li>
+      <li>Yang dibayar adalah <b>nilai terbesar</b> dari gaji target dan jaminan komisi, jadi gajimu tidak pernah di bawah komisi.</li>
+      <li>Hitungan ditutup pukul 23:59, lalu dicairkan admin ke Saldo Penarikan.</li>
+    </ol>
+  </details>
+
+  <div class="pm-link">
+    <div class="pm-link-tx">
+      <small><i class="ph-bold ph-link"></i> Link Promosi &bull; <?= htmlspecialchars($user['referral_code']) ?></small>
+      <code id="pm-ref"><?= htmlspecialchars($ref_url) ?></code>
+    </div>
+    <button type="button" class="pm-copy" onclick="pmCopy(this)"><i class="ph-bold ph-copy"></i> Salin</button>
+  </div>
+
+  <div class="pm-stats">
+    <div class="pm-st a"><b><?= number_format($today_clicks, 0, ',', '.') ?></b><span>Klik hari ini</span></div>
+    <div class="pm-st b"><b><?= number_format($total_clicks, 0, ',', '.') ?></b><span>Total klik</span></div>
+    <div class="pm-st c"><b><?= number_format($downline_total, 0, ',', '.') ?></b><span>Total member</span></div>
+    <div class="pm-st d"><b><?= number_format($avg_percentage, 0) ?>%</b><span>Rata capaian</span></div>
+  </div>
+
+  <!-- GAJI PENDING -->
+  <div class="pm-card">
+    <div class="pm-pend">
+      <div class="pm-pend-ic <?= $pending_salary > 0 ? '' : 'ok' ?>"><i class="ph-fill <?= $pending_salary > 0 ? 'ph-hourglass-high' : 'ph-check-circle' ?>"></i></div>
+      <div class="pm-pend-tx">
+        <small>Gaji Menunggu Cair</small>
+        <b><?= format_rp($pending_salary) ?></b>
+        <span><?= $pending_days > 0 ? $pending_days . ' hari sebelumnya, dicairkan admin' : 'Semua gaji sebelumnya sudah cair' ?></span>
+      </div>
+      <?php if (!empty($pending_history_list)): ?>
+        <button type="button" class="pm-btn-sm" onclick="togglePendingDetail()"><i class="ph-bold ph-list-dashes"></i> Rincian</button>
+      <?php endif; ?>
+    </div>
+    <?php if (!empty($pending_history_list)): ?>
+    <div id="pending-breakdown-box" class="pm-pend-list" style="display:none;">
+      <?php foreach ($pending_history_list as $plog): ?>
+      <div class="pm-row">
+        <div class="pm-row-tx">
+          <b><?= date('d M Y', strtotime($plog['date'])) ?></b>
+          <span><?= number_format((float)$plog['percentage'], 1, ',', '.') ?>% &bull; <?= number_format((int)($plog['valid_regs'] ?? $plog['actual_regs'])) ?> member &bull; <?= format_rp((float)$plog['actual_deposits']) ?></span>
         </div>
+        <div class="pm-row-r"><b style="color:#b45309">+<?= format_rp((float)$plog['earned_amount']) ?></b></div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+  </div>
 
-        <button type="submit" class="p-btn-submit">
-          <i class="ph-bold ph-floppy-disk"></i> Buat & Simpan Bukti WD
-        </button>
+  <div class="pm-tabs">
+    <button type="button" class="pm-tab active" data-tab="tab-stats" onclick="switchTab('tab-stats')"><i class="ph-bold ph-calendar-check"></i>Riwayat</button>
+    <button type="button" class="pm-tab" data-tab="tab-chart" onclick="switchTab('tab-chart')"><i class="ph-bold ph-chart-line-up"></i>Grafik</button>
+    <button type="button" class="pm-tab" data-tab="tab-dl" onclick="switchTab('tab-dl')"><i class="ph-bold ph-users-three"></i>Member</button>
+    <button type="button" class="pm-tab" data-tab="tab-fwd" onclick="switchTab('tab-fwd')"><i class="ph-bold ph-receipt"></i>Bukti WD</button>
+  </div>
+
+  <!-- RIWAYAT -->
+  <div id="tab-stats" class="pm-pane active">
+    <?php if (empty($history_logs)): ?>
+      <div class="pm-empty"><i class="ph-bold ph-calendar-blank"></i>Belum ada riwayat target harian.</div>
+    <?php else: ?>
+      <div class="pm-list">
+        <?php foreach ($history_logs as $log):
+          [$st, $st_lbl, $st_ic] = $hist_status($log);
+          $amt = (int)$log['is_paid'] === 1 && (float)$log['paid_amount'] > 0 ? (float)$log['paid_amount'] : (float)$log['earned_amount'];
+          $is_new = isset($log['valid_regs']);
+        ?>
+        <div class="pm-row">
+          <div class="pm-row-ic ic-<?= $st ?>"><i class="ph-bold <?= $st_ic ?>"></i></div>
+          <div class="pm-row-tx">
+            <b><?= date('d M Y', strtotime($log['date'])) ?></b>
+            <?php if ($is_new): ?>
+              <span><?= number_format((int)$log['valid_regs']) ?>/<?= number_format((int)$log['target_regs']) ?> member &bull; <?= format_rp((float)$log['actual_deposits']) ?></span>
+              <div class="pm-mini-bar"><i style="width: <?= min(100, (float)$log['percentage']) ?>%"></i></div>
+            <?php else: ?>
+              <span><?= number_format((int)$log['actual_regs']) ?> member &bull; <?= format_rp((float)$log['actual_deposits']) ?> &bull; skema lama</span>
+            <?php endif; ?>
+          </div>
+          <div class="pm-row-r">
+            <b><?= format_rp($amt) ?></b>
+            <?php if ($is_new): ?><span style="font-size:9.5px;font-weight:800;color:var(--reef-muted)"><?= number_format((float)$log['percentage'], 0) ?>% </span><?php endif; ?>
+            <span class="pm-pill pl-<?= $st ?>"><?= $st_lbl ?></span>
+          </div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+
+      <?php if ($total_pages > 1): ?>
+      <div class="pm-pager">
+        <a href="?page=<?= max(1, $page - 1) ?>" class="<?= $page <= 1 ? 'off' : '' ?>">← Baru</a>
+        <span><?= $page ?> / <?= $total_pages ?></span>
+        <a href="?page=<?= min($total_pages, $page + 1) ?>" class="<?= $page >= $total_pages ? 'off' : '' ?>">Lama →</a>
+      </div>
+      <?php endif; ?>
+    <?php endif; ?>
+  </div>
+
+  <!-- GRAFIK -->
+  <div id="tab-chart" class="pm-pane">
+    <div class="pm-card pm-chart">
+      <h3><i class="ph-bold ph-cursor-click" style="color:#f59e0b"></i> Klik Link (7 hari)</h3>
+      <div class="cv"><canvas id="clicksChart"></canvas></div>
+    </div>
+    <div class="pm-card pm-chart">
+      <h3><i class="ph-bold ph-user-plus" style="color:#10b981"></i> Pendaftar Baru (7 hari)</h3>
+      <div class="cv"><canvas id="regsChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- MEMBER -->
+  <div id="tab-dl" class="pm-pane">
+    <?php if (empty($downlines)): ?>
+      <div class="pm-empty"><i class="ph-bold ph-users"></i>Belum ada member yang daftar lewat linkmu.</div>
+    <?php else: ?>
+      <div class="pm-list">
+        <?php foreach ($downlines as $idx => $dl): ?>
+        <div class="pm-row dl-item-row" style="<?= $idx >= 5 ? 'display:none;' : '' ?>">
+          <div class="pm-row-ic ic-user"><i class="ph-bold ph-user"></i></div>
+          <div class="pm-row-tx">
+            <b><?= htmlspecialchars($dl['username']) ?></b>
+            <span><?= date('d M Y, H:i', strtotime($dl['created_at'])) ?><?= (int)$dl['dep_count'] > 0 ? ' &bull; ' . (int)$dl['dep_count'] . 'x deposit' : '' ?></span>
+          </div>
+          <div class="pm-row-r">
+            <span class="pm-pill pl-tier"><?= htmlspecialchars($dl['membership_name'] ?: 'Gratis') ?></span><br>
+            <?php if ((int)$dl['is_valid'] === 1): ?>
+              <span class="pm-pill pl-paid">VALID</span>
+            <?php else: ?>
+              <span class="pm-pill pl-off">BELUM AKTIF</span>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <?php if (count($downlines) > 5): ?>
+      <div class="pm-pager">
+        <button type="button" onclick="dlPrev()" id="dl-btn-prev" class="off">← Sebelumnya</button>
+        <span id="dl-page-info">1/<?= $dl_pages ?></span>
+        <button type="button" onclick="dlNext()" id="dl-btn-next">Berikutnya →</button>
+      </div>
+      <?php endif; ?>
+      <?php if ($downline_total > count($downlines)): ?>
+        <div class="pm-m-sub" style="text-align:center">Menampilkan <?= count($downlines) ?> member terbaru dari <?= number_format($downline_total, 0, ',', '.') ?>.</div>
+      <?php endif; ?>
+    <?php endif; ?>
+  </div>
+
+  <!-- BUKTI WD -->
+  <div id="tab-fwd" class="pm-pane">
+    <?php if ($fwd_flash): ?>
+    <div class="pm-note <?= $fwd_flashType ?>"><?= htmlspecialchars($fwd_flash) ?></div>
+    <?php endif; ?>
+    <div class="pm-card">
+      <form method="POST" id="fwd-form" class="pm-form">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="fake_wd">
+        <?php if (!empty($user['bank_name'])): ?>
+          <div class="acc"><?= htmlspecialchars($user['bank_name']) ?> · <?= htmlspecialchars(mask_account($user['account_number'] ?? '')) ?> a/n <?= htmlspecialchars($user['account_name'] ?? '') ?></div>
+        <?php else: ?>
+          <div class="acc" style="color:#c2410c">Rekening belum diisi. <a href="/edit-rekening" style="color:#c2410c">Lengkapi &rarr;</a></div>
+        <?php endif; ?>
+        <label>Nominal (Rp)</label>
+        <input type="number" name="fwd_amount" placeholder="250000" min="1000" step="1000" required>
+        <label>Tanggal</label>
+        <input type="date" name="fwd_date" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required>
+        <label>Status</label>
+        <select name="fwd_status">
+          <option value="approved">Approved</option>
+          <option value="pending">Pending</option>
+        </select>
+        <button type="submit">Simpan</button>
       </form>
     </div>
-
-    <!-- Riwayat WD Fake -->
     <?php if (!empty($fake_wds)): ?>
-    <div class="p-sec-heading">
-      <i class="ph-bold ph-clock-counter-clockwise"></i> Riwayat Bukti WD Dibuat
-    </div>
-    <div class="p-card-list">
-      <?php foreach ($fake_wds as $fw): ?>
-      <?php $wl = $channel_logos[strtolower($fw['bank_name'])] ?? null; ?>
-      <div class="p-list-item">
-        <?php if ($wl): ?>
-        <div class="p-list-ico bank"><img src="/assets/banks/<?= htmlspecialchars($wl) ?>" alt="<?= htmlspecialchars($fw['bank_name']) ?>"></div>
-        <?php else: ?>
-        <div class="p-list-ico amber"><i class="ph-bold ph-money"></i></div>
-        <?php endif; ?>
-        <div class="p-list-main">
-          <div class="p-list-amt"><?= format_rp((float)$fw['amount']) ?></div>
-          <div class="p-list-sub"><?= htmlspecialchars($fw['bank_name']) ?> · <?= date('d M Y, H:i', strtotime($fw['created_at'])) ?></div>
+    <div class="pm-list">
+      <?php foreach ($fake_wds as $fw): $wl = $channel_logos[strtolower($fw['bank_name'])] ?? null; ?>
+      <div class="pm-row">
+        <div class="pm-row-ic ic-zero"><?php if ($wl): ?><img src="/assets/banks/<?= htmlspecialchars($wl) ?>" alt=""><?php else: ?><i class="ph-bold ph-money"></i><?php endif; ?></div>
+        <div class="pm-row-tx">
+          <b><?= format_rp((float)$fw['amount']) ?></b>
+          <span><?= htmlspecialchars($fw['bank_name']) ?> · <?= date('d M Y, H:i', strtotime($fw['created_at'])) ?></span>
         </div>
-        <div class="p-list-right">
-          <span class="p-pill-status <?= $fw['status'] === 'approved' ? 'success' : 'warn' ?>">
-            <?= ucfirst($fw['status']) ?>
-          </span>
-        </div>
+        <div class="pm-row-r"><span class="pm-pill <?= $fw['status'] === 'approved' ? 'pl-paid' : 'pl-wait' ?>"><?= ucfirst($fw['status']) ?></span></div>
       </div>
       <?php endforeach; ?>
     </div>
@@ -1289,111 +647,64 @@ body {
 
 </div>
 
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-// Switch Tabs
 function switchTab(tabId) {
-  document.querySelectorAll('.p-tab-btn').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.p-pane').forEach(c => c.classList.remove('active'));
-  const activeBtn = document.querySelector(`.p-tab-btn[onclick="switchTab('${tabId}')"]`);
-  if (activeBtn) activeBtn.classList.add('active');
-  const targetPane = document.getElementById(tabId);
-  if (targetPane) targetPane.classList.add('active');
+  document.querySelectorAll('.pm-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+  document.querySelectorAll('.pm-pane').forEach(p => p.classList.toggle('active', p.id === tabId));
 }
 
-// Toggle Pending Breakdown Box
 function togglePendingDetail() {
   const box = document.getElementById('pending-breakdown-box');
-  if (box) {
-    box.style.display = box.style.display === 'none' ? 'block' : 'none';
-  }
+  if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
 }
 
-// Downline Client Pagination
+function pmCopy(btn) {
+  const txt = document.getElementById('pm-ref').textContent.trim();
+  const done = () => { btn.innerHTML = '<i class="ph-bold ph-check"></i> Tersalin'; setTimeout(() => { btn.innerHTML = '<i class="ph-bold ph-copy"></i> Salin'; }, 1600); };
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done).catch(() => {});
+  else { const t = document.createElement('textarea'); t.value = txt; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (e) {} t.remove(); }
+}
+
+// Paginasi member di sisi klien
 let dlCurrentPage = 1;
 const dlLimit = 5;
-const dlTotal = <?= count($downlines) ?>;
-const dlTotalPages = Math.max(1, Math.ceil(dlTotal / dlLimit));
-
+const dlTotalPages = <?= $dl_pages ?>;
 function updateDlPagination() {
-  const items = document.querySelectorAll('.dl-item-row');
-  items.forEach((item, idx) => {
+  document.querySelectorAll('.dl-item-row').forEach((item, idx) => {
     item.style.display = (idx >= (dlCurrentPage - 1) * dlLimit && idx < dlCurrentPage * dlLimit) ? 'flex' : 'none';
   });
-  
   const info = document.getElementById('dl-page-info');
   if (info) info.textContent = dlCurrentPage + '/' + dlTotalPages;
-  
-  const prevBtn = document.getElementById('dl-btn-prev');
-  if (prevBtn) {
-    prevBtn.style.opacity = dlCurrentPage <= 1 ? '0.5' : '1';
-    prevBtn.style.pointerEvents = dlCurrentPage <= 1 ? 'none' : 'auto';
-  }
-  const nextBtn = document.getElementById('dl-btn-next');
-  if (nextBtn) {
-    nextBtn.style.opacity = dlCurrentPage >= dlTotalPages ? '0.5' : '1';
-    nextBtn.style.pointerEvents = dlCurrentPage >= dlTotalPages ? 'none' : 'auto';
-  }
+  document.getElementById('dl-btn-prev')?.classList.toggle('off', dlCurrentPage <= 1);
+  document.getElementById('dl-btn-next')?.classList.toggle('off', dlCurrentPage >= dlTotalPages);
 }
 function dlPrev() { if (dlCurrentPage > 1) { dlCurrentPage--; updateDlPagination(); } }
 function dlNext() { if (dlCurrentPage < dlTotalPages) { dlCurrentPage++; updateDlPagination(); } }
 
-// Charts Initialization
 document.addEventListener('DOMContentLoaded', () => {
-  const commonOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
+  if (typeof Chart === 'undefined') return;
+  const tick = { font: { size: 9, family: 'Nunito', weight: '700' }, color: '#64748b' };
+  const opts = {
+    responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      y: { 
-        beginAtZero: true, 
-        grid: { color: 'rgba(0,0,0,0.05)' },
-        ticks: { font: { size: 9, family: 'Nunito', weight: '700' }, color: '#64748b' } 
-      },
-      x: { 
-        grid: { display: false },
-        ticks: { font: { size: 9, family: 'Nunito', weight: '700' }, color: '#64748b' } 
-      }
+      y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { ...tick, precision: 0 } },
+      x: { grid: { display: false }, ticks: tick }
     }
   };
-
-  const ctxClicks = document.getElementById('clicksChart');
-  if (ctxClicks) {
-    new Chart(ctxClicks.getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: <?= json_encode($chart_labels) ?>,
-        datasets: [{
-          data: <?= json_encode($chart_data) ?>,
-          backgroundColor: '#f59e0b',
-          borderRadius: 6
-        }]
-      },
-      options: commonOptions
-    });
-  }
-
-  const ctxRegs = document.getElementById('regsChart');
-  if (ctxRegs) {
-    new Chart(ctxRegs.getContext('2d'), {
-      type: 'line',
-      data: {
-        labels: <?= json_encode($chart_reg_labels) ?>,
-        datasets: [{
-          data: <?= json_encode($chart_reg_data) ?>,
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16,185,129,0.18)',
-          fill: true,
-          tension: 0.35,
-          borderWidth: 2.5,
-          pointRadius: 4,
-          pointBackgroundColor: '#10b981'
-        }]
-      },
-      options: commonOptions
-    });
-  }
+  const c1 = document.getElementById('clicksChart');
+  if (c1) new Chart(c1, {
+    type: 'bar',
+    data: { labels: <?= json_encode($chart_labels) ?>, datasets: [{ data: <?= json_encode($chart_data) ?>, backgroundColor: '#fbbf24', borderRadius: 6 }] },
+    options: opts
+  });
+  const c2 = document.getElementById('regsChart');
+  if (c2) new Chart(c2, {
+    type: 'line',
+    data: { labels: <?= json_encode($chart_reg_labels) ?>, datasets: [{ data: <?= json_encode($chart_reg_data) ?>, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 3.5, pointBackgroundColor: '#10b981' }] },
+    options: opts
+  });
 });
 </script>
 
