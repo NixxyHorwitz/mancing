@@ -14,14 +14,14 @@ $membership_active = $user['membership_id']
     && strtotime((string)$user['membership_expires_at']) > time();
 
 if ($membership_active) {
-    $stmt = $pdo->prepare("SELECT name, min_wd, max_wd, wd_hold, allow_edit_bank FROM memberships WHERE id = ? AND is_active = 1");
+    $stmt = $pdo->prepare("SELECT id, name, min_wd, max_wd, wd_hold, allow_edit_bank, is_wd_disabled FROM memberships WHERE id = ? AND is_active = 1");
     $stmt->execute([$user['membership_id']]);
     $user_mem = $stmt->fetch() ?: null;
 }
 
 // Fallback ke paket gratis jika tidak ada membership aktif
 if (!$user_mem) {
-    $stmt = $pdo->prepare("SELECT name, min_wd, max_wd, wd_hold, allow_edit_bank FROM memberships WHERE price = 0 AND is_active = 1 ORDER BY sort_order ASC LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, name, min_wd, max_wd, wd_hold, allow_edit_bank, is_wd_disabled FROM memberships WHERE price = 0 AND is_active = 1 ORDER BY sort_order ASC LIMIT 1");
     $stmt->execute();
     $user_mem = $stmt->fetch() ?: null;
 }
@@ -281,6 +281,10 @@ $wd_status_map = [
     'refunded'  => ['Kembali', 'info'],
 ];
 $user_wl = $has_bank ? ($channel_logos[strtolower($user['bank_name'] ?? '')] ?? null) : null;
+
+// Status antrian WD untuk level user ini saja (Lancar / Ramai / Withdraw Overload)
+require_once dirname(__DIR__) . '/lib/wd_levels.php';
+$wd_lv = $user_mem ? wd_level_status($pdo, (int)$user_mem['id']) : null;
 ?>
 
 <style>
@@ -298,6 +302,24 @@ $user_wl = $has_bank ? ($channel_logos[strtolower($user['bank_name'] ?? '')] ?? 
 .wx-note.err  { background: #fff1f2; color: #9f1239; }
 .wx-note.warn { background: #fffbeb; color: #92400e; }
 .wx-note.ok   { background: #ecfdf5; color: #065f46; }
+
+/* Status antrian WD level user (Lancar / Ramai / Overload) */
+.wx-lvl { display: flex; gap: 10px; padding: 11px 12px; border-radius: 16px; border: 2px solid #fff; box-shadow: 0 3px 10px rgba(30, 27, 46, .06); }
+.wx-lvl.s-normal   { background: linear-gradient(135deg, #ecfdf5, #ffffff); --lc: #059669; --lb: #d1fae5; }
+.wx-lvl.s-busy     { background: linear-gradient(135deg, #fffbeb, #ffffff); --lc: #d97706; --lb: #fef3c7; }
+.wx-lvl.s-overload { background: linear-gradient(135deg, #fff1f2, #ffffff); --lc: #e11d48; --lb: #ffe4e6; }
+.wx-lvl-ic { width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; background: var(--lc); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(30, 27, 46, .12); }
+.wx-lvl.s-overload .wx-lvl-ic { animation: wxLvlPulse 1.6s ease-in-out infinite; }
+@keyframes wxLvlPulse { 50% { box-shadow: 0 0 0 5px rgba(225, 29, 72, .18); } }
+.wx-lvl-tx { flex: 1; min-width: 0; }
+.wx-lvl-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.wx-lvl-top b { font-size: 13px; font-weight: 900; color: var(--lc); }
+.wx-lvl-tag { font-size: 9.5px; font-weight: 900; color: var(--lc); background: var(--lb); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.wx-lvl p { margin: 3px 0 5px; font-size: 11px; font-weight: 700; color: var(--reef-ink); line-height: 1.4; }
+.wx-lvl-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 10px; font-weight: 800; color: var(--reef-muted); }
+.wx-lvl-meta span { display: inline-flex; align-items: center; gap: 3px; }
+.wx-lvl-bar { height: 5px; border-radius: 999px; background: var(--lb); margin-top: 7px; overflow: hidden; }
+.wx-lvl-bar i { display: block; height: 100%; border-radius: 999px; background: var(--lc); }
 
 /* Kartu saldo + rekening tujuan dalam satu blok */
 .wx-card { border: 2px solid #fff; border-radius: 20px; background: var(--reef-card); box-shadow: var(--reef-clay-shadow); overflow: hidden; }
@@ -381,6 +403,26 @@ $user_wl = $has_bank ? ($channel_logos[strtolower($user['bank_name'] ?? '')] ?? 
 
   <?php if ($wd_note): ?>
     <div class="wx-note <?= $wd_note[0] ?>"><i class="ph-fill <?= $wd_note[1] ?>"></i><span><?= htmlspecialchars($wd_note[2]) ?></span></div>
+  <?php endif; ?>
+
+  <?php if ($wd_lv && $wd_lv['show']): ?>
+    <div class="wx-lvl s-<?= $wd_lv['state'] ?>">
+      <div class="wx-lvl-ic"><i class="ph-fill <?= $wd_lv['icon'] ?>"></i></div>
+      <div class="wx-lvl-tx">
+        <div class="wx-lvl-top">
+          <b><?= htmlspecialchars($wd_lv['label']) ?></b>
+          <span class="wx-lvl-tag"><?= htmlspecialchars($user_mem['name']) ?></span>
+        </div>
+        <p><?= htmlspecialchars($wd_lv['message']) ?></p>
+        <div class="wx-lvl-meta">
+          <span><i class="ph-bold ph-clock"></i> Estimasi <?= htmlspecialchars($wd_lv['eta']) ?></span>
+          <?php if ($wd_lv['queue'] > 0): ?><span><i class="ph-bold ph-users-three"></i> <?= (int)$wd_lv['queue'] ?> antrian di level kamu</span><?php endif; ?>
+        </div>
+        <?php if ($wd_lv['state'] !== 'normal'): ?>
+          <div class="wx-lvl-bar"><i style="width:<?= $wd_lv['state'] === 'overload' ? 100 : 62 ?>%"></i></div>
+        <?php endif; ?>
+      </div>
+    </div>
   <?php endif; ?>
 
   <form method="POST" id="wd-form" style="display:flex;flex-direction:column;gap:9px;">
