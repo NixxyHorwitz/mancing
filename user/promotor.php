@@ -209,16 +209,8 @@ $downline_total = (int)$dl_tot->fetchColumn();
 
 $ref_url = base_url('register/' . $user['referral_code']);
 
-// Skema komisi jaminan (untuk penjelasan di halaman)
-$g_member  = (float)setting($pdo, 'promotor_per_member_bonus', '0');
-$g_scheme  = setting($pdo, 'promotor_deposit_scheme', 'flat');
-$g_flat    = (float)setting($pdo, 'promotor_per_deposit_bonus', '0');
-$g_pct     = (float)setting($pdo, 'promotor_deposit_percent', '0');
-$g_dep_txt = match ($g_scheme) {
-    'percent' => rtrim(rtrim(number_format($g_pct, 2, ',', '.'), '0'), ',') . '% nominal deposit',
-    'hybrid'  => format_rp($g_flat) . '/deposit + ' . rtrim(rtrim(number_format($g_pct, 2, ',', '.'), '0'), ',') . '% nominal',
-    default   => format_rp($g_flat) . '/deposit',
-};
+// Bonus per member (keterangan kartu komisi)
+$g_member = (float)setting($pdo, 'promotor_per_member_bonus', '0');
 
 $pageTitle  = 'Promotor Hub';
 $activePage = 'referral';
@@ -278,15 +270,6 @@ require dirname(__DIR__) . '/partials/header.php';
 .pm-cmp .on { background: #fffbeb; }
 .pm-cmp .on b { color: #b45309; }
 .pm-cmp .on::after { content: 'DIPAKAI'; position: absolute; top: 8px; right: 9px; font-size: 8px; font-weight: 900; color: #fff; background: #f59e0b; padding: 2px 5px; border-radius: 5px; }
-
-/* Cara hitung */
-.pm-how { border: 2px solid #fff; border-radius: 16px; background: #fff; box-shadow: 0 2px 8px rgba(30,27,46,.05); }
-.pm-how summary { list-style: none; cursor: pointer; padding: 10px 12px; display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 900; color: var(--reef-ink); }
-.pm-how summary::-webkit-details-marker { display: none; }
-.pm-how summary i.go { margin-left: auto; color: var(--reef-muted); transition: transform .2s; }
-.pm-how[open] summary i.go { transform: rotate(180deg); }
-.pm-how ol { margin: 0; padding: 0 12px 11px 30px; display: grid; gap: 5px; font-size: 10.5px; font-weight: 700; color: #475569; line-height: 1.45; }
-.pm-how ol b { color: var(--reef-ink); }
 
 /* Link referral */
 .pm-link { display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 12px; border: 2px solid #fff; border-radius: 16px; background: linear-gradient(135deg, #ecfeff, #ffffff); box-shadow: 0 2px 8px rgba(30,27,46,.05); }
@@ -443,15 +426,6 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
       </div>
     </div>
   </div>
-
-  <details class="pm-how">
-    <summary><i class="ph-fill ph-calculator" style="color:#f97316"></i> Cara gaji dihitung <i class="ph-bold ph-caret-down go"></i></summary>
-    <ol>
-      <li><b>Komisi member</b> = <?= format_rp($g_member) ?> untuk setiap member yang daftar lewat linkmu hari itu.</li>
-      <li><b>Komisi deposit</b> = <?= htmlspecialchars($g_dep_txt) ?> dari deposit member yang terkonfirmasi hari itu.</li>
-      <li>Gaji harian = komisi member + komisi deposit. Hitungan ditutup pukul 23:59, lalu dicairkan admin ke Saldo Penarikan.</li>
-    </ol>
-  </details>
 
   <div class="pm-link">
     <div class="pm-link-tx">
