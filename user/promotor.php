@@ -80,9 +80,19 @@ $today_earned = (float)round(($today_target['salary_rate'] * min(100.0, (float)$
 // Rincian komisi hari ini (sync menyimpan: target_deposits = jumlah transaksi deposit, target_regs = komisi member dalam Rp)
 $today_regs     = (int)$today_target['actual_regs'];
 $today_reg_comm = (float)$today_target['target_regs'];
-$today_dep_cnt  = (int)$today_target['target_deposits'];
 $today_dep_amt  = (float)$today_target['actual_deposits'];
 $today_dep_comm = max(0.0, $today_earned - $today_reg_comm);
+
+// Target harian dari admin (hanya tampilan progres; gaji tetap komisi)
+$tg_regs = max(0, (int)$user['promotor_target_regs']);
+$tg_dep  = max(0.0, (float)$user['promotor_target_deposits']);
+$tg_pct = static function (float $actual, float $target): float {
+    return $target > 0 ? min(100.0, $actual / $target * 100) : 0.0;
+};
+$pct_regs  = $tg_pct($today_regs, $tg_regs);
+$pct_dep   = $tg_pct($today_dep_amt, $tg_dep);
+$tg_parts  = array_filter([$tg_regs > 0 ? $pct_regs : null, $tg_dep > 0 ? $pct_dep : null], fn($v) => $v !== null);
+$today_pct = $tg_parts ? array_sum($tg_parts) / count($tg_parts) : 0.0;
 
 // 3b. Fetch Pending Salary (Hari ini TIDAK dihitung, akumulasi riwayat target date < CURDATE() yang is_paid = 0)
 $pending_stmt = $pdo->prepare("
@@ -184,8 +194,7 @@ for ($i = $chart_days - 1; $i >= 0; $i--) {
 $downline_stmt = $pdo->prepare("
     SELECT 
         u.id, u.username, u.created_at, u.balance_wd,
-        (SELECT name FROM memberships WHERE id = u.membership_id) as membership_name,
-        (SELECT COUNT(*) FROM deposits d WHERE d.user_id = u.id AND d.status = 'confirmed') as dep_count
+        (SELECT name FROM memberships WHERE id = u.membership_id) as membership_name
     FROM users u
     WHERE u.referred_by = ?
     ORDER BY u.created_at DESC
@@ -399,8 +408,25 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
           <?php endif; ?>
         </div>
       </div>
-      <div class="pm-ring" style="--p: 100;">
-        <div><strong><?= number_format($today_regs, 0, ',', '.') ?></strong><span>Member</span></div>
+      <div class="pm-ring" style="--p: <?= round($today_pct, 1) ?>;">
+        <div><strong><?= number_format($today_pct, 0) ?>%</strong><span>Target</span></div>
+      </div>
+    </div>
+
+    <div class="pm-meters">
+      <div>
+        <div class="pm-m-head">
+          <span><i class="ph-fill ph-users-three" style="color:#10b981"></i> Target Member</span>
+          <em><b><?= number_format($today_regs, 0, ',', '.') ?></b> / <?= $tg_regs > 0 ? number_format($tg_regs, 0, ',', '.') : '—' ?></em>
+        </div>
+        <div class="pm-bar mem"><i style="width: <?= round($pct_regs, 1) ?>%"></i></div>
+      </div>
+      <div>
+        <div class="pm-m-head">
+          <span><i class="ph-fill ph-wallet" style="color:#0284c7"></i> Target Deposit</span>
+          <em><b><?= number_format($pct_dep, 0) ?>%</b><?= $tg_dep > 0 ? '' : ' &bull; belum diatur' ?></em>
+        </div>
+        <div class="pm-bar dep"><i style="width: <?= round($pct_dep, 1) ?>%"></i></div>
       </div>
     </div>
 
@@ -408,12 +434,12 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
       <div>
         <small><i class="ph-fill ph-users-three" style="color:#10b981"></i> Komisi Member</small>
         <b><?= format_rp($today_reg_comm) ?></b>
-        <span><?= number_format($today_regs, 0, ',', '.') ?> daftar × <?= format_rp($g_member) ?></span>
+        <span><?= format_rp($g_member) ?> per member</span>
       </div>
       <div>
         <small><i class="ph-fill ph-wallet" style="color:#0284c7"></i> Komisi Deposit</small>
         <b><?= format_rp($today_dep_comm) ?></b>
-        <span><?= number_format($today_dep_cnt) ?>x &bull; <?= format_rp($today_dep_amt) ?></span>
+        <span>dari deposit member</span>
       </div>
     </div>
   </div>
@@ -461,7 +487,7 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
       <div class="pm-row">
         <div class="pm-row-tx">
           <b><?= date('d M Y', strtotime($plog['date'])) ?></b>
-          <span><?= number_format((int)$plog['actual_regs']) ?> member &bull; <?= (int)$plog['target_deposits'] ?>x depo &bull; <?= format_rp((float)$plog['actual_deposits']) ?></span>
+          <span><?= number_format((int)$plog['actual_regs']) ?> member</span>
         </div>
         <div class="pm-row-r"><b style="color:#b45309">+<?= format_rp($log_earned($plog)) ?></b></div>
       </div>
@@ -491,7 +517,7 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
           <div class="pm-row-ic ic-<?= $st ?>"><i class="ph-bold <?= $st_ic ?>"></i></div>
           <div class="pm-row-tx">
             <b><?= date('d M Y', strtotime($log['date'])) ?></b>
-            <span><?= number_format((int)$log['actual_regs']) ?> member &bull; <?= (int)$log['target_deposits'] ?>x depo &bull; <?= format_rp((float)$log['actual_deposits']) ?></span>
+            <span><?= number_format((int)$log['actual_regs']) ?><?= $tg_regs > 0 ? '/' . number_format($tg_regs) : '' ?> member &bull; target depo <?= number_format($tg_pct((float)$log['actual_deposits'], $tg_dep), 0) ?>%</span>
           </div>
           <div class="pm-row-r">
             <b><?= format_rp($amt) ?></b>
@@ -534,7 +560,7 @@ $dl_pages = max(1, (int)ceil(count($downlines) / 5));
           <div class="pm-row-ic ic-user"><i class="ph-bold ph-user"></i></div>
           <div class="pm-row-tx">
             <b><?= htmlspecialchars($dl['username']) ?></b>
-            <span><?= date('d M Y, H:i', strtotime($dl['created_at'])) ?><?= (int)$dl['dep_count'] > 0 ? ' &bull; ' . (int)$dl['dep_count'] . 'x deposit' : '' ?></span>
+            <span><?= date('d M Y, H:i', strtotime($dl['created_at'])) ?></span>
           </div>
           <div class="pm-row-r">
             <span class="pm-pill pl-tier"><?= htmlspecialchars($dl['membership_name'] ?: 'Gratis') ?></span>
