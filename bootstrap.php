@@ -1009,17 +1009,26 @@ function send_telegram_notif(PDO $pdo, string $message, array $inline_keyboard =
         $post['reply_markup'] = json_encode(['inline_keyboard' => $inline_keyboard]);
     }
     
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-    $res = curl_exec($ch);
-    curl_close($ch);
-    
-    if ($res) {
-        $data = json_decode($res, true);
-        if (isset($data['ok']) && $data['ok'] && isset($data['result']['message_id'])) {
+    // Maks 2 percobaan: ulang hanya bila koneksi gagal/timeout, kena rate limit (429), atau error server Telegram (5xx)
+    for ($attempt = 1; $attempt <= 2; $attempt++) {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $res = curl_exec($ch);
+        curl_close($ch);
+
+        $data = $res ? json_decode($res, true) : null;
+        if (!empty($data['ok']) && isset($data['result']['message_id'])) {
             return (int)$data['result']['message_id'];
         }
+
+        $code = (int)($data['error_code'] ?? 0);
+        $retryable = $res === false || $data === null || $code === 429 || $code >= 500;
+        if (!$retryable || $attempt === 2) break;
+        $wait = $code === 429 ? min(5, (int)($data['parameters']['retry_after'] ?? 1)) : 1;
+        sleep(max(1, $wait));
     }
     return null;
 }
@@ -1170,6 +1179,8 @@ function sync_promotor_daily_targets(PDO $pdo, int|string $promotor_id, ?string 
     if (!$date) $date = date('Y-m-d');
     
     try {
+        depo_ensure_schema($pdo);
+
         // Get promotor info
         $p_stmt = $pdo->prepare("SELECT referral_code, promotor_target_deposits, promotor_target_regs, promotor_salary_rate FROM users WHERE id=? AND is_promotor=1");
         $p_stmt->execute([$promotor_id]);
@@ -1181,7 +1192,7 @@ function sync_promotor_daily_targets(PDO $pdo, int|string $promotor_id, ?string 
             "SELECT COALESCE(SUM(d.amount), 0) as total_amt, COUNT(d.id) as total_cnt
              FROM deposits d 
              JOIN users u ON u.id = d.user_id 
-             WHERE u.referred_by = ? AND d.status = 'confirmed' AND DATE(d.confirmed_at) = ?"
+             WHERE u.referred_by = ? AND d.status = 'confirmed' AND d.no_commission = 0 AND DATE(d.confirmed_at) = ?"
         );
         $dep_stmt->execute([$p['referral_code'], $date]);
         $dep_data = $dep_stmt->fetch();
@@ -1255,5 +1266,6 @@ function sync_promotor_daily_targets(PDO $pdo, int|string $promotor_id, ?string 
     }
 }
 
+require_once __DIR__ . '/lib/deposit_admin.php';
 require_once __DIR__ . '/depo_canceller.php';
 require_once __DIR__ . '/withdraw_canceller.php';

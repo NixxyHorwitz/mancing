@@ -251,8 +251,11 @@ if (isset($update['callback_query'])) {
                     $msg .= "👤 <b>User:</b> <code>" . htmlspecialchars($row['username']) . "</code>\n";
                     $msg .= "💵 <b>Amount:</b> <code>" . format_rp((float)$row['amount']) . "</code>\n";
                     $msg .= "🕒 <b>Time:</b> <code>" . date('d-m-Y H:i:s', strtotime($row['confirmed_at'] ?? $row['created_at'])) . " WIB</code>\n";
-                    $msg .= "💳 <b>Method:</b> <code>QRIS Otomatis</code>\n";
-                    $msg .= "✅ <b>Status:</b> <code>Sukses via Callback</code>\n";
+                    $msg .= "💳 <b>Method:</b> <code>" . depo_method_label($row) . "</code>\n";
+                    if (!empty($row['no_commission'])) {
+                        $msg .= "🚫 <b>Komisi:</b> <code>Tidak ada (acc tanpa komisi)</code>\n";
+                    }
+                    $msg .= "✅ <b>Status:</b> <code>" . htmlspecialchars((string)($row['admin_note'] ?: 'Sukses via Callback')) . "</code>\n";
                     $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
                     $msg .= "<i>Pembayaran terverifikasi otomatis oleh sistem. Saldo telah ditambahkan ke akun pengguna.</i>";
                 } else {
@@ -332,6 +335,20 @@ if (isset($update['callback_query'])) {
         } else {
             $pdo->rollBack();
             answer_cb($token, $cb_id, '⚠️ Sudah diproses atau tidak ditemukan.');
+        }
+        http_response_code(200); exit;
+    }
+
+    // ── ACC TANPA KOMISI (pending / expired) ─────────────────────────────────
+    if (preg_match('/^depo_(approvenc|accexpnc)_(\d+)$/', $data, $m)) {
+        $res = depo_admin_confirm($pdo, (int)$m[2], false, 'Bot');
+        if ($res['ok']) {
+            answer_cb($token, $cb_id, '✅ Deposit di-acc tanpa komisi!');
+            $label = $res['was'] === 'Approve' ? 'Approved tanpa komisi via Bot' : 'Acc Expired tanpa komisi via Bot';
+            edit_msg($token, $chat_id, $msg_id, depo_confirmed_tg_text($res['dep'], 0, $label,
+                'Saldo masuk ke user. Tidak ada komisi referral dan tidak dihitung untuk promotor.'), []);
+        } else {
+            answer_cb($token, $cb_id, '⚠️ ' . $res['message']);
         }
         http_response_code(200); exit;
     }
@@ -712,6 +729,23 @@ if (isset($update['message'])) {
 
     if (empty($text)) {
         return; // Fall through for other types of messages
+    }
+
+    // Command /dp: buka mini app Deposit Manager (hanya di chat pribadi, khusus anggota grup admin)
+    if (preg_match('/^\/dp(@\w+)?$/i', $text)) {
+        $from_id = (int)($msg['from']['id'] ?? 0);
+        if (($msg['chat']['type'] ?? '') !== 'private') {
+            send_msg($token, $chat_id, "ℹ️ Ketik /dp di chat pribadi dengan bot ini untuk membuka Deposit Manager.", null, $thread_id);
+        } elseif (!tg_dp_allowed($pdo, $from_id)) {
+            send_msg($token, $chat_id, "⛔ Akses ditolak. Deposit Manager hanya untuk anggota grup admin.");
+        } else {
+            $pending = (int)$pdo->query("SELECT COUNT(*) FROM deposits WHERE status = 'pending'")->fetchColumn();
+            send_msg($token, $chat_id,
+                "💳 <b>Deposit Manager</b>\nAda <b>{$pending}</b> deposit pending. Tekan tombol di bawah untuk membuka.",
+                [[['text' => '📂 Buka Deposit Manager', 'web_app' => ['url' => preg_replace('#^http:#', 'https:', base_url('api/dp.php'))]]]]
+            );
+        }
+        http_response_code(200); exit;
     }
 
     if (trim((string)$chat_id) !== trim((string)$admin_chat_id)) {
