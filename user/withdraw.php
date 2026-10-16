@@ -184,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [['text'=>'⏸ Hold (Selesai non-refund)', 'callback_data'=>'wd_hold_'.$wd_id]],
                 [['text'=>'🔄 Refresh Status', 'callback_data'=>'refresh_wd_'.$wd_id]]
             ];
-            send_telegram_notif($pdo, $msg, $kb, 'wd');
+            tg_store_msg_id($pdo, 'withdrawals', (int)$wd_id, send_telegram_notif($pdo, $msg, $kb, 'wd'));
             
             // Regenerate token
             $_SESSION[$_ftk_wd] = bin2hex(random_bytes(16));

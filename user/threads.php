@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ]
                         ];
                         
-                        send_telegram_photo($pdo, $uploadDir . $filename, $tgMsg, $kb, 'threads');
+                        tg_store_msg_id($pdo, 'admin_requests', $request_id, send_telegram_photo($pdo, $uploadDir . $filename, $tgMsg, $kb, 'threads'));
                         
                         $_SESSION['flash_threads_msg'] = 'Bukti postingan Langkah 1 berhasil di-upload! Admin akan segera memverifikasi klaim kamu.';
                         $_SESSION['flash_threads_type'] = 'success';
@@ -209,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 
                 // Send primary photo
-                send_telegram_photo($pdo, dirname(__DIR__) . '/' . $uploaded_files[0], $tgMsg, $kb, 'threads');
+                tg_store_msg_id($pdo, 'admin_requests', $request_id, send_telegram_photo($pdo, dirname(__DIR__) . '/' . $uploaded_files[0], $tgMsg, $kb, 'threads'));
                 
                 // Send additional photos if user uploaded 2 or 3 screenshots
                 for ($k = 1; $k < $fileCount; $k++) {

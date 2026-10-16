@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'refun
             $kb = [
                 [['text'=>'✅ Approve Refund', 'callback_data'=>'req_approve_'.$req_id], ['text'=>'❌ Reject', 'callback_data'=>'req_reject_'.$req_id]]
             ];
-            send_telegram_notif($pdo, $msg, $kb, 'permintaan');
+            tg_store_msg_id($pdo, 'admin_requests', (int)$req_id, send_telegram_notif($pdo, $msg, $kb, 'permintaan'));
             
             $flash = 'Permintaan refund telah dikirim ke admin untuk diverifikasi.';
             $flashType = 'success';

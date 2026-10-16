@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $kb = [
                 [['text'=>'Approve', 'callback_data'=>'req_approve_'.$req_id], ['text'=>'Reject', 'callback_data'=>'req_reject_'.$req_id]]
             ];
-            send_telegram_notif($pdo, $msg, $kb, 'permintaan');
+            tg_store_msg_id($pdo, 'admin_requests', (int)$req_id, send_telegram_notif($pdo, $msg, $kb, 'permintaan'));
             
             $flash = 'Pengajuan perubahan rekening baru berhasil dikirim dan sedang diverifikasi admin!';
             $flashType = 'success';

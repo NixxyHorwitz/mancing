@@ -89,54 +89,6 @@ function clear_tg_state(PDO $pdo, $chat_id): void {
     $pdo->prepare("DELETE FROM settings WHERE `key`=?")->execute(['tg_state_' . $chat_id]);
 }
 
-/** Do the actual admin request reject */
-function do_req_reject(PDO $pdo, int $id, string $reason): array {
-    $pdo->beginTransaction();
-    $req = $pdo->prepare("SELECT r.*, u.username FROM admin_requests r JOIN users u ON u.id = r.user_id WHERE r.id=? FOR UPDATE");
-    $req->execute([$id]);
-    $req = $req->fetch();
-    if (!$req || $req['status'] !== 'pending') {
-        $pdo->rollBack();
-        return ['status' => 'error', 'message' => 'Request tidak ditemukan atau sudah diproses.'];
-    }
-    
-    $admin_note = $reason ?: 'Ditolak oleh Admin (Ketentuan belum terpenuhi)';
-    $pdo->prepare("UPDATE admin_requests SET status='rejected', admin_note=?, updated_at=NOW() WHERE id=?")
-        ->execute([$admin_note, $id]);
-        
-    if ($req['type'] === 'threads_campaign' || $req['type'] === 'threads_campaign_step2') {
-        $stepText = $req['type'] === 'threads_campaign_step2' ? 'Langkah 2' : 'Langkah 1';
-        $notifTitle = "Kampanye Threads {$stepText} Ditolak ❌";
-        $notifMsg = "Maaf, promosi Threads {$stepText} kamu ditolak. Alasan: " . $admin_note;
-        $pdo->prepare("INSERT INTO notifications (title, message, type, icon, target_type, target_user_ids) VALUES (?, ?, 'warning', '🌀', 'single', ?)")
-            ->execute([$notifTitle, $notifMsg, json_encode([$req['user_id']])]);
-        
-        $msg = "❌ <b>PROMOSI THREADS - {$stepText} (REJECTED)</b>\n";
-        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-        $msg .= "👤 <b>User:</b> <code>" . htmlspecialchars($req['username']) . "</code>\n";
-        $msg .= "📝 <b>Alasan:</b> <code>" . htmlspecialchars($admin_note) . "</code>\n";
-        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-        $msg .= "<i>Permintaan {$stepText} ditolak oleh admin.</i>";
-    } else {
-        $title = $req['type'] === 'change_bank' ? 'GANTI REKENING' : ($req['type'] === 'refund_level' ? 'REFUND LEVEL' : 'REFUND WD HOLD');
-        $msg = "❌ <b>REQUEST {$title} (REJECTED)</b>\n";
-        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-        $msg .= "👤 <b>User:</b> <code>" . htmlspecialchars($req['username']) . "</code>\n";
-        $msg .= "📝 <b>Alasan:</b> <code>" . htmlspecialchars($admin_note) . "</code>\n";
-        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-        $msg .= "<i>Permintaan ini telah DITOLAK.</i>";
-        
-        $typeName = $req['type'] === 'change_bank' ? 'Ganti Rekening' : ($req['type'] === 'refund_level' ? 'Refund Level' : 'Refund WD Hold');
-        $notifTitle = "Permintaan {$typeName} Ditolak ❌";
-        $notifMsg = "Maaf, permintaan {$typeName} kamu ditolak. Alasan: " . $admin_note;
-        $pdo->prepare("INSERT INTO notifications (title, message, type, icon, target_type, target_user_ids) VALUES (?, ?, 'warning', '⚠️', 'single', ?)")
-            ->execute([$notifTitle, $notifMsg, json_encode([$req['user_id']])]);
-    }
-    
-    $pdo->commit();
-    return ['status' => 'ok', 'msg' => $msg, 'req_type' => $req['type']];
-}
-
 /** Do the actual deposit reject */
 function do_depo_reject(PDO $pdo, int $id, string $reason): string {
     $pdo->beginTransaction();
@@ -429,141 +381,16 @@ if (isset($update['callback_query'])) {
 
     // ── ADMIN REQUEST APPROVE ────────────────────────────────────────────────
     if (preg_match('/^req_approve_(\d+)$/', $data, $m)) {
-        $id = (int)$m[1];
-        
-        try {
-            $pdo->beginTransaction();
-            $req = $pdo->prepare("SELECT r.*, u.username, u.balance_dep FROM admin_requests r JOIN users u ON u.id = r.user_id WHERE r.id=? FOR UPDATE");
-            $req->execute([$id]); $req = $req->fetch();
-            
-            if ($req && $req['status'] === 'pending') {
-                $pdo->prepare("UPDATE admin_requests SET status='approved', updated_at=NOW() WHERE id=?")->execute([$id]);
-                
-                if ($req['type'] === 'change_bank') {
-                    $payload = json_decode($req['payload'], true);
-                    $pdo->prepare("UPDATE users SET bank_name=?, account_number=?, account_name=? WHERE id=?")
-                        ->execute([$payload['bank_name'], $payload['account_number'], $payload['account_name'], $req['user_id']]);
-                    
-                    $msg = "✅ <b>REQUEST GANTI REKENING (APPROVED)</b>\n";
-                    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-                    $msg .= "👤 <b>User:</b> <code>{$req['username']}</code>\n";
-                    $msg .= "🏦 <b>Bank Baru:</b> <code>{$payload['bank_name']}</code>\n";
-                    $msg .= "💳 <b>Nomor:</b> <code>{$payload['account_number']}</code>\n";
-                    $msg .= "👨‍💼 <b>A.N:</b> <code>{$payload['account_name']}</code>\n";
-                    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-                    $msg .= "<i>Perubahan rekening telah disetujui.</i>";
-                    
-                } elseif ($req['type'] === 'refund_level') {
-                    $s = $pdo->prepare("SELECT u.membership_id, u.refund_cut_percent, m.price, m.name FROM users u LEFT JOIN memberships m ON u.membership_id = m.id WHERE u.id=?");
-                    $s->execute([$req['user_id']]);
-                    $uInfo = $s->fetch();
-                    
-                    if ($uInfo && $uInfo['membership_id']) {
-                        $oStmt = $pdo->prepare("SELECT amount FROM upgrade_orders WHERE user_id=? AND membership_id=? AND status='confirmed' ORDER BY id DESC LIMIT 1");
-                        $oStmt->execute([$req['user_id'], $uInfo['membership_id']]);
-                        $basePrice = (float)$oStmt->fetchColumn();
-                        if (!$basePrice) $basePrice = (float)$uInfo['price'];
-                        
-                        $pct = (float)$uInfo['refund_cut_percent'];
-                        $refundAmt = $basePrice * ((100 - $pct) / 100);
-                        
-                        // Cancel pending & hold WDs
-                        $wds = $pdo->prepare("SELECT id, amount FROM withdrawals WHERE user_id = ? AND status IN ('pending', 'hold') FOR UPDATE");
-                        $wds->execute([$req['user_id']]);
-                        $wd_refund_total = 0;
-                        foreach ($wds->fetchAll() as $w) {
-                            $wd_refund_total += (float)$w['amount'];
-                            $pdo->prepare("UPDATE withdrawals SET status = 'rejected', admin_note = 'Dibatalkan (Refund Level)', processed_at = NOW() WHERE id = ?")->execute([$w['id']]);
-                        }
-                        
-                        $pdo->prepare("UPDATE users SET balance_dep = balance_dep + ?, balance_wd = balance_wd + ?, membership_id = NULL, membership_expires_at = NULL WHERE id = ?")
-                            ->execute([$refundAmt, $wd_refund_total, $req['user_id']]);
-                            
-                        $notifTitle = "Refund Level Disetujui ✅";
-                        $notifMsg = "Refund untuk level {$uInfo['name']} telah disetujui. Saldo " . format_rp($refundAmt) . " (setelah potongan {$pct}%) telah dikembalikan ke Saldo Beli kamu.";
-                        if ($wd_refund_total > 0) {
-                            $notifMsg .= " Semua penarikan yang tertunda juga dibatalkan dan saldo " . format_rp($wd_refund_total) . " dikembalikan ke Saldo WD kamu.";
-                        }
-                        $pdo->prepare("INSERT INTO notifications (title, message, type, icon, target_type, target_user_ids, action_url, action_text) VALUES (?, ?, 'success', '💰', 'single', ?, '/user/upgrade.php', 'Cek Saldo')")
-                            ->execute([$notifTitle, $notifMsg, json_encode([$req['user_id']])]);
-                            
-                        $msg = "✅ <b>REQUEST REFUND LEVEL (APPROVED)</b>\n";
-                        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-                        $msg .= "👤 <b>User:</b> <code>{$req['username']}</code>\n";
-                        $msg .= "🏆 <b>Level Dibatalkan:</b> <code>{$uInfo['name']}</code>\n";
-                        $msg .= "💵 <b>Saldo Dikembalikan:</b> <code>" . format_rp($refundAmt) . " (potongan {$pct}%)</code>\n";
-                        if ($wd_refund_total > 0) {
-                            $msg .= "🔙 <b>WD Dikembalikan:</b> <code>" . format_rp($wd_refund_total) . "</code>\n";
-                        }
-                        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-                        $msg .= "<i>Refund level telah disetujui dan saldo berhasil dikembalikan.</i>";
-                    } else {
-                        $pdo->rollBack();
-                        answer_cb($token, $cb_id, '⚠️ User tidak memiliki level aktif untuk di-refund.');
-                        http_response_code(200); exit;
-                    }
-                } elseif ($req['type'] === 'refund_wd_hold') {
-                    $payload = json_decode($req['payload'], true) ?: [];
-                    $wd_id = $payload['withdrawal_id'] ?? 0;
-                    $wd = $pdo->prepare("SELECT * FROM withdrawals WHERE id=? AND status='hold' FOR UPDATE");
-                    $wd->execute([$wd_id]);
-                    $wd = $wd->fetch();
-                    if ($wd) {
-                        $pdo->prepare("UPDATE withdrawals SET status='refunded', admin_note='Dikembalikan ke Saldo Tarik', processed_at=NOW() WHERE id=?")->execute([$wd_id]);
-                        $pdo->prepare("UPDATE users SET balance_wd = balance_wd + ? WHERE id = ?")->execute([$wd['amount'], $req['user_id']]);
-                        
-                        $notifTitle = "Refund WD Disetujui ✅";
-                        $notifMsg = "Refund untuk WD senilai " . format_rp((float)$wd['amount']) . " telah disetujui. Saldo dikembalikan ke Saldo Tarik kamu secara utuh.";
-                        $pdo->prepare("INSERT INTO notifications (title, message, type, icon, target_type, target_user_ids, action_url, action_text) VALUES (?, ?, 'success', '💰', 'single', ?, '/history?tab=withdraw', 'Cek Saldo')")
-                            ->execute([$notifTitle, $notifMsg, json_encode([$req['user_id']])]);
-                            
-                        $msg = "✅ <b>REQUEST REFUND WD HOLD (APPROVED)</b>\n";
-                        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-                        $msg .= "👤 <b>User:</b> <code>{$req['username']}</code>\n";
-                        $msg .= "💵 <b>Dikembalikan:</b> <code>" . format_rp((float)$wd['amount']) . "</code> (ke Saldo Tarik)\n";
-                        $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-                        $msg .= "<i>Refund telah disetujui dan saldo dikembalikan.</i>";
-                    } else {
-                        $pdo->rollBack();
-                        answer_cb($token, $cb_id, '⚠️ WD tidak ditemukan atau sudah tidak berstatus Hold.');
-                        http_response_code(200); exit;
-                    }
-                } elseif ($req['type'] === 'threads_campaign' || $req['type'] === 'threads_campaign_step2') {
-                    $payload = json_decode($req['payload'], true) ?: [];
-                    $reward = (float)($payload['reward_amount'] ?? ($req['type'] === 'threads_campaign' ? 25000 : 50000));
-                    $pdo->prepare("UPDATE users SET balance_wd = balance_wd + ? WHERE id=?")
-                        ->execute([$reward, $req['user_id']]);
-                    
-                    $stepText = $req['type'] === 'threads_campaign_step2' ? 'Langkah 2' : 'Langkah 1';
-                    $notifTitle = "Kampanye Threads {$stepText} Disetujui! ✅";
-                    $notifMsg = "Selamat! Promosi Threads {$stepText} kamu disetujui. Cuan tambahan sebesar " . format_rp($reward) . " telah ditambahkan ke Saldo Tarik kamu.";
-                    $pdo->prepare("INSERT INTO notifications (title, message, type, icon, target_type, target_user_ids) VALUES (?, ?, 'success', '🌀', 'single', ?)")
-                        ->execute([$notifTitle, $notifMsg, json_encode([$req['user_id']])]);
-                    
-                    $msg = "✅ <b>PROMOSI THREADS - {$stepText} (APPROVED)</b>\n";
-                    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-                    $msg .= "👤 <b>User:</b> <code>{$req['username']}</code>\n";
-                    $msg .= "💵 <b>Reward:</b> <code>" . format_rp($reward) . "</code>\n";
-                    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n";
-                    $msg .= "<i>Reward {$stepText} telah ditambahkan ke Saldo Tarik user.</i>";
-                }
-                
-                $pdo->commit();
-                answer_cb($token, $cb_id, "✅ Request Approved!");
-                if ($req['type'] === 'threads_campaign') {
-                    edit_caption($token, $chat_id, $msg_id, $msg, []);
-                } else {
-                    edit_msg($token, $chat_id, $msg_id, $msg, []);
-                }
+        $res = req_admin_approve($pdo, (int)$m[1]);
+        if ($res['ok']) {
+            answer_cb($token, $cb_id, "✅ Request Approved!");
+            if ($res['is_photo']) {
+                edit_caption($token, $chat_id, $msg_id, $res['tg_text'], []);
             } else {
-                $pdo->rollBack();
-                answer_cb($token, $cb_id, '⚠️ Sudah diproses atau tidak ditemukan.');
+                edit_msg($token, $chat_id, $msg_id, $res['tg_text'], []);
             }
-        } catch (\Throwable $th) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            answer_cb($token, $cb_id, '⚠️ Error DB: ' . $th->getMessage());
+        } else {
+            answer_cb($token, $cb_id, '⚠️ ' . $res['message']);
         }
         http_response_code(200); exit;
     }
@@ -731,18 +558,30 @@ if (isset($update['message'])) {
         return; // Fall through for other types of messages
     }
 
-    // Command /dp: buka mini app Deposit Manager (hanya di chat pribadi, khusus anggota grup admin)
-    if (preg_match('/^\/dp(@\w+)?$/i', $text)) {
+    // Command /menu (alias lama /dp): buka mini app Menu Admin — Deposit, Withdraw, Permintaan.
+    // Hanya di chat pribadi bot dan khusus anggota grup admin.
+    if (preg_match('/^\/(menu|dp)(@\w+)?$/i', $text, $cm)) {
         $from_id = (int)($msg['from']['id'] ?? 0);
         if (($msg['chat']['type'] ?? '') !== 'private') {
-            send_msg($token, $chat_id, "ℹ️ Ketik /dp di chat pribadi dengan bot ini untuk membuka Deposit Manager.", null, $thread_id);
+            send_msg($token, $chat_id, "ℹ️ Ketik /menu di chat pribadi dengan bot ini untuk membuka Menu Admin.", null, $thread_id);
         } elseif (!tg_dp_allowed($pdo, $from_id)) {
-            send_msg($token, $chat_id, "⛔ Akses ditolak. Deposit Manager hanya untuk anggota grup admin.");
+            send_msg($token, $chat_id, "⛔ Akses ditolak. Menu Admin hanya untuk anggota grup admin.");
         } else {
-            $pending = (int)$pdo->query("SELECT COUNT(*) FROM deposits WHERE status = 'pending'")->fetchColumn();
+            $dp  = (int)$pdo->query("SELECT COUNT(*) FROM deposits WHERE status = 'pending'")->fetchColumn();
+            $wd  = (int)$pdo->query("SELECT COUNT(*) FROM withdrawals WHERE status = 'pending'")->fetchColumn();
+            $wdh = (int)$pdo->query("SELECT COUNT(*) FROM withdrawals WHERE status = 'hold'")->fetchColumn();
+            $rq  = (int)$pdo->query("SELECT COUNT(*) FROM admin_requests WHERE status = 'pending'")->fetchColumn();
+            $url = static fn(string $s) => preg_replace('#^http:#', 'https:', base_url('api/menu.php?s=' . $s));
             send_msg($token, $chat_id,
-                "💳 <b>Deposit Manager</b>\nAda <b>{$pending}</b> deposit pending. Tekan tombol di bawah untuk membuka.",
-                [[['text' => '📂 Buka Deposit Manager', 'web_app' => ['url' => preg_replace('#^http:#', 'https:', base_url('api/dp.php'))]]]]
+                "🛠 <b>Menu Admin</b>\n"
+                . "💳 Deposit pending: <b>{$dp}</b>\n"
+                . "💸 Withdraw pending: <b>{$wd}</b> · hold: <b>{$wdh}</b>\n"
+                . "📨 Permintaan pending: <b>{$rq}</b>",
+                [
+                    [['text' => '📊 Buka Menu Admin', 'web_app' => ['url' => $url(strtolower($cm[1]) === 'dp' ? 'depo' : 'home')]]],
+                    [['text' => "💳 Deposit ({$dp})", 'web_app' => ['url' => $url('depo')]], ['text' => "💸 Withdraw ({$wd})", 'web_app' => ['url' => $url('wd')]]],
+                    [['text' => "📨 Permintaan ({$rq})", 'web_app' => ['url' => $url('req')]]],
+                ]
             );
         }
         http_response_code(200); exit;
