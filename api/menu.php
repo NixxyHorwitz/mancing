@@ -77,7 +77,23 @@ if ($action !== '') {
               AND NOT EXISTS (SELECT 1 FROM deposits o WHERE o.user_id = d.user_id AND o.status = 'confirmed' AND o.confirmed_at < CURDATE())
         ")->fetchColumn();
 
+        // Callback forwarder (payment_gateway_logs) & status HP
+        $cb = $pdo->query("
+            SELECT COUNT(*) n, SUM(status IN ('matched','matched_expired','matched_manual')) ok, SUM(status = 'unmatched') um,
+                   SUM(status NOT IN ('matched','matched_expired','matched_manual','unmatched')) other,
+                   COALESCE(SUM(CASE WHEN status IN ('matched','matched_expired','matched_manual') THEN extracted_amount END), 0) ok_sum,
+                   MAX(UNIX_TIMESTAMP(created_at)) last
+            FROM payment_gateway_logs WHERE created_at >= CURDATE()")->fetch();
+        $hb = $pdo->query("SELECT UNIX_TIMESTAMP(created_at) ts, interval_minutes, device_info, payload_text FROM forwarder_heartbeats ORDER BY id DESC LIMIT 1")->fetch() ?: null;
+        $hbd = $hb ? (json_decode((string)$hb['payload_text'], true) ?: []) : [];
+        $um_open = (int)$pdo->query("SELECT COUNT(*) FROM payment_gateway_logs WHERE status = 'unmatched' AND created_at >= NOW() - INTERVAL 1 DAY")->fetchColumn();
+
         return [
+            'cb'   => ['today' => (int)$cb['n'], 'ok' => (int)$cb['ok'], 'unmatched' => (int)$cb['um'], 'other' => (int)$cb['other'],
+                       'ok_sum' => (float)$cb['ok_sum'], 'last' => (int)$cb['last'], 'open' => $um_open,
+                       'hb' => $hb ? ['ts' => (int)$hb['ts'], 'interval' => (int)$hb['interval_minutes'], 'device' => $hb['device_info'],
+                                      'battery' => $hbd['battery'] ?? null, 'charging' => !empty($hbd['charging']), 'listener' => $hbd['listener'] ?? null,
+                                      'queue' => (int)($hbd['queue'] ?? 0), 'apps' => (array)($hbd['apps'] ?? [])] : null],
             'depo' => ['pending' => (int)$d['p_n'], 'pending_sum' => (float)$d['p_sum'], 'oldest' => (int)$d['p_old'],
                        'today' => (int)$d['c_n'], 'today_sum' => (float)$d['c_sum'], 'yesterday_sum' => (float)$d['y_sum'],
                        'nc' => (int)$d['nc_n'], 'nc_sum' => (float)$d['nc_sum'], 'expired' => (int)$d['e_n'], 'rejected' => (int)$d['r_n'],
@@ -250,6 +266,59 @@ if ($action !== '') {
                     'created' => (int)$r['created_ts'], 'done' => $r['status'] === 'pending' ? 0 : (int)$r['updated_ts'],
                 ];
             }
+        } elseif ($s === 'cb') {
+            $okSt = "('matched','matched_expired','matched_manual')";
+            $where = match ($tab) {
+                'matched'   => "x.status IN {$okSt}",
+                'unmatched' => "x.status = 'unmatched'",
+                'other'     => "x.status NOT IN ('matched','matched_expired','matched_manual','unmatched')",
+                'today'     => "x.created_at >= CURDATE()",
+                default     => '1=1',
+            };
+            $params = [];
+            if ($q !== '') {
+                $digits = preg_replace('/\D/', '', $q);
+                $where .= " AND (x.payload LIKE ? OR u.username LIKE ?" . ($digits !== '' ? " OR x.id = ? OR x.deposit_id = ? OR CAST(x.extracted_amount AS UNSIGNED) LIKE ?" : '') . ")";
+                $params[] = '%' . $q . '%'; $params[] = '%' . $q . '%';
+                if ($digits !== '') { $params[] = (int)$digits; $params[] = (int)$digits; $params[] = '%' . $digits . '%'; }
+            }
+            $st = $pdo->prepare("
+                SELECT x.id, x.payload, x.extracted_amount, x.deposit_id, x.status, UNIX_TIMESTAMP(x.created_at) ts,
+                       d.status d_status, d.amount d_amount, d.no_commission, d.method d_method, UNIX_TIMESTAMP(d.created_at) d_created, UNIX_TIMESTAMP(d.confirmed_at) d_confirmed,
+                       u.id uid, u.username
+                FROM payment_gateway_logs x
+                LEFT JOIN deposits d ON d.id = x.deposit_id
+                LEFT JOIN users u ON u.id = d.user_id
+                WHERE {$where} ORDER BY x.id " . ($sort === 'old' ? 'ASC' : 'DESC') . " LIMIT 100");
+            $st->execute($params);
+            $cand = $pdo->prepare("
+                SELECT d.id, d.status, d.admin_note, d.amount, UNIX_TIMESTAMP(d.created_at) c, u.username, u.id uid
+                FROM deposits d JOIN users u ON u.id = d.user_id
+                WHERE d.amount = ? AND d.created_at BETWEEN FROM_UNIXTIME(?) - INTERVAL 1 DAY AND FROM_UNIXTIME(?) + INTERVAL 1 HOUR
+                ORDER BY ABS(TIMESTAMPDIFF(SECOND, d.created_at, FROM_UNIXTIME(?))) LIMIT 4");
+            foreach ($st->fetchAll() as $r) {
+                $p = json_decode((string)$r['payload'], true) ?: [];
+                $item = [
+                    'id' => (int)$r['id'], 'status' => $r['status'], 'amount' => (float)$r['extracted_amount'], 'created' => (int)$r['ts'],
+                    'app' => (string)($p['app'] ?? $p['package'] ?? ''), 'title' => (string)($p['title'] ?? ''),
+                    'text' => (string)($p['big_text'] ?? '') ?: (string)($p['text'] ?? ''), 'device' => (string)($p['device'] ?? ''),
+                    'posted' => (int)($p['posted_at'] ?? 0),
+                    'dep' => $r['deposit_id'] ? [
+                        'id' => (int)$r['deposit_id'], 'user' => $r['username'], 'uid' => (int)$r['uid'], 'status' => $r['d_status'],
+                        'amount' => (float)$r['d_amount'], 'nc' => (int)$r['no_commission'] === 1,
+                        'created' => (int)$r['d_created'], 'confirmed' => (int)$r['d_confirmed'],
+                    ] : null,
+                    'cands' => [],
+                ];
+                if (!$r['deposit_id'] && $r['status'] === 'unmatched' && $item['amount'] > 0) {
+                    $cand->execute([$item['amount'], $item['created'], $item['created'], $item['created']]);
+                    foreach ($cand->fetchAll() as $c) {
+                        $item['cands'][] = ['id' => (int)$c['id'], 'user' => $c['username'], 'uid' => (int)$c['uid'], 'created' => (int)$c['c'],
+                            'status' => ($c['status'] === 'rejected' && $c['admin_note'] === DEPO_EXPIRED_NOTE) ? 'expired' : $c['status']];
+                    }
+                }
+                $items[] = $item;
+            }
         }
 
         $sum = $summary();
@@ -319,13 +388,38 @@ if ($action !== '') {
             }
         }
 
+        // Hubungkan callback "tidak cocok" ke deposit secara manual (acc deposit bila belum sukses)
+        if ($s === 'cb' && $do === 'link') {
+            $depId = (int)($in['dep'] ?? 0);
+            $lg = $pdo->prepare("SELECT * FROM payment_gateway_logs WHERE id = ?");
+            $lg->execute([$id]);
+            $log = $lg->fetch();
+            if (!$log || $log['deposit_id']) $out(['ok' => false, 'error' => 'Callback tidak ditemukan atau sudah terhubung.']);
+            $dq = $pdo->prepare("SELECT status, amount FROM deposits WHERE id = ?");
+            $dq->execute([$depId]);
+            $d = $dq->fetch();
+            if (!$d) $out(['ok' => false, 'error' => 'Deposit tidak ditemukan.']);
+            $msg = 'Callback #' . $id . ' dihubungkan ke deposit #' . $depId . '.';
+            if ($d['status'] !== 'confirmed') {
+                $res = depo_admin_confirm($pdo, $depId, true, $actor);
+                if (!$res['ok']) $out(['ok' => false, 'error' => $res['message']]);
+                if (!empty($res['dep']['tg_msg_id'])) {
+                    edit_telegram_notif($pdo, (int)$res['dep']['tg_msg_id'],
+                        depo_confirmed_tg_text($res['dep'], (float)$res['comm'], 'Sukses (callback #' . $id . ' dihubungkan via ' . $actor . ')', 'Pembayaran dicocokkan manual dari log callback.'), []);
+                }
+                $msg .= ' Deposit di-acc.';
+            }
+            $pdo->prepare("UPDATE payment_gateway_logs SET deposit_id = ?, status = 'matched_manual' WHERE id = ?")->execute([$depId, $id]);
+            $out(['ok' => true, 'message' => $msg]);
+        }
+
         $out(['ok' => false, 'error' => 'Aksi tidak dikenal.'], 400);
     }
 
     $out(['ok' => false, 'error' => 'Not found'], 404);
 }
 
-$start_section = in_array($_GET['s'] ?? '', ['home', 'depo', 'wd', 'req'], true) ? $_GET['s'] : 'home';
+$start_section = in_array($_GET['s'] ?? '', ['home', 'depo', 'wd', 'req', 'cb'], true) ? $_GET['s'] : 'home';
 header('Cache-Control: no-store');
 ?><!doctype html>
 <html lang="id">
@@ -363,7 +457,7 @@ a { color: var(--cy); }
 
 /* Bottom nav */
 .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(10,15,28,.96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 5px 6px calc(5px + env(safe-area-inset-bottom)); }
-.nav-in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.nav-in { max-width: 600px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
 .nv { border: 0; background: transparent; color: var(--dim); border-radius: 11px; padding: 6px 2px 5px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; font-weight: 700; position: relative; }
 .nv span.ic { font-size: 18px; line-height: 1; }
 .nv.on { color: var(--tx); background: var(--card2); }
@@ -503,6 +597,26 @@ a { color: var(--cy); }
 .lb.on { display: flex; }
 .lb img { max-width: 100%; max-height: 100%; border-radius: 8px; }
 .foot { text-align: center; font-size: 10.5px; color: var(--mute); margin-top: 12px; }
+.card.s-matched, .card.s-matched_expired, .card.s-matched_manual { --sc: var(--gr); } .card.s-unmatched { --sc: var(--am); }
+.card.s-failed, .card.s-unauthorized { --sc: var(--rd); } .card.s-disabled, .card.s-duplicate, .card.s-ignored { --sc: var(--mute); }
+.ntext { font-size: 11.5px; background: var(--card2); border-radius: 9px; padding: 7px 9px; line-height: 1.4; word-break: break-word; }
+.ntext b { display: block; font-size: 11px; color: var(--dim); margin-bottom: 2px; }
+.link { display: flex; align-items: center; gap: 8px; border: 1px dashed var(--line2); border-radius: 10px; padding: 7px 9px; font-size: 11.5px; }
+.link .lk { font-size: 16px; flex-shrink: 0; }
+.link .lt { flex: 1; min-width: 0; line-height: 1.3; }
+.link .lt b { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.link .lt span { display: block; color: var(--dim); font-size: 10.5px; }
+.link.ok { border-style: solid; border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.06); }
+.cand { display: grid; gap: 5px; }
+.cand .b { flex: none; width: 100%; text-align: left; padding: 0 10px; font-size: 11px; background: #0e7490; }
+.hbox { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; margin-bottom: 8px; }
+.hbox .hd { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: var(--rd); }
+.hbox .hd.on { background: var(--gr); box-shadow: 0 0 0 4px rgba(34,197,94,.18); }
+.hbox .ht { flex: 1; min-width: 0; line-height: 1.3; }
+.hbox .ht b { display: block; font-size: 12.5px; }
+.hbox .ht span { display: block; font-size: 10.5px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbox .hn { text-align: right; font-size: 10.5px; color: var(--dim); line-height: 1.3; flex-shrink: 0; }
+.hbox .hn b { display: block; font-size: 14px; color: var(--tx); }
 </style>
 </head>
 <body>
@@ -522,6 +636,7 @@ a { color: var(--cy); }
   <button class="nv" data-s="depo"><span class="ic">💳</span>Deposit<b id="bd-depo"></b></button>
   <button class="nv" data-s="wd"><span class="ic">💸</span>Withdraw<b id="bd-wd"></b></button>
   <button class="nv" data-s="req"><span class="ic">📨</span>Permintaan<b id="bd-req"></b></button>
+  <button class="nv" data-s="cb"><span class="ic">🔗</span>Callback<b id="bd-cb"></b></button>
 </div></nav>
 
 <div class="toast" id="toast"></div>
@@ -599,9 +714,16 @@ a { color: var(--cy); }
       sorts: [['', 'Urutan'], ['new', 'Terbaru'], ['old', 'Terlama']],
       ph: 'Cari user, upline, ID…',
     },
+    cb: {
+      title: 'Callback',
+      tabs: [['all', 'Semua'], ['today', '📅 Hari ini'], ['matched', '✅ Cocok'], ['unmatched', '⚠ Tidak cocok', s => s.cb.open], ['other', 'Lainnya']],
+      filters: [['all', 'Semua']],
+      sorts: [['', 'Terbaru'], ['old', 'Terlama']],
+      ph: 'Cari nominal, user, teks notifikasi, ID…',
+    },
   };
-  const state = { s: <?= json_encode($start_section) ?>, depo: { tab: 'pending', q: '', f: 'all', sort: '' }, wd: { tab: 'pending', q: '', f: 'all', sort: '' }, req: { tab: 'pending', q: '', f: 'all', sort: '' } };
-  if (['home', 'depo', 'wd', 'req'].includes(location.hash.slice(1))) state.s = location.hash.slice(1);
+  const state = { s: <?= json_encode($start_section) ?>, depo: { tab: 'pending', q: '', f: 'all', sort: '' }, wd: { tab: 'pending', q: '', f: 'all', sort: '' }, req: { tab: 'pending', q: '', f: 'all', sort: '' }, cb: { tab: 'all', q: '', f: 'all', sort: '' } };
+  if (['home', 'depo', 'wd', 'req', 'cb'].includes(location.hash.slice(1))) state.s = location.hash.slice(1);
 
   let sig = '', busy = false, timer = null, lastJ = null, cache = {}, open = new Set(), known = {}, firstLoad = {};
 
@@ -640,7 +762,9 @@ a { color: var(--cy); }
       </div>
       <div class="meta"><span id="meta-l">&nbsp;</span>
         <div class="seg" id="flt">${cfg.filters.map(([v, l]) => `<button class="${v === st.f ? 'on' : ''}" data-f="${v}">${l}</button>`).join('')}</div></div>
+      ${s === 'cb' ? '<div id="cb-hb"></div>' : ''}
       <div class="list" id="list"><div class="skel"></div><div class="skel"></div></div>`;
+    if (cfg.filters.length < 2) $('flt').style.display = 'none';
     let qt;
     $('q').oninput = e => { clearTimeout(qt); qt = setTimeout(() => { st.q = e.target.value.trim(); reload(); }, 350); };
     $('sort').onchange = e => { st.sort = e.target.value; reload(); };
@@ -674,6 +798,8 @@ a { color: var(--cy); }
           <div class="qt"><b>Permintaan pending</b><span>${types || 'Tidak ada'}${r.old ? ' · tertua ' + dur(nowS() - r.old) : ''}</span></div><div class="qn num" style="color:var(--bl)">${r.total}</div><div class="go">›</div></div>
         <div class="qrow" data-go="wd" data-tab="hold"><div class="qi" style="background:rgba(167,139,250,.15)">⏸</div>
           <div class="qt"><b>Withdraw hold</b><span>${rpS(w.hold_sum)} tertahan</span></div><div class="qn num" style="color:var(--vi)">${w.hold}</div><div class="go">›</div></div>
+        <div class="qrow" data-go="cb" data-tab="unmatched"><div class="qi" style="background:rgba(34,211,238,.15)">🔗</div>
+          <div class="qt"><b>Callback tidak cocok (24 jam)</b><span>${S.cb.ok}/${S.cb.today} cocok hari ini · ${S.cb.hb ? 'HP heartbeat ' + ago(S.cb.hb.ts) : 'HP forwarder belum terhubung'}</span></div><div class="qn num" style="color:var(--cy)">${S.cb.open}</div><div class="go">›</div></div>
       </div>
 
       <div class="sec-t"><span>Hari ini</span><span>${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' })}</span></div>
@@ -707,6 +833,7 @@ a { color: var(--cy); }
     $('bd-depo').textContent = S.depo.pending || '';
     $('bd-wd').textContent = S.wd.pending || '';
     $('bd-req').textContent = S.req.total || '';
+    $('bd-cb').textContent = S.cb.open || '';
     const cfg = SECTIONS[state.s];
     if (cfg) cfg.tabs.forEach(([v, , fn]) => { const e = document.querySelector(`em[data-c="${v}"]`); if (e) e.textContent = fn ? (fn(S) || '') : ''; });
   }
@@ -798,7 +925,47 @@ a { color: var(--cy); }
       ${body}${d.note ? `<div class="note">📝 ${esc(d.note)}</div>` : ''}${userDet(d)}${acts}`;
   }
 
-  const CARD = { depo: cardDepo, wd: cardWd, req: cardReq };
+  // ── Callback forwarder ──────────────────────────────────────────────────
+  const ST_CB = {
+    matched: ['c-gr', '✅ Cocok'], matched_expired: ['c-gr', '✅ Cocok (telat)'], matched_manual: ['c-gr', '✅ Dihubungkan manual'],
+    unmatched: ['c-am', '⚠ Tidak cocok'], failed: ['c-rd', 'Gagal'], disabled: ['c-sl', 'Auto-acc mati'], duplicate: ['c-sl', 'Duplikat'], ignored: ['c-sl', 'Diabaikan'],
+  };
+  const ST_DEP = { pending: ['c-am', 'Pending'], confirmed: ['c-gr', 'Sukses'], rejected: ['c-rd', 'Ditolak'], expired: ['c-sl', 'Expired'] };
+  function cardCb(d) {
+    const st = ST_CB[d.status] || ['c-sl', d.status];
+    const dep = d.dep;
+    let link = '';
+    if (dep) {
+      const ds = ST_DEP[dep.status] || ['c-sl', dep.status];
+      link = `<div class="link ok"><span class="lk">🔗</span><div class="lt"><b>Deposit #${dep.id} · ${esc(dep.user || '-')}</b>
+        <span>${rp(dep.amount)} · dibuat ${clock(dep.created)}${dep.confirmed ? ' · acc ' + clock(dep.confirmed) : ''}${dep.nc ? ' · Accepted v2' : ''}</span></div>
+        <span class="chip ${ds[0]}">${ds[1]}</span></div>`;
+    } else if (d.status === 'unmatched') {
+      link = `<div class="link"><span class="lk">⛓️‍💥</span><div class="lt"><b>Belum terhubung ke deposit</b><span>${d.cands.length ? 'Deposit dengan nominal sama:' : 'Tidak ada deposit dengan nominal ' + rp(d.amount) + ' (±1 hari)'}</span></div></div>`
+        + (d.cands.length ? `<div class="cand">${d.cands.map(c => `<button class="b" data-do="link" data-id="${d.id}" data-dep="${c.id}">🔗 Hubungkan #${c.id} · ${esc(c.user)} · ${(ST_DEP[c.status] || ['', c.status])[1]} · ${clock(c.created)}${c.status === 'confirmed' ? '' : ' (acc)'}</button>`).join('')}</div>` : '');
+    } else {
+      link = `<div class="link"><span class="lk">—</span><div class="lt"><b>Tidak ada deposit terhubung</b><span>${esc(st[1])}</span></div></div>`;
+    }
+    return `<div class="r1">
+        <div class="av" style="background:${d.status.startsWith('matched') ? '#16a34a' : (d.status === 'unmatched' ? '#d97706' : '#475569')}">${d.status.startsWith('matched') ? '✓' : (d.status === 'unmatched' ? '!' : '·')}</div>
+        <div class="who"><b>${esc(d.app || 'Callback')}</b><span class="num">#${d.id} · 🕒 ${clock(d.created)} · ${ago(d.created)}</span></div>
+        <div class="amt" data-copy="${Math.round(d.amount)}"><b class="num">${d.amount ? rp(d.amount) : '—'}</b><span>nominal notifikasi</span></div>
+      </div>
+      <div class="chips"><span class="chip ${st[0]}">${st[1]}</span>${d.device ? `<span class="chip">📱 ${esc(d.device.split(' · ')[0])}</span>` : ''}${d.posted && Math.abs(d.created - d.posted) > 60 ? `<span class="chip c-am">notif ${clock(d.posted)}</span>` : ''}</div>
+      ${d.title || d.text ? `<div class="ntext">${d.title ? `<b>${esc(d.title)}</b>` : ''}${esc(d.text)}</div>` : ''}
+      ${link}`;
+  }
+  function renderHb(S) {
+    const box = $('cb-hb'); if (!box) return;
+    const h = S.cb.hb;
+    const on = h && (nowS() - h.ts) <= (h.interval * 2 + 1) * 60;
+    box.innerHTML = `<div class="hbox"><span class="hd ${on ? 'on' : ''}"></span>
+      <div class="ht"><b>HP Forwarder ${h ? (on ? 'online' : 'offline') : 'belum terhubung'}</b>
+        <span>${h ? esc(h.device || '') + ' · heartbeat ' + ago(h.ts) + (h.battery != null ? ' · 🔋' + h.battery + '%' + (h.charging ? '⚡' : '') : '') + (h.listener === false ? ' · ❌ izin notifikasi mati' : '') + (h.queue ? ' · antrian ' + h.queue : '') : 'Pasang & jalankan aplikasi Cuan Forwarder'}</span></div>
+      <div class="hn"><b class="num">${S.cb.ok}/${S.cb.today}</b>cocok hari ini</div></div>`;
+  }
+
+  const CARD = { depo: cardDepo, wd: cardWd, req: cardReq, cb: cardCb };
 
   function renderList(j, force) {
     const s = state.s, L = $('list');
@@ -821,7 +988,7 @@ a { color: var(--cy); }
     lastJ = j;
     badges(j.summary);
     if (state.s === 'home') { if (force || j.sig !== sig) { sig = j.sig; renderHome(j.summary); } }
-    else renderList(j, force);
+    else { if (state.s === 'cb') renderHb(j.summary); renderList(j, force); }
   }
 
   function setLive(on, text) { $('live').classList.toggle('off', !on); $('live-t').textContent = text; }
@@ -852,12 +1019,12 @@ a { color: var(--cy); }
       else res(window.confirm(text));
     });
   }
-  async function act(id, what, reason) {
+  async function act(id, what, reason, extra) {
     const s = state.s;
     busy = true;
     document.querySelectorAll(`#c${id} .b`).forEach(b => b.disabled = true);
     try {
-      const j = await api('act', {}, { s, id, do: what, reason: reason || '' });
+      const j = await api('act', {}, Object.assign({ s, id, do: what, reason: reason || '' }, extra || {}));
       if (j.ok) { haptic('success'); toast('✅ ' + j.message); } else { haptic('error'); toast(j.error || 'Gagal', true); }
     } catch (e) { toast('Koneksi gagal, coba lagi', true); }
     busy = false; open.delete(s + id); sig = ''; load(true);
@@ -921,6 +1088,13 @@ a { color: var(--cy); }
       : `${d.status === 'pending' ? 'ACC DEPOSIT' : 'ACC ' + ST_DEPO[d.status][1].toUpperCase()}\n${head}${d.upline ? '\nKomisi diproses ke upline ' + d.upline : ''}`;
     if (s === 'wd') text = `APPROVE WITHDRAW\n${head}\n${d.bank} ${d.acc} a/n ${d.accname}\n\nPastikan dana sudah ditransfer.`;
     if (s === 'req') text = `SETUJUI ${d.label.toUpperCase()}\n${head}`;
+    if (s === 'cb' && what === 'link') {
+      const c = d.cands.find(x => x.id === +b.dataset.dep);
+      if (!c) return;
+      const t = `HUBUNGKAN CALLBACK #${d.id} (${rp(d.amount)})\nke deposit #${c.id} · ${c.user}${c.status === 'confirmed' ? '' : '\n\nDeposit akan di-ACC (saldo masuk + komisi upline).'}`;
+      if (await confirmBox(t)) act(id, 'link', '', { dep: c.id });
+      return;
+    }
     if (await confirmBox(text)) act(id, what);
   });
 
