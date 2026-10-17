@@ -417,7 +417,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 
     <!-- 2. PUSAT ANALISIS & DATA (COLLAPSIBLE) -->
     <?php
-    $analPages = ['transaction_flow', 'analytics', 'video_analytics', 'registration_analytics', 'target', 'heartbeats', 'qris_logs', 'missions'];
+    $analPages = ['transaction_flow', 'network_map', 'analytics', 'video_analytics', 'registration_analytics', 'target', 'heartbeats', 'qris_logs', 'missions'];
     $isAnalActive = in_array($activePage ?? '', $analPages, true);
     $canAnal = staff_can('analytics') || staff_can('video_analytics') || staff_can('target') || staff_can('transaction_flow') || staff_can('deposits');
     ?>
@@ -430,7 +430,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
           <span>Pusat Analitik</span>
         </div>
         <div class="c-nav-collapse-btn__right">
-          <span class="c-nav-collapse-badge">8 Menu</span>
+          <span class="c-nav-collapse-badge">9 Menu</span>
           <svg class="c-nav-collapse-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </button>
@@ -441,6 +441,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
           <a href="/console/transaction_flow.php" class="c-nav-sublink <?= $activePage==='transaction_flow'?'active':'' ?>">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             <span>Transaction Flow</span>
+          </a>
+          <?php endif; ?>
+
+          <?php if (staff_can('analytics') || staff_can('users')): ?>
+          <a href="/console/network_map.php" class="c-nav-sublink <?= $activePage==='network_map'?'active':'' ?>">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 3"/><circle cx="20" cy="12" r="1.6"/><circle cx="6" cy="6.5" r="1.6"/><circle cx="7" cy="18" r="1.6"/></svg>
+            <span>Peta Jaringan Referral</span>
           </a>
           <?php endif; ?>
 
